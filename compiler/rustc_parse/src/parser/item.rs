@@ -1176,14 +1176,13 @@ impl<'a> Parser<'a> {
         m: Option<Mutability>,
     ) -> PResult<'a, (Ident, P<Ty>, Option<P<ast::Expr>>)> {
         let id = if m.is_none() { self.parse_ident_or_underscore() } else { self.parse_ident() }?;
-
         // Parse the type of a `const` or `static mut?` item.
         // That is, the `":" $ty` fragment.
-        let ty = if self.eat(&token::Colon) {
-            self.parse_ty()?
-        } else {
+        let _ = self.eat(&token::Colon);
+        let ty = self.parse_ty().unwrap_or_else(|e| {
+            e.cancel();
             self.recover_missing_const_type(id, m)
-        };
+        });
 
         let expr = if self.eat(&token::Eq) { Some(self.parse_expr()?) } else { None };
         self.expect_semi()?;

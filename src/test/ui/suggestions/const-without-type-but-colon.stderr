@@ -1,0 +1,20 @@
+error: missing type for `const` item
+  --> $DIR/const-without-type-but-colon.rs:2:11
+   |
+LL |     const a: = 123;
+   |           ^ help: provide a type for the constant: `a: i32`
+
+error: missing type for `const` item
+  --> $DIR/const-without-type-but-colon.rs:4:11
+   |
+LL |     const b = 345;
+   |           ^ help: provide a type for the constant: `b: i32`
+
+error: missing type for `const` item
+  --> $DIR/const-without-type-but-colon.rs:7:11
+   |
+LL |     const c: = "hello";
+   |           ^ help: provide a type for the constant: `c: &str`
+
+error: aborting due to 3 previous errors
+
