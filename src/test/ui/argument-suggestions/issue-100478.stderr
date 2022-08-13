@@ -1,0 +1,41 @@
+error[E0061]: this function takes 11 arguments but 10 arguments were supplied
+  --> $DIR/issue-100478.rs:60:5
+   |
+LL |     foo(
+   |     ^^^
+   |
+note: function defined here
+  --> $DIR/issue-100478.rs:32:4
+   |
+LL | fn foo(
+   |    ^^^
+LL |     p1: T1,
+   |     ------
+LL |     p2: Arc<T2>,
+   |     -----------
+LL |     p3: T3,
+   |     ------
+LL |     p4: Arc<T4>,
+   |     -----------
+LL |     p5: T5,
+   |     ------
+LL |     p6: T6,
+   |     ------
+LL |     p7: T7,
+   |     ------
+LL |     p8: Arc<T8>,
+   |     -----------
+LL |     p9: T9,
+   |     ------
+LL |     p10: T10,
+   |     --------
+LL |     p11: T11,
+   |     --------
+help: did you mean
+   |
+LL |     foo(p1, /* Arc<T2> */, /* T3 */, /* Arc<T4> */, /* T5 */, /* T6 */, /* T7 */, /* Arc<T8> */, /* T9 */, /* T10 */, /* T11 */);
+   |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0061`.

@@ -364,7 +364,14 @@ impl<'tcx> ArgMatrix<'tcx> {
                 None => {
                     // We didn't find any issues, so we need to push the algorithm forward
                     // First, eliminate any arguments that currently satisfy their inputs
-                    for (inp, arg) in self.eliminate_satisfied() {
+                    let eliminated = self.eliminate_satisfied();
+                    if eliminated.len() == 0 {
+                        // In every iteration, we should reduce the size of provided_indices or expected_indices
+                        // Othewise, means we meet an weird compatibility_matrix which we can not shrink the size,
+                        // we will get into infinite loop if we don't break the loop, see #100478
+                        break;
+                    }
+                    for (inp, arg) in eliminated {
                         matched_inputs[arg] = Some(inp);
                     }
                 }
