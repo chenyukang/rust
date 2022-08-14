@@ -110,6 +110,36 @@ impl<'tcx> ArgMatrix<'tcx> {
         self.eliminate_expected(expected_idx);
     }
 
+    /* fn print_mat(&self, msg: &str) {
+        println!("================== {} ==================", msg);
+        let mat = &self.compatibility_matrix;
+        let mut head = false;
+        for (i, row) in mat.iter().enumerate() {
+            if !head {
+                print!("x| ");
+                for (j, _) in row.iter().enumerate() {
+                    print!(" {} ", j);
+                }
+                print!("\n-| ");
+                for (_, _) in row.iter().enumerate() {
+                    print!(" - ");
+                }
+                head = true;
+                println!();
+            }
+            print!("{}| ", i);
+            for (_j, cell) in row.iter().enumerate() {
+                match cell {
+                    Compatibility::Compatible => print!(" 1 "),
+                    Compatibility::Incompatible(_err) => {
+                        print!(" 0 ");
+                    }
+                }
+            }
+            println!();
+        }
+    } */
+
     // Returns a `Vec` of (user input, expected arg) of matched arguments. These
     // are inputs on the remaining diagonal that match.
     fn eliminate_satisfied(&mut self) -> Vec<(ProvidedIdx, ExpectedIdx)> {
@@ -130,14 +160,18 @@ impl<'tcx> ArgMatrix<'tcx> {
         let ai = &self.expected_indices;
         let ii = &self.provided_indices;
 
+        /*  println!("ai: {:?}", ai);
+        println!("ii: {:?}", ii);
+        self.print_mat("find_issue:"); */
+        let mut cur_matched_idx = 0;
         for i in 0..cmp::max(ai.len(), ii.len()) {
-            // If we eliminate the last row, any left-over inputs are considered missing
+            // If we eliminate the last row, any left-over arguments are considered missing
             if i >= mat.len() {
-                return Some(Issue::Missing(i));
+                return Some(Issue::Missing(cur_matched_idx));
             }
-            // If we eliminate the last column, any left-over arguments are extra
+            // If we eliminate the last column, any left-over inputs are extra
             if mat[i].len() == 0 {
-                return Some(Issue::Extra(i));
+                return Some(Issue::Extra(cur_matched_idx));
             }
 
             // Make sure we don't pass the bounds of our matrix
@@ -145,6 +179,7 @@ impl<'tcx> ArgMatrix<'tcx> {
             let is_input = i < ii.len();
             if is_arg && is_input && matches!(mat[i][i], Compatibility::Compatible) {
                 // This is a satisfied input, so move along
+                cur_matched_idx += 1;
                 continue;
             }
 
@@ -163,7 +198,7 @@ impl<'tcx> ArgMatrix<'tcx> {
             if is_input {
                 for j in 0..ai.len() {
                     // If we find at least one argument that could satisfy this input
-                    // this argument isn't useless
+                    // this input isn't useless
                     if matches!(mat[i][j], Compatibility::Compatible) {
                         useless = false;
                         break;
@@ -171,6 +206,10 @@ impl<'tcx> ArgMatrix<'tcx> {
                 }
             }
 
+            /*  println!(
+                "i: {}, is_arg: {}, is_input: {}, useless: {}, unsatisfiable: {}",
+                i, is_arg, is_input, useless, unsatisfiable
+            ); */
             match (is_input, is_arg, useless, unsatisfiable) {
                 // If an argument is unsatisfied, and the input in its position is useless
                 // then the most likely explanation is that we just got the types wrong
@@ -309,7 +348,9 @@ impl<'tcx> ArgMatrix<'tcx> {
         }
 
         while !self.provided_indices.is_empty() || !self.expected_indices.is_empty() {
-            match self.find_issue() {
+            let res = self.find_issue();
+            //println!("res: {:?}", res);
+            match res {
                 Some(Issue::Invalid(idx)) => {
                     let compatibility = self.compatibility_matrix[idx][idx].clone();
                     let input_idx = self.provided_indices[idx];
@@ -365,12 +406,7 @@ impl<'tcx> ArgMatrix<'tcx> {
                     // We didn't find any issues, so we need to push the algorithm forward
                     // First, eliminate any arguments that currently satisfy their inputs
                     let eliminated = self.eliminate_satisfied();
-                    if eliminated.len() == 0 {
-                        // In every iteration, we should reduce the size of provided_indices or expected_indices
-                        // Othewise, means we meet an weird compatibility_matrix which we can not shrink the size,
-                        // we will get into infinite loop if we don't break the loop, see #100478
-                        break;
-                    }
+                    assert!(!eliminated.is_empty(), "didn't eliminated any indice in this round");
                     for (inp, arg) in eliminated {
                         matched_inputs[arg] = Some(inp);
                     }
