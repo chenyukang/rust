@@ -110,7 +110,7 @@ impl<'tcx> ArgMatrix<'tcx> {
         self.eliminate_expected(expected_idx);
     }
 
-    /* fn print_mat(&self, msg: &str) {
+    fn print_mat(&self, msg: &str) {
         println!("================== {} ==================", msg);
         let mat = &self.compatibility_matrix;
         let mut head = false;
@@ -138,7 +138,7 @@ impl<'tcx> ArgMatrix<'tcx> {
             }
             println!();
         }
-    } */
+    }
 
     // Returns a `Vec` of (user input, expected arg) of matched arguments. These
     // are inputs on the remaining diagonal that match.
@@ -160,9 +160,9 @@ impl<'tcx> ArgMatrix<'tcx> {
         let ai = &self.expected_indices;
         let ii = &self.provided_indices;
 
-        /*  println!("ai: {:?}", ai);
+        println!("ai: {:?}", ai);
         println!("ii: {:?}", ii);
-        self.print_mat("find_issue:"); */
+        self.print_mat("find_issue:"); 
         let mut cur_matched_idx = 0;
         for i in 0..cmp::max(ai.len(), ii.len()) {
             // If we eliminate the last row, any left-over arguments are considered missing
@@ -206,10 +206,10 @@ impl<'tcx> ArgMatrix<'tcx> {
                 }
             }
 
-            /*  println!(
-                "i: {}, is_arg: {}, is_input: {}, useless: {}, unsatisfiable: {}",
-                i, is_arg, is_input, useless, unsatisfiable
-            ); */
+            println!(
+                "i: {}, is_input: {}, is_arg: {}, useless: {}, unsatisfiable: {}",
+                i, is_input, is_arg, useless, unsatisfiable
+            ); 
             match (is_input, is_arg, useless, unsatisfiable) {
                 // If an argument is unsatisfied, and the input in its position is useless
                 // then the most likely explanation is that we just got the types wrong
@@ -271,6 +271,7 @@ impl<'tcx> ArgMatrix<'tcx> {
                             if matches!(c, Compatibility::Compatible) { Some(i) } else { None }
                         })
                         .collect();
+                println!("loop i: {} j: {} compat: {:?}", i, j, compat);
                 if compat.len() != 1 {
                     // this could go into multiple slots, don't bother exploring both
                     is_cycle = false;
@@ -291,6 +292,7 @@ impl<'tcx> ArgMatrix<'tcx> {
             // ex: [1,2,3,4]; last = 2; j = 2;
             // So, we want to mark 4, 3, and 2 as part of a permutation
             permutation_found = is_cycle;
+            println!("permutation_found: {}", permutation_found);
             while let Some(x) = stack.pop() {
                 if is_cycle {
                     permutation[x] = Some(Some(j));
@@ -303,6 +305,7 @@ impl<'tcx> ArgMatrix<'tcx> {
                 } else {
                     // Some(None) ensures we save time by skipping this argument again
                     permutation[x] = Some(None);
+                    println!("now permutation: {:?}", permutation);
                 }
             }
         }
@@ -349,7 +352,7 @@ impl<'tcx> ArgMatrix<'tcx> {
 
         while !self.provided_indices.is_empty() || !self.expected_indices.is_empty() {
             let res = self.find_issue();
-            //println!("res: {:?}", res);
+            println!("res: {:?}", res);
             match res {
                 Some(Issue::Invalid(idx)) => {
                     let compatibility = self.compatibility_matrix[idx][idx].clone();
@@ -406,7 +409,11 @@ impl<'tcx> ArgMatrix<'tcx> {
                     // We didn't find any issues, so we need to push the algorithm forward
                     // First, eliminate any arguments that currently satisfy their inputs
                     let eliminated = self.eliminate_satisfied();
-                    assert!(!eliminated.is_empty(), "didn't eliminated any indice in this round");
+                    //assert!(!eliminated.is_empty(), "didn't eliminated any indice in this round");
+                    if eliminated.is_empty() {
+                        println!("not found anything ....");
+                        return (errors, matched_inputs);
+                    }
                     for (inp, arg) in eliminated {
                         matched_inputs[arg] = Some(inp);
                     }
