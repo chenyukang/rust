@@ -162,6 +162,23 @@ impl<'tcx> ArgMatrix<'tcx> {
 
         println!("ai: {:?}", ai);
         println!("ii: {:?}", ii);
+       /*  if ii.len() > ai.len() {
+            // There are more inputs than args, so there must be an extra input
+            for i in 0..ai.len() {
+                if !matches!(mat[i][i], Compatibility::Compatible) {
+                    return Some(Issue::Extra(i));
+                }
+            }
+            return Some(Issue::Extra(ii.len() - 1));
+        } else if ii.len() < ai.len() {
+            // There are fewer inputs than args, so there must be a missing input
+            for i in 0..ii.len() {
+                if !matches!(mat[i][i], Compatibility::Compatible) {
+                    return Some(Issue::Missing(i));
+                }
+            }
+            return Some(Issue::Missing(ai.len() - 1));
+        } */
         self.print_mat("find_issue:"); 
         let mut cur_matched_idx = 0;
         for i in 0..cmp::max(ai.len(), ii.len()) {
@@ -211,7 +228,7 @@ impl<'tcx> ArgMatrix<'tcx> {
                 i, is_input, is_arg, useless, unsatisfiable
             ); 
             match (is_input, is_arg, useless, unsatisfiable) {
-                // If an argument is unsatisfied, and the input in its position is useless
+                 // If an argument is unsatisfied, and the input in its position is useless
                 // then the most likely explanation is that we just got the types wrong
                 (true, true, true, true) => return Some(Issue::Invalid(i)),
                 // Otherwise, if an input is useless, then indicate that this is an extra argument
@@ -272,22 +289,22 @@ impl<'tcx> ArgMatrix<'tcx> {
                         })
                         .collect();
                 println!("loop i: {} j: {} compat: {:?}", i, j, compat);
-                if compat.len() != 1 {
+                if compat.len() < 1 {
                     // this could go into multiple slots, don't bother exploring both
                     is_cycle = false;
                     break;
-                }
+                } 
                 j = compat[0];
                 if stack.contains(&j) {
                     last = j;
                     break;
                 }
             }
-            if stack.len() <= 2 {
+            /* if stack.len() <= 2 {
                 // If we encounter a cycle of 1 or 2 elements, we'll let the
                 // "satisfy" and "swap" code above handle those
                 is_cycle = false;
-            }
+            } */
             // We've built up some chain, some of which might be a cycle
             // ex: [1,2,3,4]; last = 2; j = 2;
             // So, we want to mark 4, 3, and 2 as part of a permutation
