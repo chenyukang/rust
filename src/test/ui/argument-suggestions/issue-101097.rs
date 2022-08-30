@@ -13,8 +13,8 @@ fn f(
 ) {}
 
 fn main() {
-    f(C, A, A, A, B, B, C);
-    //f(C, C, A, A, B, B);
+    f(C, C, A, A, B, B);
+    //f(C, A, A, A, B, B, C);
     //f(A, A, D, D, B, B); //ok
     //f(C, C, B, B, A, A); 
     //f(C, C, A, B, A, A); 
