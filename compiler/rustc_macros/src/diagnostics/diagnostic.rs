@@ -35,10 +35,25 @@ impl<'a> SessionDiagnosticDerive<'a> {
 
         let ast = structure.ast();
         let implementation = {
-            if let syn::Data::Struct(..) = ast.data {
+            if let syn::Data::Struct(s) = &ast.data {
                 let preamble = builder.preamble(&structure);
                 let (attrs, args) = builder.body(&mut structure);
+                //println!("struct: {:?}", s.fields);
+                let mut fields = vec![];
+                match s.fields {
+                    syn::Fields::Named(_) => {
+                        for field in s.fields.iter() {
+                            println!("field: {:?}", field.ident);
+                            match &field.ident {
+                                Some(ident) => fields.push(ident.clone()),
+                                None => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
 
+                println!("fileds: {:?}", fields);
                 let span = ast.span().unwrap();
                 let diag = &builder.diag;
                 let init = match builder.slug.value() {
@@ -52,6 +67,7 @@ impl<'a> SessionDiagnosticDerive<'a> {
                         return DiagnosticDeriveError::ErrorHandled.to_compile_error();
                     }
                     Some(slug) => {
+                        println!("slug: {:?}", slug);
                         quote! {
                             let mut #diag = #sess.struct_diagnostic(rustc_errors::fluent::#slug);
                         }
