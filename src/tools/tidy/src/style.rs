@@ -233,6 +233,7 @@ pub fn check(path: &Path, bad: &mut bool) {
         }
 
         if filename.contains("bootstrap/target/") {
+            println!("skip: {:?}", filename);
             return;
         }
 
