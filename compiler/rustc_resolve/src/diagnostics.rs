@@ -1983,15 +1983,53 @@ impl<'a> Resolver<'a> {
                     Applicability::MaybeIncorrect,
                 ))
             } else {
-                self.find_similarly_named_module_or_crate(ident.name, &parent_scope.module).map(
-                    |sugg| {
+                let similar = self
+                    .find_similarly_named_module_or_crate(ident.name, &parent_scope.module)
+                    .map(|sugg| {
                         (
                             vec![(ident.span, sugg.to_string())],
                             String::from("there is a crate or module with a similar name"),
                             Applicability::MaybeIncorrect,
                         )
-                    },
-                )
+                    });
+                if similar.is_some() {
+                    similar
+                } else {
+                    if let Some(ribs) = ribs {
+                        let res = self.resolve_ident_in_lexical_scope(
+                            ident,
+                            ValueNS,
+                            parent_scope,
+                            None,
+                            &ribs[ValueNS],
+                            ignore_binding,
+                        );
+                        println!("res: {:?}", res);
+                        let bind = match res {
+                            Some(LexicalScopeBinding::Res(Res::Local(id))) => {
+                                Some(*self.pat_span_map.get(&id).unwrap())
+                            }
+                            _ => None,
+                        };
+                        let next = self.next_node_id();
+                        println!("bind: {:?}", bind);
+                        println!("next: {:?}", next);
+                        if bind.is_some() {
+                            Some((
+                                vec![(bind.unwrap(), String::from(""))],
+                                format!(
+                                    "`{}` is defined here, but is not a crate or module",
+                                    ident
+                                ),
+                                Applicability::MaybeIncorrect,
+                            ))
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }
             };
             (format!("use of undeclared crate or module `{}`", ident), suggestion)
         }
