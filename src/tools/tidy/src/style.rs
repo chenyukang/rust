@@ -232,6 +232,10 @@ pub fn check(path: &Path, bad: &mut bool) {
             return;
         }
 
+        if filename.contains("bootstrap/target/") {
+            return;
+        }
+
         let is_style_file = filename.ends_with(".css");
         let under_rustfmt = filename.ends_with(".rs") &&
             // This list should ideally be sourced from rustfmt.toml but we don't want to add a toml
