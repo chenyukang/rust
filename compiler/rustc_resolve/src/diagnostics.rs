@@ -2004,21 +2004,28 @@ impl<'a> Resolver<'a> {
                             &ribs[ValueNS],
                             ignore_binding,
                         );
-                        println!("res: {:?}", res);
+                        /*           println!("res: {:?}", res);
+                        println!("span: {:?}", ident.span); */
                         let bind = match res {
                             Some(LexicalScopeBinding::Res(Res::Local(id))) => {
                                 Some(*self.pat_span_map.get(&id).unwrap())
                             }
                             _ => None,
                         };
-                        let next = self.next_node_id();
+                        /* let next = self.next_node_id();
                         println!("bind: {:?}", bind);
-                        println!("next: {:?}", next);
-                        if bind.is_some() {
+                        println!("next: {:?}", next); */
+                        let sm = self.session.source_map();
+                        let expand_span =
+                            sm.span_extend_while(ident.span, |c| c == ':').unwrap_or(ident.span);
+                        //println!("expand_span: {:?}", expand_span);
+                        let diff = expand_span.hi() - ident.span.hi();
+                        if let Some(_) = bind && diff == rustc_span::BytePos(2)
+                            {
                             Some((
-                                vec![(bind.unwrap(), String::from(""))],
+                                vec![(expand_span, format!("{}.", ident))],
                                 format!(
-                                    "`{}` is defined here, but is not a crate or module",
+                                    "`{}` is not a crate or module, maybe you meant to call instance method",
                                     ident
                                 ),
                                 Applicability::MaybeIncorrect,
