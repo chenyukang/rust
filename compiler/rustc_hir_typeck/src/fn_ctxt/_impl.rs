@@ -1043,7 +1043,6 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         hir_id: hir::HirId,
     ) -> (Ty<'tcx>, Res) {
         let tcx = self.tcx;
-
         let path_segs = match res {
             Res::Local(_) | Res::SelfCtor(_) => vec![],
             Res::Def(kind, def_id) => <dyn AstConv<'_>>::def_ids_for_value_path_segments(

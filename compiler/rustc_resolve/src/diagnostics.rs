@@ -1840,13 +1840,20 @@ impl<'a> Resolver<'a> {
 
             (format!("use of undeclared type `{}`", ident), suggestion)
         } else {
-            let suggestion = if ident.name == sym::alloc {
-                Some((
+            // crate or module resolve failed, here we try three things:
+
+            // 1. special handling for `alloc`
+            let mut suggestion = None;
+            if ident.name == sym::alloc {
+                suggestion = Some((
                     vec![],
                     String::from("add `extern crate alloc` to use the `alloc` crate"),
                     Applicability::MaybeIncorrect,
                 ))
-            } else {
+            }
+
+            // 2. check whether there is a similar name
+            suggestion = suggestion.or_else(|| {
                 self.find_similarly_named_module_or_crate(ident.name, &parent_scope.module).map(
                     |sugg| {
                         (
@@ -1856,7 +1863,56 @@ impl<'a> Resolver<'a> {
                         )
                     },
                 )
-            };
+            });
+
+            // 3. check whether the name refers to an item in local scope
+            // then delay to check whether methond name is an associated function or not
+            // For example:
+            // ```
+            // struct Foo;
+            // impl Foo {
+            //    fn bar(&self) {}
+            // }
+            //
+            // fn main() {
+            //    let foo = Foo {};
+            //    foo::bar(); // suggest to foo.bar();
+            //}
+            //```
+            if suggestion.is_none() &&
+                let Some(ribs) = ribs &&
+                let Some(LexicalScopeBinding::Res(Res::Local(local_id))) = self.resolve_ident_in_lexical_scope(
+                    ident,
+                    ValueNS,
+                    parent_scope,
+                    None,
+                    &ribs[ValueNS],
+                    ignore_binding,
+                )
+                {
+                    let sm = self.session.source_map();
+                    // only check path with two segments, like `foo::bar(..)`
+                    if let Ok(span) = sm.span_extend_while(ident.span.shrink_to_hi(), |c| c != ' ') &&
+                        let Ok(snippet) = sm.span_to_snippet(span) &&
+                            snippet.starts_with("::") &&  snippet.matches("::").count() == 1 {
+                        let local_span = *self.pat_span_map.get(&local_id).unwrap();
+                        let mut err = self.session.struct_span_err(
+                            ident.span,
+                            format!(
+                                "`{}` is not a crate or module",
+                                ident
+                            )
+                        );
+                        err.span_suggestion_verbose(
+                            sm.span_extend_while(ident.span.shrink_to_hi(), |c| c == ':').unwrap(),
+                            "maybe you meant to call instance method",
+                            ".".to_string(),
+                            Applicability::MaybeIncorrect
+                        );
+                        err.span_warn(local_span, format!("ident `{}` is defined at here", ident));
+                        err.stash(ident.span, rustc_errors::StashKey::CallAssocMethod);
+                    }
+                };
             (format!("use of undeclared crate or module `{}`", ident), suggestion)
         }
     }
