@@ -1994,13 +1994,20 @@ impl<'a> Resolver<'a> {
 
             (format!("use of undeclared type `{}`", ident), suggestion)
         } else {
-            let suggestion = if ident.name == sym::alloc {
-                Some((
+            // crate or module resolve failed, here we try three things:
+
+            // 1. special handling for `alloc`
+            let mut suggestion = None;
+            if ident.name == sym::alloc {
+                suggestion = Some((
                     vec![],
                     String::from("add `extern crate alloc` to use the `alloc` crate"),
                     Applicability::MaybeIncorrect,
                 ))
-            } else {
+            }
+
+            // 2. check whether there is a similar name
+            suggestion = suggestion.or_else(|| {
                 self.find_similarly_named_module_or_crate(ident.name, &parent_scope.module).map(
                     |sugg| {
                         (
@@ -2010,7 +2017,39 @@ impl<'a> Resolver<'a> {
                         )
                     },
                 )
-            };
+            });
+
+            // 3. check whether the name refers to an item in local scope
+            if suggestion.is_none() &&
+                let Some(ribs) = ribs &&
+                let Some(LexicalScopeBinding::Res(Res::Local(_))) = self.resolve_ident_in_lexical_scope(
+                    ident,
+                    ValueNS,
+                    parent_scope,
+                    None,
+                    &ribs[ValueNS],
+                    ignore_binding,
+                )
+                {
+                    let sm = self.session.source_map();
+                    let code_span = sm
+                        .span_extend_while(ident.span.shrink_to_hi(), |c| c != '\n')
+                        .unwrap_or(ident.span);
+                    let code = sm.span_to_snippet(code_span).unwrap();
+                    if code.starts_with("::") && code.matches("::").count() == 1 {
+                        suggestion = Some((
+                            vec![(
+                                sm.span_extend_while(ident.span, |c| c == ':').unwrap(),
+                                format!("{}.", ident),
+                            )],
+                            format!(
+                                "`{}` is not a crate or module, maybe you meant to call instance method",
+                                ident
+                            ),
+                            Applicability::MaybeIncorrect,
+                        ))
+                    }
+                };
             (format!("use of undeclared crate or module `{}`", ident), suggestion)
         }
     }
