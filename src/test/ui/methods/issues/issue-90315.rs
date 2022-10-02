@@ -67,4 +67,10 @@ fn main() {
 
     let _res = b.take(1)..a;
     //~^ ERROR not an iterator
+
+    let _res: i32 = ..6.take(2).sum();
+    //~^ can't call method `take` on ambiguous numeric type
+    //~| ERROR mismatched types [E0308]
+    //~| HELP you must specify a concrete type for this numeric value
+    // Won't suggest because `RangeTo` dest not implemented `take`
 }
