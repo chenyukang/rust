@@ -346,3 +346,28 @@ pub struct ExpectedUsedSymbol {
     #[primary_span]
     pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[diag(typeck::missing_parentheses_in_range, code = "E0599")]
+pub struct MissingParentheseInRange {
+    #[primary_span]
+    #[label(typeck::missing_parentheses_in_range)]
+    pub span: Span,
+    pub ty_str: String,
+
+    #[subdiagnostic]
+    pub add_missing_parentheses: Option<AddMissingParenthesesInRange>,
+}
+
+#[derive(Subdiagnostic)]
+#[multipart_suggestion_verbose(
+    typeck::add_missing_parentheses_in_range,
+    applicability = "maybe-incorrect"
+)]
+pub struct AddMissingParenthesesInRange {
+    pub func_name: String,
+    #[suggestion_part(code = "(")]
+    pub left: Span,
+    #[suggestion_part(code = ")")]
+    pub right: Span,
+}
