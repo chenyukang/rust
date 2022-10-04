@@ -348,10 +348,10 @@ pub struct ExpectedUsedSymbol {
 }
 
 #[derive(Diagnostic)]
-#[diag(typeck::missing_parentheses_in_range, code = "E0599")]
+#[diag(hir_analysis::missing_parentheses_in_range, code = "E0599")]
 pub struct MissingParentheseInRange {
     #[primary_span]
-    #[label(typeck::missing_parentheses_in_range)]
+    #[label(hir_analysis::missing_parentheses_in_range)]
     pub span: Span,
     pub ty_str: String,
 
@@ -361,7 +361,7 @@ pub struct MissingParentheseInRange {
 
 #[derive(Subdiagnostic)]
 #[multipart_suggestion_verbose(
-    typeck::add_missing_parentheses_in_range,
+    hir_analysis::add_missing_parentheses_in_range,
     applicability = "maybe-incorrect"
 )]
 pub struct AddMissingParenthesesInRange {
