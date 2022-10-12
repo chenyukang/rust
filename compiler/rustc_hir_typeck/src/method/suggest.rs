@@ -29,11 +29,11 @@ use rustc_trait_selection::traits::{
     FulfillmentError, Obligation, ObligationCause, ObligationCauseCode, OnUnimplementedNote,
 };
 
-use std::cmp::Ordering;
-use std::iter;
-
 use super::probe::{AutorefOrPtrAdjustment, IsSuggestion, Mode, ProbeScope};
 use super::{CandidateSource, MethodError, NoMatchData};
+use rustc_hir::intravisit::Visitor;
+use std::cmp::Ordering;
+use std::iter;
 
 impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     fn is_fn_ty(&self, ty: Ty<'tcx>, span: Span) -> bool {
@@ -1405,6 +1405,63 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             return true;
         }
         false
+    }
+
+    pub(crate) fn suggest_instance_call(
+        &self,
+        seg1: &hir::PathSegment<'_>,
+        seg2: &hir::PathSegment<'_>,
+        local_span: Span,
+    ) -> bool {
+        let map = self.infcx.tcx.hir();
+        let body_id = map.body_owned_by(seg1.hir_id.owner.def_id);
+        let body = map.body(body_id);
+
+        struct LetVisitor<'a> {
+            local_span: Span,
+            result: Option<&'a Ty<'a>>,
+        }
+
+        impl<'v> Visitor<'v> for LetVisitor<'_> {
+            fn visit_stmt(&mut self, ex: &'v hir::Stmt<'v>) {
+                if self.result.is_some() {
+                    return;
+                }
+                if let hir::StmtKind::Local(hir::Local {
+                        span, ty, init: None, ..
+                    }) = &ex.kind && span.contains(self.local_span) {
+                        self.result = ty;
+                }
+                hir::intravisit::walk_stmt(self, ex);
+            }
+        }
+
+        let mut visitor = LetVisitor { local_span, result: None };
+        visitor.visit_body(&body);
+
+        let parent = self.tcx.hir().get_parent_node(seg1.hir_id);
+        let parent_expr = self.tcx.hir().find(parent);
+        debug!("yukang parent_expr: {:?}", parent_expr);
+        let node = self.tcx.hir().get_parent_node(seg1.hir_id);
+        let ty = self.typeck_results.borrow().node_type_opt(node);
+
+        debug!("yukang suggest_instance_call ty: {:?}", ty);
+        if let Some(Node::Expr(call_expr)) = self.tcx.hir().find(parent) &&
+            let Some(self_ty) = ty {
+            debug!("yukang trying to prob method");
+            let probe = self.lookup_probe(
+                seg1.ident.span,
+                seg2.ident,
+                self_ty,
+                call_expr,
+                ProbeScope::TraitsInScope,
+            );
+
+            if let Ok(_pick) = probe {
+                return true;
+            }
+        }
+        return false;
     }
 
     fn check_for_field_method(

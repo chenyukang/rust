@@ -520,6 +520,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         args: &'tcx [hir::Expr<'tcx>],
     ) -> Ty<'tcx> {
         let tcx = self.tcx;
+        debug!("yukang check_expr_path: {:?}", qpath);
         let (res, opt_ty, segs) =
             self.resolve_ty_and_res_fully_qualified_call(qpath, expr.hir_id, expr.span);
         let ty = match res {

@@ -2022,7 +2022,7 @@ impl<'a> Resolver<'a> {
             // 3. check whether the name refers to an item in local scope
             if suggestion.is_none() &&
                 let Some(ribs) = ribs &&
-                let Some(LexicalScopeBinding::Res(Res::Local(_))) = self.resolve_ident_in_lexical_scope(
+                let Some(LexicalScopeBinding::Res(Res::Local(local_id))) = self.resolve_ident_in_lexical_scope(
                     ident,
                     ValueNS,
                     parent_scope,
@@ -2033,13 +2033,26 @@ impl<'a> Resolver<'a> {
                 {
                     let sm = self.session.source_map();
                     let code_span = sm
-                        .span_extend_while(ident.span.shrink_to_hi(), |c| c != '\n')
+                        .span_extend_while(ident.span.shrink_to_hi(), |c| c == ':')
                         .unwrap_or(ident.span);
                     let code = sm.span_to_snippet(code_span).unwrap();
-                    if code.starts_with("::") && code.matches("::").count() == 1 {
-                        suggestion = Some((
+                    if code == "::" {
+                        let local_span = *self.pat_span_map.get(&local_id).unwrap();
+                        let mut err = struct_span_err!(
+                            self.session,
+                            ident.span,
+                            E0434,
+                            "{}",
+                            format!(
+                                "`{}` is not a crate or module, maybe you meant to call instance method",
+                                ident
+                            )
+                        );
+                        err.span_warn(local_span, "ident is defined at here");
+                        err.stash(ident.span, rustc_errors::StashKey::CallInstanceMethod);
+                       /*  suggestion = Some((
                             vec![(
-                                sm.span_extend_while(ident.span, |c| c == ':').unwrap(),
+                                sm.span_extend_while(id ent.span, |c| c == ':').unwrap(),
                                 format!("{}.", ident),
                             )],
                             format!(
@@ -2047,7 +2060,7 @@ impl<'a> Resolver<'a> {
                                 ident
                             ),
                             Applicability::MaybeIncorrect,
-                        ))
+                        )) */
                     }
                 };
             (format!("use of undeclared crate or module `{}`", ident), suggestion)
