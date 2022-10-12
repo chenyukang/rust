@@ -870,7 +870,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                         .tcx
                         .sess
                         .diagnostic()
-                        .steal_diagnostic(seg1.ident.span, StashKey::CallInstanceMethod) 
+                        .steal_diagnostic(seg1.ident.span, StashKey::CallInstanceMethod)
                         && let Some(&help) = diag.children.get(0) {
                         let local_def_span = help.span;
                         if self.suggest_instance_call(seg1, seg2, &local_def_span) {
