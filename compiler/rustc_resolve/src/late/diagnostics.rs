@@ -5,6 +5,7 @@ use crate::path_names_to_string;
 use crate::{Module, ModuleKind, ModuleOrUniformRoot};
 use crate::{PathResult, PathSource, Segment};
 
+use crate::ty::Visibility;
 use rustc_ast::visit::{FnCtxt, FnKind, LifetimeCtxt};
 use rustc_ast::{
     self as ast, AssocItemKind, Expr, ExprKind, GenericParam, GenericParamKind, Item, ItemKind,
@@ -29,7 +30,6 @@ use rustc_span::hygiene::MacroKind;
 use rustc_span::lev_distance::find_best_match_for_name;
 use rustc_span::symbol::{kw, sym, Ident, Symbol};
 use rustc_span::{BytePos, Span};
-
 use std::iter;
 use std::ops::Deref;
 
@@ -1211,6 +1211,7 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
                         }
                         _ => (": val", "literal", Applicability::HasPlaceholders),
                     };
+
                     let (fields, applicability) = match self.r.field_names.get(&def_id) {
                         Some(fields) => (
                             fields
@@ -1222,6 +1223,11 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
                         ),
                         None => ("/* fields */".to_string(), Applicability::HasPlaceholders),
                     };
+                    debug!("yukang try to get def_id: {:?}", def_id);
+                    let field_visibilities: Vec<Visibility<DefId>> =
+                        self.r.cstore().struct_field_visibilities_untracked(def_id).collect();
+                    debug!("yukang: field_visibilities {:?}", field_visibilities);
+                    debug!("yukang: fields {:?}", fields);
                     let pad = match self.r.field_names.get(&def_id) {
                         Some(fields) if fields.is_empty() => "",
                         _ => " ",
@@ -1239,6 +1245,9 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
             }
         };
 
+        debug!("yukang: res -> {:?}", res);
+        debug!("yukang: span -> {:?}", span);
+        debug!("yukang: path -> {:?}", path_str);
         match (res, source) {
             (
                 Res::Def(DefKind::Macro(MacroKind::Bang), _),
@@ -1314,19 +1323,40 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
                 self.suggest_using_enum_variant(err, source, def_id, span);
             }
             (Res::Def(DefKind::Struct, def_id), source) if ns == ValueNS => {
-                let (ctor_def, ctor_vis, fields) =
-                    if let Some(struct_ctor) = self.r.struct_constructors.get(&def_id).cloned() {
-                        if let PathSource::Expr(Some(parent)) = source {
-                            if let ExprKind::Field(..) | ExprKind::MethodCall(..) = parent.kind {
-                                bad_struct_syntax_suggestion(def_id);
-                                return true;
-                            }
+                let struct_ctor = self.r.struct_constructors.get(&def_id).cloned();
+                if struct_ctor.is_none() {
+                    debug!("yukang: struct_ctor is none");
+                    bad_struct_syntax_suggestion(def_id);
+                    return false;
+                }
+
+                let (ctor_def, ctor_vis, fields) = struct_ctor.unwrap();
+                if let PathSource::Expr(Some(parent)) = source {
+                    match &parent.kind {
+                        ExprKind::Field(..) => {
+                            debug!("yukang: ExprKind::Field {:?}, def_id: {:?}", parent, def_id);
+                            bad_struct_syntax_suggestion(def_id);
+                            return true;
                         }
-                        struct_ctor
-                    } else {
-                        bad_struct_syntax_suggestion(def_id);
-                        return true;
-                    };
+                        ExprKind::MethodCall(_, call, args, _) => {
+                            let non_visible_fields: usize = fields
+                                .iter()
+                                .filter(|vis| {
+                                    self.r.is_accessible_from(**vis, self.parent_scope.module)
+                                })
+                                .count();
+
+                            debug!("yukang: call {:?}", call);
+                            debug!("yukang: parent {:?}", parent);
+                            debug!("yukang: args: {:?}", args);
+                            debug!("yukang: fields: {:?}", fields);
+                            debug!("yukang: non_visible_fields: {:?}", non_visible_fields);
+                            bad_struct_syntax_suggestion(def_id);
+                            return true;
+                        }
+                        _ => {}
+                    }
+                }
 
                 let is_accessible = self.r.is_accessible_from(ctor_vis, self.parent_scope.module);
                 if !is_expected(ctor_def) || is_accessible {
@@ -1388,6 +1418,7 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
                 ),
                 _,
             ) if ns == ValueNS => {
+                debug!("yukang: going to def : {:?}", def_id);
                 bad_struct_syntax_suggestion(def_id);
             }
             (Res::Def(DefKind::Ctor(_, CtorKind::Const), def_id), _) if ns == ValueNS => {

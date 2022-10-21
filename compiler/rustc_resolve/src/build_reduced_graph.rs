@@ -347,6 +347,7 @@ impl<'a, 'b> BuildReducedGraphVisitor<'a, 'b> {
     }
 
     fn insert_field_names(&mut self, def_id: DefId, field_names: Vec<Spanned<Symbol>>) {
+        debug!("yukang insert_field_names: def_id={:?} filed_names: {:?}", def_id, field_names);
         self.r.field_names.insert(def_id, field_names);
     }
 
@@ -764,8 +765,13 @@ impl<'a, 'b> BuildReducedGraphVisitor<'a, 'b> {
                 self.r.define(parent, ident, TypeNS, (res, vis, sp, expansion));
 
                 // Record field names for error reporting.
+                debug!(
+                    "yukang: build_reduced_graph_for_item: ItemKind::Struct def_id: {:?}, vdata: {:?}",
+                    def_id, vdata
+                );
                 self.insert_field_names_local(def_id, vdata);
-
+                let ctor_id = vdata.ctor_id();
+                debug!("yukang: build_reduced_graph_for_item: ctor_id: {:?}", ctor_id);
                 // If this is a tuple or unit struct, define a name
                 // in the value namespace as well.
                 if let Some(ctor_node_id) = vdata.ctor_id() {
@@ -1022,20 +1028,27 @@ impl<'a, 'b> BuildReducedGraphVisitor<'a, 'b> {
                 let field_names =
                     cstore.struct_field_names_untracked(def_id, self.r.session).collect();
                 let ctor = cstore.ctor_def_id_and_kind_untracked(def_id);
+                debug!("yukang ctor: {:?} -> def_id: {:?}", ctor, def_id);
                 if let Some((ctor_def_id, ctor_kind)) = ctor {
                     let ctor_res = Res::Def(DefKind::Ctor(CtorOf::Struct, ctor_kind), ctor_def_id);
                     let ctor_vis = cstore.visibility_untracked(ctor_def_id);
                     let field_visibilities =
                         cstore.struct_field_visibilities_untracked(def_id).collect();
+                    debug!(
+                        "yukang add filed_visibilities: {:?} for def_id: {:?}",
+                        field_visibilities, def_id
+                    );
                     self.r
                         .struct_constructors
                         .insert(def_id, (ctor_res, ctor_vis, field_visibilities));
                 }
+                debug!("yukang add field_names: {:?} for def_id: {:?}", field_names, def_id);
                 self.insert_field_names(def_id, field_names);
             }
             Res::Def(DefKind::Union, def_id) => {
                 let field_names =
                     cstore.struct_field_names_untracked(def_id, self.r.session).collect();
+                debug!("yukang add field_names union: {:?} for def_id: {:?}", field_names, def_id);
                 self.insert_field_names(def_id, field_names);
             }
             Res::Def(DefKind::AssocFn, def_id) => {
