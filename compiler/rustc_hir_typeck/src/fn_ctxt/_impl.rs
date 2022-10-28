@@ -4,7 +4,7 @@ use crate::rvalue_scopes;
 use crate::{BreakableCtxt, Diverges, Expectation, FnCtxt, LocalTy};
 use rustc_data_structures::captures::Captures;
 use rustc_data_structures::fx::FxHashSet;
-use rustc_errors::{Applicability, Diagnostic, ErrorGuaranteed, MultiSpan, StashKey};
+use rustc_errors::{Applicability, Diagnostic, ErrorGuaranteed, MultiSpan};
 use rustc_hir as hir;
 use rustc_hir::def::{CtorOf, DefKind, Res};
 use rustc_hir::def_id::DefId;
@@ -863,28 +863,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         );
         let (ty, qself, item_segment) = match *qpath {
             QPath::Resolved(ref opt_qself, ref path) => {
-                if path.segments.len() == 2 {
-                    debug!("yukang item_segment: {:?}", path.segments);
-                    if let [seg1, seg2] = path.segments
-                        && let Some(mut diag) = self
-                        .tcx
-                        .sess
-                        .diagnostic()
-                        .steal_diagnostic(seg1.ident.span, StashKey::CallInstanceMethod)
-                        && let Some(&help) = diag.children.get(0) {
-                        let local_def_span = help.span;
-                        if self.suggest_instance_call(seg1, seg2, &local_def_span) {
-                            diag.set_primary_message(format!(
-                                "need to fix call instance method: {:?}",
-                                seg2.ident
-                            ));
-                            diag.emit();
-                        } else {
-                            diag.cancel();
-                        }
-                    }
-                }
-
+                self.suggest_instance_call(*path);
                 return (
                     path.res,
                     opt_qself.as_ref().map(|qself| self.to_ty(qself)),

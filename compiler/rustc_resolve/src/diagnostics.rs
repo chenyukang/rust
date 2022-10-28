@@ -2050,17 +2050,6 @@ impl<'a> Resolver<'a> {
                         );
                         err.span_warn(local_span, "ident is defined at here");
                         err.stash(ident.span, rustc_errors::StashKey::CallInstanceMethod);
-                       /*  suggestion = Some((
-                            vec![(
-                                sm.span_extend_while(id ent.span, |c| c == ':').unwrap(),
-                                format!("{}.", ident),
-                            )],
-                            format!(
-                                "`{}` is not a crate or module, maybe you meant to call instance method",
-                                ident
-                            ),
-                            Applicability::MaybeIncorrect,
-                        )) */
                     }
                 };
             (format!("use of undeclared crate or module `{}`", ident), suggestion)

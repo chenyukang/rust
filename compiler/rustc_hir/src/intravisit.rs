@@ -697,7 +697,6 @@ pub fn walk_qpath<'v, V: Visitor<'v>>(visitor: &mut V, qpath: &'v QPath<'v>, id:
             visitor.visit_path(path, id)
         }
         QPath::TypeRelative(ref qself, ref segment) => {
-            debug!("yukang segment: {:?}", segment);
             visitor.visit_ty(qself);
             visitor.visit_path_segment(segment);
         }
@@ -712,7 +711,6 @@ pub fn walk_path<'v, V: Visitor<'v>>(visitor: &mut V, path: &'v Path<'v>) {
 }
 
 pub fn walk_path_segment<'v, V: Visitor<'v>>(visitor: &mut V, segment: &'v PathSegment<'v>) {
-    debug!("yukang walk_path_segment: {:?}", segment);
     visitor.visit_ident(segment.ident);
     visitor.visit_id(segment.hir_id);
     if let Some(ref args) = segment.args {

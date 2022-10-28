@@ -5,6 +5,7 @@ use crate::errors;
 use crate::FnCtxt;
 use rustc_ast::ast::Mutability;
 use rustc_data_structures::fx::{FxHashMap, FxHashSet};
+use rustc_errors::StashKey;
 use rustc_errors::{
     pluralize, struct_span_err, Applicability, Diagnostic, DiagnosticBuilder, ErrorGuaranteed,
     MultiSpan,
@@ -13,6 +14,7 @@ use rustc_hir as hir;
 use rustc_hir::def::DefKind;
 use rustc_hir::def_id::DefId;
 use rustc_hir::lang_items::LangItem;
+use rustc_hir::PatKind::Binding;
 use rustc_hir::{ExprKind, Node, QPath};
 use rustc_infer::infer::type_variable::{TypeVariableOrigin, TypeVariableOriginKind};
 use rustc_middle::traits::util::supertraits;
@@ -1407,48 +1409,44 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         false
     }
 
-    pub(crate) fn suggest_instance_call(
-        &self,
-        seg1: &hir::PathSegment<'_>,
-        seg2: &hir::PathSegment<'_>,
-        local_span: Span,
-    ) -> bool {
+    /// For code `rect::area(...)`, we try to suggest `rect.area()`
+    /// If `rect` is a local variable and `area` is a valid assoc method for it.
+    pub(crate) fn suggest_instance_call(&self, path: &hir::Path<'_>) {
+        if path.segments.len() != 2 {
+            return;
+        }
+        let seg1 = &path.segments[0];
+        let seg2 = &path.segments[1];
+        let Some(mut diag) =
+            self.tcx.sess.diagnostic().steal_diagnostic(seg1.ident.span, StashKey::CallInstanceMethod) else { return };
+
         let map = self.infcx.tcx.hir();
         let body_id = map.body_owned_by(seg1.hir_id.owner.def_id);
         let body = map.body(body_id);
-
         struct LetVisitor<'a> {
-            local_span: Span,
-            result: Option<&'a Ty<'a>>,
+            result: Option<&'a hir::Expr<'a>>,
+            ident_name: Symbol,
         }
 
-        impl<'v> Visitor<'v> for LetVisitor<'_> {
+        impl<'v> Visitor<'v> for LetVisitor<'v> {
             fn visit_stmt(&mut self, ex: &'v hir::Stmt<'v>) {
-                if self.result.is_some() {
-                    return;
-                }
-                if let hir::StmtKind::Local(hir::Local {
-                        span, ty, init: None, ..
-                    }) = &ex.kind && span.contains(self.local_span) {
-                        self.result = ty;
+                if let hir::StmtKind::Local(hir::Local { pat, init, .. }) = &ex.kind {
+                    if let Binding(_, _, ident, ..) = pat.kind &&
+                        ident.name == self.ident_name {
+                        self.result = *init;
+                    }
                 }
                 hir::intravisit::walk_stmt(self, ex);
             }
         }
 
-        let mut visitor = LetVisitor { local_span, result: None };
+        let mut visitor = LetVisitor { result: None, ident_name: seg1.ident.name };
         visitor.visit_body(&body);
 
         let parent = self.tcx.hir().get_parent_node(seg1.hir_id);
-        let parent_expr = self.tcx.hir().find(parent);
-        debug!("yukang parent_expr: {:?}", parent_expr);
-        let node = self.tcx.hir().get_parent_node(seg1.hir_id);
-        let ty = self.typeck_results.borrow().node_type_opt(node);
-
-        debug!("yukang suggest_instance_call ty: {:?}", ty);
         if let Some(Node::Expr(call_expr)) = self.tcx.hir().find(parent) &&
-            let Some(self_ty) = ty {
-            debug!("yukang trying to prob method");
+            let Some(expr) = visitor.result {
+            let self_ty = self.check_expr(expr);
             let probe = self.lookup_probe(
                 seg1.ident.span,
                 seg2.ident,
@@ -1457,11 +1455,16 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 ProbeScope::TraitsInScope,
             );
 
-            if let Ok(_pick) = probe {
-                return true;
+            if probe.is_ok() {
+                diag.set_primary_message(format!(
+                    "need to fix call instance method: {:?}",
+                    seg2.ident
+                ));
+                diag.emit();
+            } else {
+                diag.cancel();
             }
         }
-        return false;
     }
 
     fn check_for_field_method(

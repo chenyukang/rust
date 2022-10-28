@@ -1994,7 +1994,6 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 }
             }
             hir::QPath::TypeRelative(_, segment) => {
-                debug!("yukang point_at_path_if_possible segment={:?}", segment);
                 if self.point_at_generic_if_possible(error, def_id, param, segment) {
                     return true;
                 }
