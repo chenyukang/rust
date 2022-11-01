@@ -1,3 +1,3 @@
-// error-pattern: aborting due to 5 previous errors
+// error-pattern: this file contains an unclosed delimiter
 
 fn i(n{...,f #

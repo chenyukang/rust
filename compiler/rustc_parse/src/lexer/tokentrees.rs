@@ -47,10 +47,14 @@ impl<'a> TokenTreesReader<'a> {
     // Parse a stream of tokens into a list of `TokenTree`s.
     fn parse_token_trees(&mut self, is_delimited: bool) -> PResult<'a, TokenStream> {
         self.token = self.string_reader.next_token().0;
+        debug!(
+            "yukang parser_token_trees: token={:?} is_delimited: {:?}",
+            self.token, is_delimited
+        );
         let mut buf = Vec::new();
         loop {
             match self.token.kind {
-                token::OpenDelim(delim) => buf.push(self.parse_token_tree_open_delim(delim)),
+                token::OpenDelim(delim) => buf.push(self.parse_token_tree_open_delim(delim)?),
                 token::CloseDelim(delim) => {
                     return if is_delimited {
                         Ok(TokenStream::new(buf))
@@ -59,10 +63,12 @@ impl<'a> TokenTreesReader<'a> {
                     };
                 }
                 token::Eof => {
+                    debug!("yukang EOF: {:?}", self.open_braces);
                     if is_delimited {
-                        self.eof_err().emit();
+                        return Err(self.eof_err());
+                    } else {
+                        return Ok(TokenStream::new(buf));
                     }
-                    return Ok(TokenStream::new(buf));
                 }
                 _ => {
                     // Get the next normal token. This might require getting multiple adjacent
@@ -103,10 +109,22 @@ impl<'a> TokenTreesReader<'a> {
             });
         }
 
+        debug!("yukang eof_err: {:?}", self.open_braces);
         if let Some((delim, _)) = self.open_braces.last() {
+            for (delim, open_sp, close_sp) in self.matching_delim_spans.iter() {
+                debug!(
+                    "yukang eof_err: delim: {:?} open: {:?} close: {:?}",
+                    delim, open_sp, close_sp
+                );
+            }
             if let Some((_, open_sp, close_sp)) =
                 self.matching_delim_spans.iter().find(|(d, open_sp, close_sp)| {
                     let sm = self.string_reader.sess.source_map();
+                    let close_padding = sm.span_to_margin(*close_sp);
+                    let open_padding = sm.span_to_margin(*open_sp);
+                    debug!("yukang compare d: {:?} open: {:?} close: {:?}", d, open_sp, close_sp);
+                    debug!("yukang close_padding: {:?}", close_padding);
+                    debug!("yukang open_padding: {:?}", open_padding);
                     if let Some(close_padding) = sm.span_to_margin(*close_sp) {
                         if let Some(open_padding) = sm.span_to_margin(*open_sp) {
                             return delim == d && close_padding != open_padding;
@@ -124,7 +142,7 @@ impl<'a> TokenTreesReader<'a> {
         err
     }
 
-    fn parse_token_tree_open_delim(&mut self, open_delim: Delimiter) -> TokenTree {
+    fn parse_token_tree_open_delim(&mut self, open_delim: Delimiter) -> PResult<'a, TokenTree> {
         // The span for beginning of the delimited section
         let pre_span = self.token.span;
 
@@ -133,11 +151,12 @@ impl<'a> TokenTreesReader<'a> {
         // Parse the token trees within the delimiters.
         // We stop at any delimiter so we can try to recover if the user
         // uses an incorrect delimiter.
-        let tts = self.parse_token_trees(/* is_delimited */ true).unwrap();
+        let tts = self.parse_token_trees(/* is_delimited */ true)?;
 
         // Expand to cover the entire delimited token tree
         let delim_span = DelimSpan::from_pair(pre_span, self.token.span);
-
+        debug!("yukang parse_token_tree_open_delim: token={:?}", self.token);
+        debug!("yukang parse_token_tree_open_delim: open_delim={:?}", open_delim);
         match self.token.kind {
             // Correct delimiter.
             token::CloseDelim(close_delim) if close_delim == open_delim => {
@@ -162,8 +181,11 @@ impl<'a> TokenTreesReader<'a> {
                 if self.open_braces.is_empty() {
                     // Clear up these spans to avoid suggesting them as we've found
                     // properly matched delimiters so far for an entire block.
+                    debug!("yukang now len: {:?}", self.matching_delim_spans.len());
                     self.matching_delim_spans.clear();
+                    debug!("yukang end clear");
                 } else {
+                    debug!("yukang push : {:?}", (open_brace, open_brace_span, close_brace_span));
                     self.matching_delim_spans.push((open_brace, open_brace_span, close_brace_span));
                 }
                 // Move past the closing delimiter.
@@ -225,7 +247,7 @@ impl<'a> TokenTreesReader<'a> {
             _ => unreachable!(),
         }
 
-        TokenTree::Delimited(delim_span, open_delim, tts)
+        Ok(TokenTree::Delimited(delim_span, open_delim, tts))
     }
 
     fn close_delim_err(&mut self, delim: Delimiter) -> PErr<'a> {

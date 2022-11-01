@@ -1,3 +1,3 @@
 // ignore-tidy-trailing-newlines
-// error-pattern: aborting due to 4 previous errors
+// error-pattern: this file contains an unclosed delimiter
 fn main((ؼ
