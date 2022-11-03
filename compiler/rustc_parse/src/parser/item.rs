@@ -2017,18 +2017,8 @@ impl<'a> Parser<'a> {
     /// }
     /// ```
     fn report_unexpected_colon_in_enum(&self) -> PResult<'a, ()> {
-        let mut err = self.struct_span_err(
-            lo.to(self.prev_token.span),
-            &format!("functions are not allowed in {adt_ty} definitions"),
-        );
-        err.help(
-            "unlike in C++, Java, and C#, functions are declared in `impl` blocks",
-        );
-        err.help("see https://doc.rust-lang.org/book/ch05-03-method-syntax.html for more information");
-        err
+        Ok(())
     }
-}
-
 }
 
 /// The parsing configuration used to parse a parameter list (see `parse_fn_params`).
