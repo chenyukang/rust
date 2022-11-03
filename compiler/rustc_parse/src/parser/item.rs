@@ -1346,7 +1346,9 @@ impl<'a> Parser<'a> {
                 }
                 let ident = this.parse_field_ident("enum", vlo)?;
 
-                let struct_def = if this.check(&token::OpenDelim(Delimiter::Brace)) {
+                let struct_def = if this.check(&token::Colon) {
+                    return self.report_unexpected_colon_in_enum();
+                } else if this.check(&token::OpenDelim(Delimiter::Brace)) {
                     // Parse a struct variant.
                     let (fields, recovered) =
                         this.parse_record_struct_body("struct", ident.span, false)?;
@@ -2005,6 +2007,28 @@ impl<'a> Parser<'a> {
         }
         Ok(true)
     }
+
+    /// Report proper help message for defining an Enum using Struct syntax
+    /// code like:
+    /// ```
+    /// enum VecOrMap {
+    ///     vec: Vec<usize>,
+    ///     map: HashMap<String,usize>
+    /// }
+    /// ```
+    fn report_unexpected_colon_in_enum(&self) -> PResult<'a, ()> {
+        let mut err = self.struct_span_err(
+            lo.to(self.prev_token.span),
+            &format!("functions are not allowed in {adt_ty} definitions"),
+        );
+        err.help(
+            "unlike in C++, Java, and C#, functions are declared in `impl` blocks",
+        );
+        err.help("see https://doc.rust-lang.org/book/ch05-03-method-syntax.html for more information");
+        err
+    }
+}
+
 }
 
 /// The parsing configuration used to parse a parameter list (see `parse_fn_params`).
