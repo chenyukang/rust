@@ -107,11 +107,12 @@ impl<'a> TokenTreesReader<'a> {
             if let Some((_, open_sp, close_sp)) =
                 self.matching_delim_spans.iter().find(|(d, open_sp, close_sp)| {
                     let sm = self.string_reader.sess.source_map();
-                    if let Some(close_padding) = sm.span_to_margin(*close_sp) {
-                        if let Some(open_padding) = sm.span_to_margin(*open_sp) {
+                    if let Some(open_padding) = sm.span_to_margin(*open_sp) &&
+                        let Some(close_padding) = sm.span_to_margin(*close_sp) &&
+                            sm.is_line_before_span_empty(*open_sp) &&
+                            sm.is_line_before_span_empty(*close_sp) {
                             return delim == d && close_padding != open_padding;
                         }
-                    }
                     false
                 })
             // these are in reverse order as they get inserted on close, but
