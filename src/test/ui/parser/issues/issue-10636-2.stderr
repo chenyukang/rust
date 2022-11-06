@@ -1,16 +1,63 @@
-error: expected one of `)`, `,`, `.`, `?`, or an operator, found `;`
-  --> $DIR/issue-10636-2.rs:5:15
-   |
-LL |     option.map(|some| 42;
-   |               ^         ^ help: `)` may belong here
-   |               |
-   |               unclosed delimiter
-
-error: expected expression, found `)`
+error: unexpected closing delimiter: `}`
   --> $DIR/issue-10636-2.rs:8:1
    |
 LL | }
-   | ^ expected expression
+   | ^ unexpected closing delimiter
 
-error: aborting due to 2 previous errors
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-10636-2.rs:11:14
+   |
+LL | pub fn trace_option(option: Option<isize>) {
+   |                                            - unclosed delimiter
+LL |     option.map(|some| 42;
+   |               - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-10636-2.rs:11:14
+   |
+LL | pub fn trace_option(option: Option<isize>) {
+   |                                            - unclosed delimiter
+LL |     option.map(|some| 42;
+   |               - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: closure bodies that contain statements must be surrounded by braces
+  --> $DIR/issue-10636-2.rs:5:21
+   |
+LL |     option.map(|some| 42;
+   |                     ^
+...
+LL | fn main() {}
+   |              ^
+   |
+note: statement found outside of a block
+  --> $DIR/issue-10636-2.rs:5:25
+   |
+LL |     option.map(|some| 42;
+   |                       --^ this `;` turns the preceding closure into a statement
+   |                       |
+   |                       this expression is a statement because of the trailing semicolon
+note: the closure body may be incorrectly delimited
+  --> $DIR/issue-10636-2.rs:5:16
+   |
+LL |     option.map(|some| 42;
+   |                ^^^^^^^^^ this is the parsed closure...
+...
+LL | fn main() {}
+   |              - ...but likely you meant the closure to end here
+help: try adding braces
+   |
+LL ~     option.map(|some| { 42;
+LL |
+ ...
+LL | 
+LL ~ fn main() {}}
+   |
+
+error: aborting due to 4 previous errors
 

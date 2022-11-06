@@ -4,5 +4,12 @@ error: unexpected closing delimiter: `}`
 LL | static foo: isize = 2; }
    |                        ^ unexpected closing delimiter
 
-error: aborting due to previous error
+error[E0601]: `main` function not found in crate `issue_2354_1`
+  --> $DIR/issue-2354-1.rs:1:23
+   |
+LL | static foo: isize = 2; }
+   |                       ^ consider adding a `main` function to `$DIR/issue-2354-1.rs`
 
+error: aborting due to 2 previous errors
+
+For more information about this error, try `rustc --explain E0601`.

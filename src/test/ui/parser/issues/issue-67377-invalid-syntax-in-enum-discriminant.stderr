@@ -1,31 +1,341 @@
-error[E0282]: type annotations needed
-  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:5:14
+error: unexpected closing delimiter: `]`
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:5:42
    |
 LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
-   |              ^^^^^^^^^^^ cannot infer type of the type parameter `T` declared on the struct `PhantomData`
-   |
-help: consider specifying the generic argument
-   |
-LL |         V = [PhantomData::<T>; { [ () ].len() ].len() as isize,
-   |                         +++++
+   |                                          ^ unexpected closing delimiter
 
-error[E0282]: type annotations needed
-  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:15:26
+error: unexpected closing delimiter: `}`
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:11:1
+   |
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |                           - this opening brace...
+...
+LL |     }
+   |     - ...matches this closing brace
+LL | }
+   | ^ unexpected closing delimiter
+
+error: unexpected closing delimiter: `]`
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:15:36
+   |
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |                           - this opening brace...
+...
+LL |     }
+   |     - ...matches this closing brace
+...
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |                                    ^ unexpected closing delimiter
+
+error: unexpected closing delimiter: `}`
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:22:1
    |
 LL |         V = [Vec::new; { [].len()  ].len() as isize,
-   |                          ^^ cannot infer type for type parameter `T`
+   |                        - this opening brace...
+...
+LL |     }
+   |     - ...matches this closing brace
+LL | }
+   | ^ unexpected closing delimiter
 
-error[E0282]: type annotations needed
-  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:26:14
+error: unexpected closing delimiter: `]`
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:26:36
+   |
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |                        - this opening brace...
+...
+LL |     }
+   |     - ...matches this closing brace
+...
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |                                    ^ unexpected closing delimiter
+
+error: unexpected closing delimiter: `}`
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:33:1
    |
 LL |         V = [Vec::new; { [0].len() ].len() as isize,
-   |              ^^^^^^^^ cannot infer type of the type parameter `T` declared on the struct `Vec`
-   |
-help: consider specifying the generic argument
-   |
-LL |         V = [Vec::<T>::new; { [0].len() ].len() as isize,
-   |                 +++++
+   |                        - this opening brace...
+...
+LL |     }
+   |     - ...matches this closing brace
+LL | }
+   | ^ unexpected closing delimiter
 
-error: aborting due to 3 previous errors
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
 
-For more information about this error, try `rustc --explain E0282`.
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:35:14
+   |
+LL | mod a {
+   |       - unclosed delimiter
+...
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod b {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [].len()  ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | mod c {
+   |       - unclosed delimiter
+LL |     enum Bug {
+   |              - unclosed delimiter
+LL |         V = [Vec::new; { [0].len() ].len() as isize,
+   |             - unclosed delimiter
+...
+LL | fn main() {}
+   |              ^
+
+error: expected one of `!`, `(`, `.`, `::`, `;`, `<`, `?`, or `}`, found `,`
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:1:7
+   |
+LL | mod a {
+   |       ^ unclosed delimiter
+...
+LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
+   |                                                          ^
+   |                                                          |
+   |                                                          expected one of 8 possible tokens
+   |                                                          help: `}` may belong here
+
+error: expected one of `.`, `?`, `]`, or an operator, found keyword `mod`
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:13:1
+   |
+LL |     enum Bug {
+   |          --- while parsing this enum
+...
+LL |     }
+   |      - expected one of `.`, `?`, `]`, or an operator
+...
+LL | mod b {
+   | ^^^ unexpected token
+
+error: aborting due to 17 previous errors
+

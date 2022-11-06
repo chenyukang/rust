@@ -10,5 +10,11 @@ LL |     let _ = ();
 LL | }
    | ^ unexpected closing delimiter
 
-error: aborting due to previous error
+error: expected item, found keyword `let`
+  --> $DIR/mismatched-delim-brace-empty-block.rs:4:5
+   |
+LL |     let _ = ();
+   |     ^^^ expected item
+
+error: aborting due to 2 previous errors
 

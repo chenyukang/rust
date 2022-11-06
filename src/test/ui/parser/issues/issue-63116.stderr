@@ -4,5 +4,29 @@ error: unexpected closing delimiter: `]`
 LL | impl W <s(f;Y(;]
    |                ^ unexpected closing delimiter
 
-error: aborting due to previous error
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-63116.rs:3:18
+   |
+LL | impl W <s(f;Y(;]
+   |          -   -   ^
+   |          |   |
+   |          |   unclosed delimiter
+   |          unclosed delimiter
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-63116.rs:3:18
+   |
+LL | impl W <s(f;Y(;]
+   |          -   -   ^
+   |          |   |
+   |          |   unclosed delimiter
+   |          unclosed delimiter
+
+error: expected one of `!`, `(`, `)`, `+`, `,`, `::`, or `<`, found `;`
+  --> $DIR/issue-63116.rs:3:12
+   |
+LL | impl W <s(f;Y(;]
+   |            ^ expected one of 7 possible tokens
+
+error: aborting due to 4 previous errors
 

@@ -42,12 +42,12 @@ impl<'a> TokenTreesReader<'a> {
             last_delim_empty_block_spans: FxHashMap::default(),
             matching_block_spans: Vec::new(),
         };
-        let res = tt_reader.parse_token_trees(/* is_delimited */ false);
+        let res = tt_reader.parse_token_trees(/* is_delimited */ None);
         (res, tt_reader.unmatched_braces)
     }
 
     // Parse a stream of tokens into a list of `TokenTree`s.
-    fn parse_token_trees(&mut self, is_delimited: bool) -> PResult<'a, TokenStream> {
+    fn parse_token_trees(&mut self, is_delimited: Option<Delimiter>) -> PResult<'a, TokenStream> {
         self.token = self.string_reader.next_token().0;
         let mut buf = Vec::new();
         loop {
@@ -55,15 +55,20 @@ impl<'a> TokenTreesReader<'a> {
                 token::OpenDelim(delim) => buf.push(self.parse_token_tree_open_delim(delim)),
                 token::CloseDelim(delim) => {
                     debug!("yukang now return delim = {:?}, token: {:?}", delim, self.token);
-                    return if is_delimited {
-                        Ok(TokenStream::new(buf))
+                    if is_delimited == Some(delim) {
+                        return Ok(TokenStream::new(buf));
                     } else {
-                        Err(self.close_delim_err(delim))
+                        self.close_delim_err(delim).emit();
+                        // continue loop;
+                        self.token = self.string_reader.next_token().0;
                     };
                 }
                 token::Eof => {
-                    if is_delimited {
+                    if is_delimited.is_some() {
                         self.eof_err().emit();
+                    }
+                    for t in buf.iter_mut() {
+                        debug!("yukang final return tree t = {:?}", t);
                     }
                     return Ok(TokenStream::new(buf));
                 }
@@ -141,11 +146,12 @@ impl<'a> TokenTreesReader<'a> {
         // Parse the token trees within the delimiters.
         // We stop at any delimiter so we can try to recover if the user
         // uses an incorrect delimiter.
-        let tts = self.parse_token_trees(/* is_delimited */ true).unwrap();
+        let tts = self.parse_token_trees(/* is_delimited */ Some(open_delim)).unwrap();
 
         // Expand to cover the entire delimited token tree
         let delim_span = DelimSpan::from_pair(pre_span, self.token.span);
 
+        debug!("yukang begin parse_token_tree_open_delim: {:?}", self.open_braces);
         match self.token.kind {
             // Correct delimiter.
             token::CloseDelim(close_delim) if close_delim == open_delim => {
@@ -229,6 +235,7 @@ impl<'a> TokenTreesReader<'a> {
                         debug!("now token: {:?}", self.token);
                     }
                 } else if Delimiter::Parenthesis == close_delim {
+                    //self.close_delim_err(close_delim).emit();
                     debug!("yukang skip parenthesis: {:?}", self.token);
                     debug!("yukang open braces: {:?}", self.open_braces);
                     self.token = self.string_reader.next_token().0;

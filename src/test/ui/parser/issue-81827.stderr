@@ -1,9 +1,21 @@
+error: unexpected closing delimiter: `]`
+  --> $DIR/issue-81827.rs:11:24
+   |
+LL | fn main() {}
+   |           -- ...matches this closing brace
+   |           |
+   |           this opening brace...
+LL |
+LL | fn r()->i{0|{#[cfg(r(0{]0
+   |                        ^ unexpected closing delimiter
+
 error: this file contains an unclosed delimiter
   --> $DIR/issue-81827.rs:11:27
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  - -   - -     ^
-   |          |  | |   | |
+   |          -  - -   - - -   ^
+   |          |  | |   | | |
+   |          |  | |   | | unclosed delimiter
    |          |  | |   | unclosed delimiter
    |          |  | |   unclosed delimiter
    |          |  | unclosed delimiter
@@ -14,19 +26,98 @@ error: this file contains an unclosed delimiter
   --> $DIR/issue-81827.rs:11:27
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  - -   - -     ^
-   |          |  | |   | |
+   |          -  - -   - - -   ^
+   |          |  | |   | | |
+   |          |  | |   | | unclosed delimiter
    |          |  | |   | unclosed delimiter
    |          |  | |   unclosed delimiter
    |          |  | unclosed delimiter
    |          |  unclosed delimiter
    |          unclosed delimiter
 
-error: expected one of `)` or `,`, found `{`
-  --> $DIR/issue-81827.rs:11:23
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-81827.rs:11:27
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
-   |                       ^ expected one of `)` or `,`
+   |          -  - -   - - -   ^
+   |          |  | |   | | |
+   |          |  | |   | | unclosed delimiter
+   |          |  | |   | unclosed delimiter
+   |          |  | |   unclosed delimiter
+   |          |  | unclosed delimiter
+   |          |  unclosed delimiter
+   |          unclosed delimiter
 
-error: aborting due to 3 previous errors
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-81827.rs:11:27
+   |
+LL | fn r()->i{0|{#[cfg(r(0{]0
+   |          -  - -   - - -   ^
+   |          |  | |   | | |
+   |          |  | |   | | unclosed delimiter
+   |          |  | |   | unclosed delimiter
+   |          |  | |   unclosed delimiter
+   |          |  | unclosed delimiter
+   |          |  unclosed delimiter
+   |          unclosed delimiter
 
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-81827.rs:11:27
+   |
+LL | fn r()->i{0|{#[cfg(r(0{]0
+   |          -  - -   - - -   ^
+   |          |  | |   | | |
+   |          |  | |   | | unclosed delimiter
+   |          |  | |   | unclosed delimiter
+   |          |  | |   unclosed delimiter
+   |          |  | unclosed delimiter
+   |          |  unclosed delimiter
+   |          unclosed delimiter
+
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-81827.rs:11:27
+   |
+LL | fn r()->i{0|{#[cfg(r(0{]0
+   |          -  - -   - - -   ^
+   |          |  | |   | | |
+   |          |  | |   | | unclosed delimiter
+   |          |  | |   | unclosed delimiter
+   |          |  | |   unclosed delimiter
+   |          |  | unclosed delimiter
+   |          |  unclosed delimiter
+   |          unclosed delimiter
+
+error: expected statement after outer attribute
+  --> $DIR/issue-81827.rs:11:14
+   |
+LL | fn r()->i{0|{#[cfg(r(0{]0
+   |              ^^^^^^^^^^^^^
+
+error[E0412]: cannot find type `i` in this scope
+  --> $DIR/issue-81827.rs:11:9
+   |
+LL | fn r()->i{0|{#[cfg(r(0{]0
+   |         ^ help: a builtin type with a similar name exists: `i8`
+
+error[E0277]: no implementation for `{integer} | ()`
+  --> $DIR/issue-81827.rs:11:12
+   |
+LL | fn r()->i{0|{#[cfg(r(0{]0
+   |            ^ no implementation for `{integer} | ()`
+   |
+   = help: the trait `BitOr<()>` is not implemented for `{integer}`
+   = help: the following other types implement trait `BitOr<Rhs>`:
+             <&'a i128 as BitOr<i128>>
+             <&'a i16 as BitOr<i16>>
+             <&'a i32 as BitOr<i32>>
+             <&'a i64 as BitOr<i64>>
+             <&'a i8 as BitOr<i8>>
+             <&'a isize as BitOr<isize>>
+             <&'a u128 as BitOr<u128>>
+             <&'a u16 as BitOr<u16>>
+           and 52 others
+
+error: aborting due to 10 previous errors
+
+Some errors have detailed explanations: E0277, E0412.
+For more information about an error, try `rustc --explain E0277`.

@@ -1,11 +1,22 @@
-error: mismatched closing delimiter: `)`
-  --> $DIR/macro-mismatched-delim-brace-paren.rs:4:10
+error: unexpected closing delimiter: `)`
+  --> $DIR/macro-mismatched-delim-brace-paren.rs:6:5
    |
-LL |     foo! {
-   |          ^ unclosed delimiter
-LL |         bar, "baz", 1, 2.0
+LL | macro_rules! foo { ($($tt:tt)*) => () }
+   |                  -                    - ...matches this closing brace
+   |                  |
+   |                  this opening brace...
+...
 LL |     )
-   |     ^ mismatched closing delimiter
+   |     ^ unexpected closing delimiter
 
-error: aborting due to previous error
+error: this file contains an unclosed delimiter
+  --> $DIR/macro-mismatched-delim-brace-paren.rs:7:3
+   |
+LL | fn main() {
+   |           - unclosed delimiter
+...
+LL | }
+   |   ^
+
+error: aborting due to 2 previous errors
 

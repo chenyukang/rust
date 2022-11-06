@@ -1,20 +1,21 @@
-error: expected one of `.`, `;`, `?`, `else`, or an operator, found `}`
+error: unexpected closing delimiter: `)`
   --> $DIR/issue-60075.rs:6:10
    |
+LL |         let _ = if true {
+   |                         - this opening brace...
 LL |         });
-   |          ^ expected one of `.`, `;`, `?`, `else`, or an operator
+   |         -^ unexpected closing delimiter
+   |         |
+   |         ...matches this closing brace
 
-error: non-item in item list
-  --> $DIR/issue-60075.rs:6:11
+error: this file contains an unclosed delimiter
+  --> $DIR/issue-60075.rs:11:7
    |
 LL | trait T {
-   |         - item list starts here
-...
-LL |         });
-   |           ^ non-item starts here
+   |         - unclosed delimiter
 ...
 LL |     }
-   |     - item list ends here
+   |       ^
 
 error: aborting due to 2 previous errors
 
