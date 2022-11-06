@@ -16,14 +16,5 @@ LL |         });
 LL |     }
    |     - item list ends here
 
-error: mismatched closing delimiter: `)`
-  --> $DIR/issue-60075.rs:4:31
-   |
-LL |     fn qux() -> Option<usize> {
-   |                               ^ unclosed delimiter
-LL |         let _ = if true {
-LL |         });
-   |          ^ mismatched closing delimiter
-
-error: aborting due to 3 previous errors
+error: aborting due to 2 previous errors
 

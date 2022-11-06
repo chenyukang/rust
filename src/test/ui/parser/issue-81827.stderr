@@ -2,8 +2,11 @@ error: this file contains an unclosed delimiter
   --> $DIR/issue-81827.rs:11:27
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  -             ^
-   |          |  |
+   |          -  - -   - -     ^
+   |          |  | |   | |
+   |          |  | |   | unclosed delimiter
+   |          |  | |   unclosed delimiter
+   |          |  | unclosed delimiter
    |          |  unclosed delimiter
    |          unclosed delimiter
 
@@ -11,19 +14,13 @@ error: this file contains an unclosed delimiter
   --> $DIR/issue-81827.rs:11:27
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  -             ^
-   |          |  |
+   |          -  - -   - -     ^
+   |          |  | |   | |
+   |          |  | |   | unclosed delimiter
+   |          |  | |   unclosed delimiter
+   |          |  | unclosed delimiter
    |          |  unclosed delimiter
    |          unclosed delimiter
-
-error: mismatched closing delimiter: `]`
-  --> $DIR/issue-81827.rs:11:23
-   |
-LL | fn r()->i{0|{#[cfg(r(0{]0
-   |               -       ^^ mismatched closing delimiter
-   |               |       |
-   |               |       unclosed delimiter
-   |               closing delimiter possibly meant for this
 
 error: expected one of `)` or `,`, found `{`
   --> $DIR/issue-81827.rs:11:23
@@ -31,5 +28,5 @@ error: expected one of `)` or `,`, found `{`
 LL | fn r()->i{0|{#[cfg(r(0{]0
    |                       ^ expected one of `)` or `,`
 
-error: aborting due to 4 previous errors
+error: aborting due to 3 previous errors
 
