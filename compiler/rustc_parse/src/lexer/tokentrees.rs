@@ -3,7 +3,7 @@ use rustc_ast::token::{self, Delimiter, Token};
 use rustc_ast::tokenstream::{DelimSpan, Spacing, TokenStream, TokenTree};
 use rustc_ast_pretty::pprust::token_to_string;
 use rustc_data_structures::fx::FxHashMap;
-use rustc_errors::{PErr, PResult};
+use rustc_errors::{Diagnostic, PErr, PResult};
 use rustc_span::Span;
 
 pub(super) struct TokenTreesReader<'a> {
@@ -176,23 +176,7 @@ impl<'a> TokenTreesReader<'a> {
         }
 
         if let Some((delim, _)) = self.open_braces.last() {
-            if let Some((_, open_sp, close_sp)) =
-                self.matching_delim_spans.iter().find(|(d, open_sp, close_sp)| {
-                    let sm = self.string_reader.sess.source_map();
-                    if sm.is_line_before_span_empty(*open_sp)
-                        && sm.is_line_before_span_empty(*close_sp)
-                    {
-                        let res = delim == d && !self.same_identation_level(*open_sp, *close_sp);
-                        return res;
-                    }
-                    false
-                })
-            // these are in reverse order as they get inserted on close, but
-            {
-                // we want the last open/first close
-                err.span_label(*open_sp, "this delimiter might not be properly closed...");
-                err.span_label(*close_sp, "...as it matches this but it has different indentation");
-            }
+            self.error_prone_delim_block(*delim, &mut err);
         }
         err.emit();
     }
@@ -235,13 +219,9 @@ impl<'a> TokenTreesReader<'a> {
                     self.matching_block_spans.push((open_brace_span, close_brace_span));
                 }
 
-                if self.open_braces.is_empty() {
-                    // Clear up these spans to avoid suggesting them as we've found
-                    // properly matched delimiters so far for an entire block.
-                    self.matching_delim_spans.clear();
-                } else {
-                    self.matching_delim_spans.push((open_brace, open_brace_span, close_brace_span));
-                }
+                // Add all the matching spans, we will sort by span later
+                self.matching_delim_spans.push((open_brace, open_brace_span, close_brace_span));
+
                 // Move past the closing delimiter.
                 self.token = self.string_reader.next_token().0;
                 debug!("yukang correct close_delim: {:?}", self.open_braces);
@@ -288,22 +268,7 @@ impl<'a> TokenTreesReader<'a> {
         let mut err =
             self.string_reader.sess.span_diagnostic.struct_span_err(self.token.span, &msg);
 
-        // Braces are added at the end, so the last element is the biggest block
-        if let Some(parent) = self.matching_block_spans.last() && open_span.is_none() {
-            if let Some(span) = self.last_delim_empty_block_spans.remove(&delim) {
-                // Check if the (empty block) is in the last properly closed block
-                if (parent.0.to(parent.1)).contains(span) {
-                    err.span_label(span, "block is empty, you might have not meant to close it");
-                } else {
-                    err.span_label(parent.0, "this opening brace...");
-                    err.span_label(parent.1, "...matches this closing brace");
-                }
-            } else {
-                err.span_label(parent.0, "this opening brace...");
-                err.span_label(parent.1, "...matches this closing brace");
-            }
-        }
-
+        self.error_prone_delim_block(delim, &mut err);
         if let Some(span) = open_span {
             err.span_label(span.shrink_to_lo(), "unmatched opening delimiter begins here");
         }
@@ -319,6 +284,54 @@ impl<'a> TokenTreesReader<'a> {
             open_padding == close_padding
         } else {
             false
+        }
+    }
+
+    fn error_prone_delim_block(&self, delim: Delimiter, err: &mut Diagnostic) {
+        let mut matched_spans = vec![];
+        let mut candidate_span = None;
+
+        for &(d, open_sp, close_sp) in &self.matching_delim_spans {
+            if d == delim {
+                let block_span = open_sp.with_hi(close_sp.lo());
+                let same_ident = self.same_identation_level(open_sp, close_sp);
+                matched_spans.push((block_span, same_ident));
+            }
+        }
+
+        // sort by `lo`, so the large block spans in the front
+        matched_spans.sort_by(|a, b| a.0.lo().cmp(&b.0.lo()));
+
+        // We use larger block whose identation is well to cover those innert blocks
+        for i in 0..matched_spans.len() {
+            let (block_span, same_ident) = matched_spans[i];
+            if same_ident {
+                for j in i + 1..matched_spans.len() {
+                    let (inner_block, innert_same_ident) = matched_spans[j];
+                    if block_span.contains(inner_block) && !innert_same_ident {
+                        matched_spans[j] = (inner_block, true);
+                    }
+                }
+            }
+        }
+
+        // Find the innermost span candidate for final report
+        for (block_span, same_ident) in matched_spans.into_iter().rev() {
+            if !same_ident {
+                candidate_span = Some(block_span);
+                break;
+            }
+        }
+
+        if let Some(block_span) = candidate_span {
+            err.span_label(
+                block_span.shrink_to_lo(),
+                "this delimiter might not be properly closed...",
+            );
+            err.span_label(
+                block_span.shrink_to_hi(),
+                "...as it matches this but it has different indentation",
+            );
         }
     }
 }
