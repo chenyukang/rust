@@ -2,7 +2,7 @@
 
 fn func(o: Option<u32>) {
     match o {
-        Some(_x) =>   // Missing '{'
+        Some(_x) => {}   // Extra '}'
             let _ = if true {};
         }
         None => {}
