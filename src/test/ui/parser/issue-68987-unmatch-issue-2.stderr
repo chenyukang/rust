@@ -1,0 +1,21 @@
+error: mismatched closing delimiter: `)`
+  --> $DIR/issue-68987-unmatch-issue-2.rs:3:45
+   |
+LL | fn obstest() -> Result<(), Error> {
+   |                                   - unmatched opening delimiter begins here
+LL |     let obs_connect = || -> Result<(), Error) {
+   |                                             ^ mismatched closing delimiter
+
+error: expected one of `!`, `(`, `+`, `,`, `::`, `:`, `<`, `=`, or `>`, found `{`
+  --> $DIR/issue-68987-unmatch-issue-2.rs:3:47
+   |
+LL |     let obs_connect = || -> Result<(), Error) {
+   |                                               ^ expected one of 9 possible tokens
+   |
+help: you might have meant to end the type parameters here
+   |
+LL |     let obs_connect = || -> Result<(), Error>) {
+   |                                             +
+
+error: aborting due to 2 previous errors
+
