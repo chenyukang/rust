@@ -7,18 +7,5 @@ LL |             ErrorHandled::Reported => {}}
 LL | }
    | ^ unexpected closing delimiter
 
-error: expected one of `!`, `.`, `::`, `;`, `?`, `{`, `}`, or an operator, found `=>`
-  --> $DIR/issue-70583-block-is-empty-2.rs:11:38
-   |
-LL |             ErrorHandled::TooGeneric => panic!(),
-   |                                      ^^ expected one of 8 possible tokens
+error: aborting due to previous error
 
-error[E0601]: `main` function not found in crate `issue_70583_block_is_empty_2`
-  --> $DIR/issue-70583-block-is-empty-2.rs:13:6
-   |
-LL |     }
-   |      ^ consider adding a `main` function to `$DIR/issue-70583-block-is-empty-2.rs`
-
-error: aborting due to 3 previous errors
-
-For more information about this error, try `rustc --explain E0601`.

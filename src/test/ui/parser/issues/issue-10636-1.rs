@@ -1,5 +1,4 @@
-struct Obj {
-    //~^ NOTE: unclosed delimiter
+struct Obj { //~ NOTE unmatched opening delimiter begins here
     member: usize
 )
 //~^ ERROR mismatched closing delimiter

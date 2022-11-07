@@ -1,53 +1,40 @@
-error: unexpected closing delimiter: `}`
-  --> $DIR/issue-81804.rs:9:9
+error: mismatched closing delimiter: `}`
+  --> $DIR/issue-81804.rs:8:9
    |
-LL | fn main() {}
-   |           -- block is empty, you might have not meant to close it
-LL |
 LL | fn p([=(}
-   |         ^ unexpected closing delimiter
+   |        -^ mismatched closing delimiter
+   |        |
+   |        unmatched opening delimiter begins here
 
 error: this file contains an unclosed delimiter
-  --> $DIR/issue-81804.rs:9:11
+  --> $DIR/issue-81804.rs:8:11
    |
 LL | fn p([=(}
-   |     -- -  ^
-   |     || |
-   |     || unclosed delimiter
+   |     --    ^
+   |     ||
    |     |unclosed delimiter
    |     unclosed delimiter
 
 error: this file contains an unclosed delimiter
-  --> $DIR/issue-81804.rs:9:11
+  --> $DIR/issue-81804.rs:8:11
    |
 LL | fn p([=(}
-   |     -- -  ^
-   |     || |
-   |     || unclosed delimiter
-   |     |unclosed delimiter
-   |     unclosed delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-81804.rs:9:11
-   |
-LL | fn p([=(}
-   |     -- -  ^
-   |     || |
-   |     || unclosed delimiter
+   |     --    ^
+   |     ||
    |     |unclosed delimiter
    |     unclosed delimiter
 
 error: expected pattern, found `=`
-  --> $DIR/issue-81804.rs:9:7
+  --> $DIR/issue-81804.rs:8:7
    |
 LL | fn p([=(}
    |       ^ expected pattern
 
 error: expected one of `)`, `,`, `->`, `where`, or `{`, found `]`
-  --> $DIR/issue-81804.rs:9:11
+  --> $DIR/issue-81804.rs:8:11
    |
 LL | fn p([=(}
    |           ^ expected one of `)`, `,`, `->`, `where`, or `{`
 
-error: aborting due to 6 previous errors
+error: aborting due to 5 previous errors
 

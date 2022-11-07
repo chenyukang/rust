@@ -1,17 +1,11 @@
-error: unexpected closing delimiter: `)`
+error: mismatched closing delimiter: `)`
   --> $DIR/parser-recovery-2.rs:6:5
    |
+LL |     fn bar() {
+   |              - unmatched opening delimiter begins here
+LL |         let x = foo();
 LL |     )
-   |     ^ unexpected closing delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/parser-recovery-2.rs:12:3
-   |
-LL | trait Foo {
-   |           - unclosed delimiter
-...
-LL | }
-   |   ^
+   |     ^ mismatched closing delimiter
 
 error: unexpected token: `;`
   --> $DIR/parser-recovery-2.rs:10:15
@@ -31,6 +25,6 @@ error[E0425]: cannot find function `foo` in this scope
 LL |         let x = foo();
    |                 ^^^ not found in this scope
 
-error: aborting due to 5 previous errors
+error: aborting due to 4 previous errors
 
 For more information about this error, try `rustc --explain E0425`.

@@ -1,32 +1,11 @@
-error: unexpected closing delimiter: `}`
+error: mismatched closing delimiter: `}`
   --> $DIR/issue-58856-1.rs:6:1
    |
+LL |     fn b(self>
+   |         - unmatched opening delimiter begins here
+...
 LL | }
-   | ^ unexpected closing delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-58856-1.rs:8:14
-   |
-LL | impl A {
-   |        - unclosed delimiter
-LL |
-LL |     fn b(self>
-   |         - unclosed delimiter
-...
-LL | fn main() {}
-   |              ^
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-58856-1.rs:8:14
-   |
-LL | impl A {
-   |        - unclosed delimiter
-LL |
-LL |     fn b(self>
-   |         - unclosed delimiter
-...
-LL | fn main() {}
-   |              ^
+   | ^ mismatched closing delimiter
 
 error: expected parameter name, found `>`
   --> $DIR/issue-58856-1.rs:3:14
@@ -44,13 +23,13 @@ LL |     fn b(self>
    |              help: missing `,`
 
 error: expected one of `->`, `where`, or `{`, found `}`
-  --> $DIR/issue-58856-1.rs:8:14
+  --> $DIR/issue-58856-1.rs:6:1
    |
 LL |     fn b(self>
    |        - while parsing this `fn`
 ...
-LL | fn main() {}
-   |              ^ expected one of `->`, `where`, or `{`
+LL | }
+   | ^ expected one of `->`, `where`, or `{`
 
 error: associated function in `impl` without body
   --> $DIR/issue-58856-1.rs:3:5
@@ -59,10 +38,8 @@ LL | /     fn b(self>
 LL | |
 LL | |
 LL | | }
-LL | |
-LL | | fn main() {}
-   | |             ^- help: provide a definition for the function: `{ <body> }`
-   | |_____________|
+   | | ^- help: provide a definition for the function: `{ <body> }`
+   | |_|
    | 
 
 error[E0412]: cannot find type `A` in this scope
@@ -71,6 +48,6 @@ error[E0412]: cannot find type `A` in this scope
 LL | impl A {
    |      ^ not found in this scope
 
-error: aborting due to 8 previous errors
+error: aborting due to 6 previous errors
 
 For more information about this error, try `rustc --explain E0412`.

@@ -1,16 +1,16 @@
-error: expected one of `)`, `,`, `.`, `?`, or an operator, found `;`
-  --> $DIR/token-error-correct-4.rs:9:12
-   |
-LL |     setsuna(kazusa();
-   |            ^        ^ help: `)` may belong here
-   |            |
-   |            unclosed delimiter
-
-error: expected expression, found `)`
+error: mismatched closing delimiter: `}`
   --> $DIR/token-error-correct-4.rs:10:1
    |
+LL |     setsuna(kazusa();
+   |            - unmatched opening delimiter begins here
 LL | }
-   | ^ expected expression
+   | ^ mismatched closing delimiter
+
+error: expected one of `)`, `,`, `.`, `?`, or an operator, found `;`
+  --> $DIR/token-error-correct-4.rs:9:21
+   |
+LL |     setsuna(kazusa();
+   |                     ^ expected one of `)`, `,`, `.`, `?`, or an operator
 
 error: aborting due to 2 previous errors
 

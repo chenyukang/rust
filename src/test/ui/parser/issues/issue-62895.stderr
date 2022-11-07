@@ -1,46 +1,20 @@
-error: unexpected closing delimiter: `)`
+error: mismatched closing delimiter: `)`
   --> $DIR/issue-62895.rs:8:8
    |
-LL | fn main() {}
-   |           -- ...matches this closing brace
-   |           |
-   |           this opening brace...
-...
+LL | mod _ {
+   |       - unmatched opening delimiter begins here
+LL | pub    g() -> is
 LL | (), w20);
-   |        ^ unexpected closing delimiter
+   |        ^ mismatched closing delimiter
 
-error: unexpected closing delimiter: `)`
+error: mismatched closing delimiter: `)`
   --> $DIR/issue-62895.rs:10:8
    |
 LL | mod _ {
-   |       - this opening brace...
+   |       - unmatched opening delimiter begins here
 ...
-LL | }
-   | - ...matches this closing brace
 LL | (), w20);
-   |        ^ unexpected closing delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-62895.rs:11:3
-   |
-LL | fn v() -> isize {
-   |                 - unclosed delimiter
-LL | mod _ {
-   |       - unclosed delimiter
-...
-LL | }
-   |   ^
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-62895.rs:11:3
-   |
-LL | fn v() -> isize {
-   |                 - unclosed delimiter
-LL | mod _ {
-   |       - unclosed delimiter
-...
-LL | }
-   |   ^
+   |        ^ mismatched closing delimiter
 
 error: expected identifier, found reserved identifier `_`
   --> $DIR/issue-62895.rs:4:5
@@ -65,6 +39,12 @@ help: add `fn` here to parse `g` as a public function
 LL | pub fn g() -> is
    |     ++
 
+error: expected item, found `;`
+  --> $DIR/issue-62895.rs:10:9
+   |
+LL | (), w20);
+   |         ^ help: remove this semicolon
+
 error[E0412]: cannot find type `isizee` in this scope
   --> $DIR/issue-62895.rs:5:15
    |
@@ -79,7 +59,7 @@ LL | fn v() -> isize {
    |    |
    |    implicitly returns `()` as its body has no tail or `return` expression
 
-error: aborting due to 9 previous errors
+error: aborting due to 8 previous errors
 
 Some errors have detailed explanations: E0308, E0412.
 For more information about an error, try `rustc --explain E0308`.

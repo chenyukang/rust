@@ -1,30 +1,10 @@
-error: unexpected closing delimiter: `}`
+error: mismatched closing delimiter: `}`
   --> $DIR/issue-66357-unexpected-unreachable.rs:12:16
    |
 LL | fn f() { |[](* }
-   |                ^ unexpected closing delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-66357-unexpected-unreachable.rs:14:135
-   |
-LL | fn f() { |[](* }
-   |        -    - unclosed delimiter
-   |        |
-   |        unclosed delimiter
-LL |
-LL |
-   |                                                                                                                                       ^
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-66357-unexpected-unreachable.rs:14:135
-   |
-LL | fn f() { |[](* }
-   |        -    - unclosed delimiter
-   |        |
-   |        unclosed delimiter
-LL |
-LL |
-   |                                                                                                                                       ^
+   |             -  ^ mismatched closing delimiter
+   |             |
+   |             unmatched opening delimiter begins here
 
 error: expected one of `,` or `:`, found `(`
   --> $DIR/issue-66357-unexpected-unreachable.rs:12:13
@@ -38,5 +18,12 @@ error: expected one of `&`, `(`, `)`, `-`, `...`, `..=`, `..`, `[`, `_`, `box`, 
 LL | fn f() { |[](* }
    |              ^ expected one of 15 possible tokens
 
-error: aborting due to 5 previous errors
+error[E0601]: `main` function not found in crate `issue_66357_unexpected_unreachable`
+  --> $DIR/issue-66357-unexpected-unreachable.rs:12:17
+   |
+LL | fn f() { |[](* }
+   |                 ^ consider adding a `main` function to `$DIR/issue-66357-unexpected-unreachable.rs`
 
+error: aborting due to 4 previous errors
+
+For more information about this error, try `rustc --explain E0601`.

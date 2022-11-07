@@ -7,4 +7,4 @@ fn kazusa() {}
 
 fn main() {
     setsuna(kazusa(); //~ ERROR: expected one of
-} //~ ERROR: expected expression
+} //~ ERROR mismatched closing delimiter

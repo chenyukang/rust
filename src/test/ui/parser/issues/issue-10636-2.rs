@@ -3,9 +3,10 @@
 
 pub fn trace_option(option: Option<isize>) {
     option.map(|some| 42;
-                          //~^ ERROR: expected one of
+                          //~^ ERROR: closure bodies that contain statements must be surrounded by braces
 
 }
 //~^ ERROR: expected expression, found `)`
+//~^^ ERROR: mismatched closing delimiter
 
 fn main() {}

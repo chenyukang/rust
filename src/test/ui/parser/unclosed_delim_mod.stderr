@@ -1,34 +1,11 @@
-error: unexpected closing delimiter: `}`
+error: mismatched closing delimiter: `}`
   --> $DIR/unclosed_delim_mod.rs:7:1
    |
 LL |     Ok(Value {
-   |              - this opening brace...
+   |       - unmatched opening delimiter begins here
 LL |     }
-   |     - ...matches this closing brace
 LL | }
-   | ^ unexpected closing delimiter
+   | ^ mismatched closing delimiter
 
-error: this file contains an unclosed delimiter
-  --> $DIR/unclosed_delim_mod.rs:8:41
-   |
-LL | pub fn new() -> Result<Value, ()> {
-   |                                   - unclosed delimiter
-LL |     Ok(Value {
-   |       - unclosed delimiter
-...
-LL |
-   |                                         ^
-
-error: this file contains an unclosed delimiter
-  --> $DIR/unclosed_delim_mod.rs:8:41
-   |
-LL | pub fn new() -> Result<Value, ()> {
-   |                                   - unclosed delimiter
-LL |     Ok(Value {
-   |       - unclosed delimiter
-...
-LL |
-   |                                         ^
-
-error: aborting due to 3 previous errors
+error: aborting due to previous error
 

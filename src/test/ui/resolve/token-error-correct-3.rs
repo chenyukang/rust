@@ -10,11 +10,10 @@ pub mod raw {
                                                                -> io::Result<bool> {
         if !is_directory(path.as_ref()) {
             //~^ ERROR cannot find function `is_directory`
-            callback(path.as_ref();
+            callback(path.as_ref(); //~ ERROR this function takes 1 argument but 2 arguments
             //~^ ERROR expected one of
             fs::create_dir_all(path.as_ref()).map(|()| true)
-        } else {
-            //~^ ERROR expected one of `.`, `;`, `?`, `}`, or an operator, found `)`
+        } else { //~ ERROR mismatched closing delimiter
             Ok(false);
         }
 

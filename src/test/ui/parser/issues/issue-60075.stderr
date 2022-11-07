@@ -1,21 +1,11 @@
-error: unexpected closing delimiter: `)`
+error: mismatched closing delimiter: `)`
   --> $DIR/issue-60075.rs:6:10
    |
+LL |     fn qux() -> Option<usize> {
+   |                               - unmatched opening delimiter begins here
 LL |         let _ = if true {
-   |                         - this opening brace...
 LL |         });
-   |         -^ unexpected closing delimiter
-   |         |
-   |         ...matches this closing brace
+   |          ^ mismatched closing delimiter
 
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-60075.rs:11:7
-   |
-LL | trait T {
-   |         - unclosed delimiter
-...
-LL |     }
-   |       ^
-
-error: aborting due to 2 previous errors
+error: aborting due to previous error
 

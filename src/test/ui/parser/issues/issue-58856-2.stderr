@@ -1,35 +1,11 @@
-error: unexpected closing delimiter: `}`
+error: mismatched closing delimiter: `}`
   --> $DIR/issue-58856-2.rs:11:1
    |
 LL |     fn how_are_you(&self -> Empty {
-   |                                   - this opening brace...
+   |                   - unmatched opening delimiter begins here
 ...
-LL |     }
-   |     - ...matches this closing brace
 LL | }
-   | ^ unexpected closing delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-58856-2.rs:14:14
-   |
-LL | impl Howness for () {
-   |                     - unclosed delimiter
-LL |     fn how_are_you(&self -> Empty {
-   |                   - unclosed delimiter
-...
-LL | fn main() {}
-   |              ^
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-58856-2.rs:14:14
-   |
-LL | impl Howness for () {
-   |                     - unclosed delimiter
-LL |     fn how_are_you(&self -> Empty {
-   |                   - unclosed delimiter
-...
-LL | fn main() {}
-   |              ^
+   | ^ mismatched closing delimiter
 
 error: expected parameter name, found `->`
   --> $DIR/issue-58856-2.rs:6:26
@@ -46,13 +22,13 @@ LL |     fn how_are_you(&self -> Empty {
    |                         help: missing `,`
 
 error: expected one of `->`, `where`, or `{`, found `}`
-  --> $DIR/issue-58856-2.rs:14:14
+  --> $DIR/issue-58856-2.rs:11:1
    |
 LL |     fn how_are_you(&self -> Empty {
    |        ----------- while parsing this `fn`
 ...
-LL | fn main() {}
-   |              ^ expected one of `->`, `where`, or `{`
+LL | }
+   | ^ expected one of `->`, `where`, or `{`
 
 error: associated function in `impl` without body
   --> $DIR/issue-58856-2.rs:6:5
@@ -61,11 +37,10 @@ LL | /     fn how_are_you(&self -> Empty {
 LL | |
 LL | |
 LL | |         Empty
-...  |
-LL | |
-LL | | fn main() {}
-   | |             ^- help: provide a definition for the function: `{ <body> }`
-   | |_____________|
+LL | |     }
+LL | | }
+   | | ^- help: provide a definition for the function: `{ <body> }`
+   | |_|
    | 
 
 error[E0407]: method `how_are_you` is not a member of trait `Howness`
@@ -75,11 +50,10 @@ LL | /     fn how_are_you(&self -> Empty {
 LL | |
 LL | |
 LL | |         Empty
-...  |
-LL | |
-LL | | fn main() {}
-   | |_____________^ not a member of trait `Howness`
+LL | |     }
+LL | | }
+   | |_^ not a member of trait `Howness`
 
-error: aborting due to 8 previous errors
+error: aborting due to 6 previous errors
 
 For more information about this error, try `rustc --explain E0407`.

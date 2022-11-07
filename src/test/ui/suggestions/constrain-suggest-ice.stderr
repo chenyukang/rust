@@ -1,21 +1,8 @@
 error: mismatched closing delimiter: `}`
-  --> $DIR/constrain-suggest-ice.rs:2:8
+  --> $DIR/constrain-suggest-ice.rs:8:1
    |
-LL | struct Bug<S>{
-   |              - closing delimiter possibly meant for this
 LL |     A: [(); {
-   |        ^ unclosed delimiter
-...
-LL | }
-   | ^ mismatched closing delimiter
-
-error: mismatched closing delimiter: `}`
-  --> $DIR/constrain-suggest-ice.rs:2:8
-   |
-LL | struct Bug<S>{
-   |              - closing delimiter possibly meant for this
-LL |     A: [(); {
-   |        ^ unclosed delimiter
+   |        - unmatched opening delimiter begins here
 ...
 LL | }
    | ^ mismatched closing delimiter
@@ -75,7 +62,7 @@ LL | struct Bug<S>{
    = help: consider removing `S`, referring to it in a field, or using a marker such as `PhantomData`
    = help: if you intended `S` to be a const parameter, use `const S: usize` instead
 
-error: aborting due to 7 previous errors
+error: aborting due to 6 previous errors
 
 Some errors have detailed explanations: E0277, E0392, E0425.
 For more information about an error, try `rustc --explain E0277`.

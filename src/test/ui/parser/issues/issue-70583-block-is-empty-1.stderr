@@ -9,12 +9,5 @@ LL |     }
 LL | }
    | ^ unexpected closing delimiter
 
-error[E0601]: `main` function not found in crate `issue_70583_block_is_empty_1`
-  --> $DIR/issue-70583-block-is-empty-1.rs:19:6
-   |
-LL |     }
-   |      ^ consider adding a `main` function to `$DIR/issue-70583-block-is-empty-1.rs`
+error: aborting due to previous error
 
-error: aborting due to 2 previous errors
-
-For more information about this error, try `rustc --explain E0601`.

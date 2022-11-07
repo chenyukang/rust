@@ -1,35 +1,11 @@
-error: unexpected closing delimiter: `)`
-  --> $DIR/issue-10636-1.rs:4:1
-   |
-LL | )
-   | ^ unexpected closing delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-10636-1.rs:8:14
+error: mismatched closing delimiter: `)`
+  --> $DIR/issue-10636-1.rs:3:1
    |
 LL | struct Obj {
-   |            - unclosed delimiter
-...
-LL | fn main() {}
-   |              ^
-
-error: expected `,`, or `}`, found keyword `fn`
-  --> $DIR/issue-10636-1.rs:3:18
-   |
+   |            - unmatched opening delimiter begins here
 LL |     member: usize
-   |                  ^ help: try adding a comma: `,`
+LL | )
+   | ^ mismatched closing delimiter
 
-error: functions are not allowed in struct definitions
-  --> $DIR/issue-10636-1.rs:8:1
-   |
-LL | struct Obj {
-   |        --- while parsing this struct
-...
-LL | fn main() {}
-   | ^^^^^^^^^^^^
-   |
-   = help: unlike in C++, Java, and C#, functions are declared in `impl` blocks
-   = help: see https://doc.rust-lang.org/book/ch05-03-method-syntax.html for more information
-
-error: aborting due to 4 previous errors
+error: aborting due to previous error
 

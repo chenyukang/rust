@@ -5,7 +5,7 @@ struct Bug<S>{ //~ ERROR parameter `S` is never used [E0392]
         //~^^ ERROR the size for values of type `S` cannot be known at compilation time [E0277]
         F //~ ERROR cannot find value `F` in this scope [E0425]
     }
-} //~ ERROR mismatched closing delimiter: `}`
+}
 //~^ ERROR mismatched closing delimiter: `}`
 
 fn main() {}

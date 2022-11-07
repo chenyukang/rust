@@ -1,42 +1,22 @@
-error: unexpected closing delimiter: `}`
+error: mismatched closing delimiter: `}`
   --> $DIR/macro-mismatched-delim-paren-brace.rs:4:5
    |
+LL |     foo! (
+   |          - unmatched opening delimiter begins here
+LL |         bar, "baz", 1, 2.0
 LL |     }
-   |     ^ unexpected closing delimiter
+   |     ^ mismatched closing delimiter
 
 error: unexpected closing delimiter: `}`
   --> $DIR/macro-mismatched-delim-paren-brace.rs:5:1
    |
+LL | fn main() {
+   |           - this opening brace...
+...
+LL |     }
+   |     - ...matches this closing brace
 LL | }
    | ^ unexpected closing delimiter
 
-error: this file contains an unclosed delimiter
-  --> $DIR/macro-mismatched-delim-paren-brace.rs:5:47
-   |
-LL | fn main() {
-   |           - unclosed delimiter
-LL |     foo! (
-   |          - unclosed delimiter
-...
-LL | }
-   |                                               ^
-
-error: this file contains an unclosed delimiter
-  --> $DIR/macro-mismatched-delim-paren-brace.rs:5:47
-   |
-LL | fn main() {
-   |           - unclosed delimiter
-LL |     foo! (
-   |          - unclosed delimiter
-...
-LL | }
-   |                                               ^
-
-error: cannot find macro `foo` in this scope
-  --> $DIR/macro-mismatched-delim-paren-brace.rs:2:5
-   |
-LL |     foo! (
-   |     ^^^
-
-error: aborting due to 5 previous errors
+error: aborting due to 2 previous errors
 

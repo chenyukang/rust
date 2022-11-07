@@ -1,11 +1,10 @@
 error: mismatched closing delimiter: `)`
-  --> $DIR/issue-102878.rs:1:35
+  --> $DIR/issue-102878.rs:1:45
    |
 LL | macro_rules!test{($l:expr,$_:r)=>({const:y y)}
-   |                                  -^         ^ mismatched closing delimiter
-   |                                  ||
-   |                                  |unclosed delimiter
-   |                                  closing delimiter possibly meant for this
+   |                                   -         ^ mismatched closing delimiter
+   |                                   |
+   |                                   unmatched opening delimiter begins here
 
 error: invalid fragment specifier `r`
   --> $DIR/issue-102878.rs:1:27
