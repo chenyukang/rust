@@ -1,0 +1,16 @@
+error: mismatched closing delimiter: `)`
+  --> $DIR/issue-68987-unmatch-issue.rs:6:28
+   |
+LL |     while cnt < j {
+   |                   - unmatched opening delimiter begins here
+LL |         write!&mut res, " ");
+   |                            ^ mismatched closing delimiter
+
+error: expected one of `(`, `[`, or `{`, found `&`
+  --> $DIR/issue-68987-unmatch-issue.rs:6:15
+   |
+LL |         write!&mut res, " ");
+   |               ^ expected one of `(`, `[`, or `{`
+
+error: aborting due to 2 previous errors
+
