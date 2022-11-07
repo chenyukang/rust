@@ -1,4 +1,3 @@
-
 // ignore-tidy-trailing-newlines
 // Test that we do some basic error correction in the tokeniser.
 // error-pattern: expected one of
