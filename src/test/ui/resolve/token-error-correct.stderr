@@ -1,5 +1,5 @@
 error: mismatched closing delimiter: `}`
-  --> $DIR/token-error-correct.rs:8:1
+  --> $DIR/token-error-correct.rs:7:1
    |
 LL |     foo(bar(;
    |            - unmatched opening delimiter begins here
@@ -7,13 +7,13 @@ LL | }
    | ^ mismatched closing delimiter
 
 error: expected expression, found `;`
-  --> $DIR/token-error-correct.rs:7:13
+  --> $DIR/token-error-correct.rs:6:13
    |
 LL |     foo(bar(;
    |             ^ expected expression
 
 error: expected one of `)`, `,`, `.`, `?`, or an operator, found keyword `fn`
-  --> $DIR/token-error-correct.rs:11:1
+  --> $DIR/token-error-correct.rs:10:1
    |
 LL | }
    |  - expected one of `)`, `,`, `.`, `?`, or an operator
