@@ -1,4 +1,3 @@
-
 fn f(i: u32, j: u32) {
     let res = String::new();
     let mut cnt = i;
