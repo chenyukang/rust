@@ -1,4 +1,3 @@
-// error-pattern: this file contains an unclosed delimiter
 // error-pattern: mismatched closing delimiter: `]`
 
 #![crate_name="0"]

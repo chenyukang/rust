@@ -9,4 +9,4 @@ trait Foo {
 fn main() {
     let x = y.;  //~ ERROR unexpected token
                  //~^ ERROR cannot find value `y` in this scope
-} //~ ERROR `main` function not found
+}

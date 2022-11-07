@@ -1,5 +1,5 @@
 error: mismatched closing delimiter: `}`
-  --> $DIR/issue-66357-unexpected-unreachable.rs:12:16
+  --> $DIR/issue-66357-unexpected-unreachable.rs:13:16
    |
 LL | fn f() { |[](* }
    |             -  ^ mismatched closing delimiter
@@ -7,19 +7,19 @@ LL | fn f() { |[](* }
    |             unmatched opening delimiter begins here
 
 error: expected one of `,` or `:`, found `(`
-  --> $DIR/issue-66357-unexpected-unreachable.rs:12:13
+  --> $DIR/issue-66357-unexpected-unreachable.rs:13:13
    |
 LL | fn f() { |[](* }
    |             ^ expected one of `,` or `:`
 
 error: expected one of `&`, `(`, `)`, `-`, `...`, `..=`, `..`, `[`, `_`, `box`, `mut`, `ref`, `|`, identifier, or path, found `*`
-  --> $DIR/issue-66357-unexpected-unreachable.rs:12:14
+  --> $DIR/issue-66357-unexpected-unreachable.rs:13:14
    |
 LL | fn f() { |[](* }
    |              ^ expected one of 15 possible tokens
 
 error[E0601]: `main` function not found in crate `issue_66357_unexpected_unreachable`
-  --> $DIR/issue-66357-unexpected-unreachable.rs:12:17
+  --> $DIR/issue-66357-unexpected-unreachable.rs:13:17
    |
 LL | fn f() { |[](* }
    |                 ^ consider adding a `main` function to `$DIR/issue-66357-unexpected-unreachable.rs`

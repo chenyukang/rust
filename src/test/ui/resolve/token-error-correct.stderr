@@ -1,36 +1,19 @@
 error: mismatched closing delimiter: `}`
-  --> $DIR/token-error-correct.rs:6:1
+  --> $DIR/token-error-correct.rs:8:1
    |
 LL |     foo(bar(;
    |            - unmatched opening delimiter begins here
-LL |
 LL | }
    | ^ mismatched closing delimiter
 
-error: this file contains an unclosed delimiter
-  --> $DIR/token-error-correct.rs:9:21
+error: expected expression, found `;`
+  --> $DIR/token-error-correct.rs:7:13
    |
-LL | fn main() {
-   |           - unclosed delimiter
 LL |     foo(bar(;
-   |        - unclosed delimiter
-...
-LL | fn foo(_: usize) {}
-   |                     ^
-
-error: this file contains an unclosed delimiter
-  --> $DIR/token-error-correct.rs:9:21
-   |
-LL | fn main() {
-   |           - unclosed delimiter
-LL |     foo(bar(;
-   |        - unclosed delimiter
-...
-LL | fn foo(_: usize) {}
-   |                     ^
+   |             ^ expected expression
 
 error: expected one of `)`, `,`, `.`, `?`, or an operator, found keyword `fn`
-  --> $DIR/token-error-correct.rs:9:1
+  --> $DIR/token-error-correct.rs:11:1
    |
 LL | }
    |  - expected one of `)`, `,`, `.`, `?`, or an operator
@@ -38,5 +21,5 @@ LL | }
 LL | fn foo(_: usize) {}
    | ^^ unexpected token
 
-error: aborting due to 4 previous errors
+error: aborting due to 3 previous errors
 

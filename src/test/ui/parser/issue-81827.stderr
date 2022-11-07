@@ -1,85 +1,25 @@
 error: mismatched closing delimiter: `]`
-  --> $DIR/issue-81827.rs:10:24
+  --> $DIR/issue-81827.rs:9:24
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
    |                       -^ mismatched closing delimiter
    |                       |
    |                       unmatched opening delimiter begins here
 
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-81827.rs:10:27
-   |
-LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  - -   - -     ^
-   |          |  | |   | |
-   |          |  | |   | unclosed delimiter
-   |          |  | |   unclosed delimiter
-   |          |  | unclosed delimiter
-   |          |  unclosed delimiter
-   |          unclosed delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-81827.rs:10:27
-   |
-LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  - -   - -     ^
-   |          |  | |   | |
-   |          |  | |   | unclosed delimiter
-   |          |  | |   unclosed delimiter
-   |          |  | unclosed delimiter
-   |          |  unclosed delimiter
-   |          unclosed delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-81827.rs:10:27
-   |
-LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  - -   - -     ^
-   |          |  | |   | |
-   |          |  | |   | unclosed delimiter
-   |          |  | |   unclosed delimiter
-   |          |  | unclosed delimiter
-   |          |  unclosed delimiter
-   |          unclosed delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-81827.rs:10:27
-   |
-LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  - -   - -     ^
-   |          |  | |   | |
-   |          |  | |   | unclosed delimiter
-   |          |  | |   unclosed delimiter
-   |          |  | unclosed delimiter
-   |          |  unclosed delimiter
-   |          unclosed delimiter
-
-error: this file contains an unclosed delimiter
-  --> $DIR/issue-81827.rs:10:27
-   |
-LL | fn r()->i{0|{#[cfg(r(0{]0
-   |          -  - -   - -     ^
-   |          |  | |   | |
-   |          |  | |   | unclosed delimiter
-   |          |  | |   unclosed delimiter
-   |          |  | unclosed delimiter
-   |          |  unclosed delimiter
-   |          unclosed delimiter
-
 error: expected statement after outer attribute
-  --> $DIR/issue-81827.rs:10:14
+  --> $DIR/issue-81827.rs:9:14
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
    |              ^^^^^^^^^^^^^
 
 error[E0412]: cannot find type `i` in this scope
-  --> $DIR/issue-81827.rs:10:9
+  --> $DIR/issue-81827.rs:9:9
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
    |         ^ help: a builtin type with a similar name exists: `i8`
 
 error[E0277]: no implementation for `{integer} | ()`
-  --> $DIR/issue-81827.rs:10:12
+  --> $DIR/issue-81827.rs:9:12
    |
 LL | fn r()->i{0|{#[cfg(r(0{]0
    |            ^ no implementation for `{integer} | ()`
@@ -96,7 +36,7 @@ LL | fn r()->i{0|{#[cfg(r(0{]0
              <&'a u16 as BitOr<u16>>
            and 52 others
 
-error: aborting due to 9 previous errors
+error: aborting due to 4 previous errors
 
 Some errors have detailed explanations: E0277, E0412.
 For more information about an error, try `rustc --explain E0277`.

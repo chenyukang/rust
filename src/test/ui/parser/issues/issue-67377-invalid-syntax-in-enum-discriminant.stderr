@@ -7,7 +7,7 @@ LL |         V = [PhantomData; { [ () ].len() ].len() as isize,
    |                           unmatched opening delimiter begins here
 
 error: mismatched closing delimiter: `]`
-  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:15:36
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:12:36
    |
 LL |         V = [Vec::new; { [].len()  ].len() as isize,
    |                        -           ^ mismatched closing delimiter
@@ -15,7 +15,7 @@ LL |         V = [Vec::new; { [].len()  ].len() as isize,
    |                        unmatched opening delimiter begins here
 
 error: mismatched closing delimiter: `]`
-  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:26:36
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:20:36
    |
 LL |         V = [Vec::new; { [0].len() ].len() as isize,
    |                        -           ^ mismatched closing delimiter
@@ -23,13 +23,13 @@ LL |         V = [Vec::new; { [0].len() ].len() as isize,
    |                        unmatched opening delimiter begins here
 
 error[E0282]: type annotations needed
-  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:15:26
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:12:26
    |
 LL |         V = [Vec::new; { [].len()  ].len() as isize,
    |                          ^^ cannot infer type for type parameter `T`
 
 error[E0282]: type annotations needed
-  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:26:14
+  --> $DIR/issue-67377-invalid-syntax-in-enum-discriminant.rs:20:14
    |
 LL |         V = [Vec::new; { [0].len() ].len() as isize,
    |              ^^^^^^^^ cannot infer type of the type parameter `T` declared on the struct `Vec`

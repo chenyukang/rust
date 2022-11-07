@@ -117,7 +117,7 @@ impl<'a> TokenTreesReader<'a> {
                 }
                 token::Eof => {
                     if open_delimit.is_some() && self.unclosed_open_delims > 0 {
-                        self.eof_err().emit();
+                        self.report_eof_err();
                     }
                     for t in buf.iter_mut() {
                         debug!("yukang final return tree t = {:?}", t);
@@ -149,13 +149,22 @@ impl<'a> TokenTreesReader<'a> {
         }
     }
 
-    fn eof_err(&mut self) -> PErr<'a> {
+    fn report_eof_err(&mut self) {
+        let mut need_report = vec![];
+        for &(_, sp) in &self.open_braces {
+            if !(self.reported_mismatched_delims.contains_key(&sp)
+                || self.reported_mismatched_delims.keys().any(|&k| k.gt(&sp)))
+            {
+                need_report.push(sp);
+            }
+        }
+        if need_report.is_empty() {
+            return;
+        }
         let msg = "this file contains an unclosed delimiter";
         let mut err = self.string_reader.sess.span_diagnostic.struct_span_err(self.token.span, msg);
-        for &(_, sp) in &self.open_braces {
-            if self.reported_mismatched_delims.contains_key(&sp) {
-                continue;
-            }
+
+        for sp in need_report {
             err.span_label(sp, "unclosed delimiter");
             self.unmatched_braces.push(UnmatchedBrace {
                 expected_delim: Delimiter::Brace,
@@ -185,7 +194,7 @@ impl<'a> TokenTreesReader<'a> {
                 err.span_label(*close_sp, "...as it matches this but it has different indentation");
             }
         }
-        err
+        err.emit();
     }
 
     fn parse_token_tree_open_delim(&mut self, open_delim: Delimiter) -> PResult<'a, TokenTree> {

@@ -4,11 +4,14 @@ trait Howness {}
 
 impl Howness for () {
     fn how_are_you(&self -> Empty {
-    //~^ ERROR expected one of `)` or `,`, found `->`
-    //~| ERROR method `how_are_you` is not a member of trait `Howness`
+    //~^ ERROR expected parameter name
+    //~^^ ERROR expected one of
+    //~^^^ ERROR method `how_are_you` is not a member of trait `Howness`
+    //~| ERROR associated function in `impl` without body
         Empty
     }
 }
-//~^ ERROR non-item in item list
+//~^ ERROR mismatched closing delimiter
+//~| ERROR expected one of
 
 fn main() {}

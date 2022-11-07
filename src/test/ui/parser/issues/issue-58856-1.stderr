@@ -1,5 +1,5 @@
 error: mismatched closing delimiter: `}`
-  --> $DIR/issue-58856-1.rs:6:1
+  --> $DIR/issue-58856-1.rs:7:1
    |
 LL |     fn b(self>
    |         - unmatched opening delimiter begins here
@@ -23,7 +23,7 @@ LL |     fn b(self>
    |              help: missing `,`
 
 error: expected one of `->`, `where`, or `{`, found `}`
-  --> $DIR/issue-58856-1.rs:6:1
+  --> $DIR/issue-58856-1.rs:7:1
    |
 LL |     fn b(self>
    |        - while parsing this `fn`
@@ -35,6 +35,7 @@ error: associated function in `impl` without body
   --> $DIR/issue-58856-1.rs:3:5
    |
 LL | /     fn b(self>
+LL | |
 LL | |
 LL | |
 LL | | }

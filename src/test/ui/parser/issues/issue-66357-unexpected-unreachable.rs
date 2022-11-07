@@ -8,7 +8,9 @@
 // - recover_closing_delimiter
 //
 // ended up bubbling up `Ok(true)` to `unexpected` which then used `unreachable!()`.
+// error-pattern:  expected one of
 
-fn f() { |[](* }
-//~^ ERROR expected one of `,` or `:`, found `(`
-//~| ERROR expected one of `&`, `(`, `)`, `-`, `...`, `..=`, `..`, `[`, `_`, `box`, `mut`, `ref`, `|`, identifier, or path, found `*`
+fn f() { |[](* } //~ ERROR expected one of
+//~^ ERROR expected one of
+//~^^ ERROR mismatched closing delimiter
+//~| ERROR `main` function not found

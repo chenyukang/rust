@@ -1,5 +1,5 @@
 error: mismatched closing delimiter: `}`
-  --> $DIR/issue-58856-2.rs:11:1
+  --> $DIR/issue-58856-2.rs:13:1
    |
 LL |     fn how_are_you(&self -> Empty {
    |                   - unmatched opening delimiter begins here
@@ -22,7 +22,7 @@ LL |     fn how_are_you(&self -> Empty {
    |                         help: missing `,`
 
 error: expected one of `->`, `where`, or `{`, found `}`
-  --> $DIR/issue-58856-2.rs:11:1
+  --> $DIR/issue-58856-2.rs:13:1
    |
 LL |     fn how_are_you(&self -> Empty {
    |        ----------- while parsing this `fn`
@@ -36,7 +36,8 @@ error: associated function in `impl` without body
 LL | /     fn how_are_you(&self -> Empty {
 LL | |
 LL | |
-LL | |         Empty
+LL | |
+...  |
 LL | |     }
 LL | | }
    | | ^- help: provide a definition for the function: `{ <body> }`
@@ -49,7 +50,8 @@ error[E0407]: method `how_are_you` is not a member of trait `Howness`
 LL | /     fn how_are_you(&self -> Empty {
 LL | |
 LL | |
-LL | |         Empty
+LL | |
+...  |
 LL | |     }
 LL | | }
    | |_^ not a member of trait `Howness`

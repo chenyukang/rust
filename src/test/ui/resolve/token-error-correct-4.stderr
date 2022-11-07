@@ -1,5 +1,5 @@
 error: mismatched closing delimiter: `}`
-  --> $DIR/token-error-correct-4.rs:10:1
+  --> $DIR/token-error-correct-4.rs:9:1
    |
 LL |     setsuna(kazusa();
    |            - unmatched opening delimiter begins here
@@ -7,7 +7,7 @@ LL | }
    | ^ mismatched closing delimiter
 
 error: expected one of `)`, `,`, `.`, `?`, or an operator, found `;`
-  --> $DIR/token-error-correct-4.rs:9:21
+  --> $DIR/token-error-correct-4.rs:8:21
    |
 LL |     setsuna(kazusa();
    |                     ^ expected one of `)`, `,`, `.`, `?`, or an operator
