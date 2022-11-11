@@ -279,7 +279,7 @@ impl<'a> TokenTreesReader<'a> {
                 "...as it matches this but it has different indentation",
             );
 
-             // If there is a empty block in the mismatched span, note it
+            // If there is a empty block in the mismatched span, note it
             for span in self.empty_block_spans.keys() {
                 if let Some(d) = self.empty_block_spans.get(span) &&
                         *d == delim && block_span.contains(*span) {
