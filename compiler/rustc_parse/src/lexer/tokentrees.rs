@@ -19,8 +19,10 @@ pub(super) struct TokenTreesReader<'a> {
     /// Used only for error recovery when arriving to EOF with mismatched braces.
     matching_delim_spans: Vec<(Delimiter, Span, Span)>,
     last_unclosed_found_span: Option<Span>,
+
     /// Collect empty block spans that might have been auto-inserted by editors.
-    last_delim_empty_block_spans: FxHashMap<Delimiter, Span>,
+    empty_block_spans: FxHashMap<Span, Delimiter>,
+
     /// Collect the spans of braces (Open, Close). Used only
     /// for detecting if blocks are empty and only braces.
     matching_block_spans: Vec<(Span, Span)>,
@@ -37,7 +39,7 @@ impl<'a> TokenTreesReader<'a> {
             unmatched_braces: Vec::new(),
             matching_delim_spans: Vec::new(),
             last_unclosed_found_span: None,
-            last_delim_empty_block_spans: FxHashMap::default(),
+            empty_block_spans: FxHashMap::default(),
             matching_block_spans: Vec::new(),
         };
         let res = tt_reader.parse_token_trees(/* is_delimited */ false);
@@ -135,11 +137,11 @@ impl<'a> TokenTreesReader<'a> {
                     if !sm.is_multiline(empty_block_span) {
                         // Only track if the block is in the form of `{}`, otherwise it is
                         // likely that it was written on purpose.
-                        self.last_delim_empty_block_spans.insert(open_delim, empty_block_span);
+                        self.empty_block_spans.insert(empty_block_span, open_delim);
                     }
                 }
 
-                //only add braces
+                // only add braces
                 if let (Delimiter::Brace, Delimiter::Brace) = (open_brace, open_delim) {
                     self.matching_block_spans.push((open_brace_span, close_brace_span));
 
@@ -230,9 +232,8 @@ impl<'a> TokenTreesReader<'a> {
         }
     }
 
-    fn report_error_prone_delim_block(&self, delim: Delimiter, err: &mut Diagnostic) {
+    fn report_error_prone_delim_block(&mut self, delim: Delimiter, err: &mut Diagnostic) {
         let mut matched_spans = vec![];
-        let mut candidate_span = None;
 
         for &(d, open_sp, close_sp) in &self.matching_delim_spans {
             if d == delim {
@@ -259,6 +260,7 @@ impl<'a> TokenTreesReader<'a> {
             }
         }
 
+        let mut candidate_span = None;
         // Find the innermost span candidate for final report
         for (block_span, same_ident) in matched_spans.into_iter().rev() {
             if !same_ident {
@@ -276,6 +278,15 @@ impl<'a> TokenTreesReader<'a> {
                 block_span.shrink_to_hi(),
                 "...as it matches this but it has different indentation",
             );
+
+             // If there is a empty block in the mismatched span, note it
+            for span in self.empty_block_spans.keys() {
+                if let Some(d) = self.empty_block_spans.get(span) &&
+                        *d == delim && block_span.contains(*span) {
+                    err.span_label(*span, "block is empty, you might have not meant to close it");
+                    break;
+                }
+            }
         }
     }
 }
