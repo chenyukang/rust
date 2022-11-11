@@ -1,3 +1,11 @@
+error: mismatched closing delimiter: `)`
+  --> $DIR/issue-68987-unmatch-issue-3.rs:4:19
+   |
+LL |     while cnt < j {
+   |                   ^ unclosed delimiter
+LL |         write!&mut res, " ");
+   |                            ^ mismatched closing delimiter
+
 error: unexpected closing delimiter: `}`
   --> $DIR/issue-68987-unmatch-issue-3.rs:7:1
    |
@@ -8,14 +16,6 @@ LL |     }
    |     - ...as it matches this but it has different indentation
 LL | }
    | ^ unexpected closing delimiter
-
-error: mismatched closing delimiter: `)`
-  --> $DIR/issue-68987-unmatch-issue-3.rs:4:19
-   |
-LL |     while cnt < j {
-   |                   ^ unclosed delimiter
-LL |         write!&mut res, " ");
-   |                            ^ mismatched closing delimiter
 
 error: aborting due to 2 previous errors
 

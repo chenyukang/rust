@@ -52,7 +52,7 @@ impl<'a> TokenTreesReader<'a> {
         let mut buf = Vec::new();
         loop {
             match self.token.kind {
-                token::OpenDelim(delim) => buf.push(self.parse_token_tree_open_delim(delim)),
+                token::OpenDelim(delim) => buf.push(self.parse_token_tree_open_delim(delim)?),
                 token::CloseDelim(delim) => {
                     return if is_delimited {
                         Ok(TokenStream::new(buf))
@@ -62,7 +62,7 @@ impl<'a> TokenTreesReader<'a> {
                 }
                 token::Eof => {
                     if is_delimited {
-                        self.eof_err().emit();
+                        return Err(self.eof_err());
                     }
                     return Ok(TokenStream::new(buf));
                 }
@@ -111,7 +111,7 @@ impl<'a> TokenTreesReader<'a> {
         err
     }
 
-    fn parse_token_tree_open_delim(&mut self, open_delim: Delimiter) -> TokenTree {
+    fn parse_token_tree_open_delim(&mut self, open_delim: Delimiter) -> PResult<'a, TokenTree> {
         // The span for beginning of the delimited section
         let pre_span = self.token.span;
 
@@ -120,7 +120,7 @@ impl<'a> TokenTreesReader<'a> {
         // Parse the token trees within the delimiters.
         // We stop at any delimiter so we can try to recover if the user
         // uses an incorrect delimiter.
-        let tts = self.parse_token_trees(/* is_delimited */ true).unwrap();
+        let tts = self.parse_token_trees(/* is_delimited */ true)?;
 
         // Expand to cover the entire delimited token tree
         let delim_span = DelimSpan::from_pair(pre_span, self.token.span);
@@ -205,7 +205,7 @@ impl<'a> TokenTreesReader<'a> {
             _ => unreachable!(),
         }
 
-        TokenTree::Delimited(delim_span, open_delim, tts)
+        Ok(TokenTree::Delimited(delim_span, open_delim, tts))
     }
 
     fn close_delim_err(&mut self, delim: Delimiter) -> PErr<'a> {

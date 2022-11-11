@@ -1,3 +1,3 @@
-// error-pattern: aborting due to 5 previous errors
+// error-pattern: aborting due to previous error
 
 fn i(n{...,f #

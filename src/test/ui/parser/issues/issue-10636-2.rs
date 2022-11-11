@@ -3,9 +3,7 @@
 
 pub fn trace_option(option: Option<isize>) {
     option.map(|some| 42;
-                          //~^ ERROR: expected one of
 
 }
-//~^ ERROR: expected expression, found `)`
-
+//~^ ERROR mismatched closing delimiter
 fn main() {}
