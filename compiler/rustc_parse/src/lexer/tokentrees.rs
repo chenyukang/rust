@@ -175,6 +175,7 @@ impl<'a> TokenTreesReader<'a> {
                         }
                     }
                     let (tok, _) = self.open_braces.pop().unwrap();
+                    debug!("yukang tok: {:?}", tok);
                     self.unmatched_braces.push(UnmatchedBrace {
                         expected_delim: tok,
                         found_delim: Some(close_delim),

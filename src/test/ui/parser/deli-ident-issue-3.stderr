@@ -1,0 +1,37 @@
+error: mismatched closing delimiter: `}`
+  --> $DIR/deli-ident-issue-3.rs:2:13
+   |
+LL |     let a = [};
+   |             ^^ mismatched closing delimiter
+   |             |
+   |             unclosed delimiter
+
+error: mismatched closing delimiter: `}`
+  --> $DIR/deli-ident-issue-3.rs:3:13
+   |
+LL |     let b = (};
+   |             ^^ mismatched closing delimiter
+   |             |
+   |             unclosed delimiter
+
+error: mismatched closing delimiter: `]`
+  --> $DIR/deli-ident-issue-3.rs:4:13
+   |
+LL |     let c = {];
+   |             ^^ mismatched closing delimiter
+   |             |
+   |             unclosed delimiter
+
+error: unexpected closing delimiter: `}`
+  --> $DIR/deli-ident-issue-3.rs:5:1
+   |
+LL | fn main() {
+   |           - this delimiter might not be properly closed...
+LL |     let a = [};
+   |              - ...as it matches this but it has different indentation
+...
+LL | }
+   | ^ unexpected closing delimiter
+
+error: aborting due to 4 previous errors
+
