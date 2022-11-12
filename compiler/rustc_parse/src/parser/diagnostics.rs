@@ -17,7 +17,7 @@ use crate::errors::{
     UnexpectedConstParamDeclarationSugg, UnmatchedAngleBrackets, UseEqInstead,
 };
 
-use crate::lexer::UnmatchedBrace;
+use crate::lexer::UnmatchedDelim;
 use rustc_ast as ast;
 use rustc_ast::ptr::P;
 use rustc_ast::token::{self, Delimiter, Lit, LitKind, TokenKind};
@@ -229,7 +229,7 @@ impl MultiSugg {
 // is dropped.
 pub struct SnapshotParser<'a> {
     parser: Parser<'a>,
-    unclosed_delims: Vec<UnmatchedBrace>,
+    unclosed_delims: Vec<UnmatchedDelim>,
 }
 
 impl<'a> Deref for SnapshotParser<'a> {
@@ -271,7 +271,7 @@ impl<'a> Parser<'a> {
         self.unclosed_delims.extend(snapshot.unclosed_delims);
     }
 
-    pub fn unclosed_delims(&self) -> &[UnmatchedBrace] {
+    pub fn unclosed_delims(&self) -> &[UnmatchedDelim] {
         &self.unclosed_delims
     }
 

@@ -1,4 +1,4 @@
-use super::{StringReader, UnmatchedBrace};
+use super::{StringReader, UnmatchedDelim};
 use rustc_ast::token::{self, Delimiter, Token};
 use rustc_ast::tokenstream::{DelimSpan, Spacing, TokenStream, TokenTree};
 use rustc_ast_pretty::pprust::token_to_string;
@@ -12,8 +12,8 @@ pub(super) struct TokenTreesReader<'a> {
     /// not yet handled by the `TokenTreesReader`.
     token: Token,
     /// Stack of open delimiters and their spans. Used for error message.
-    open_braces: Vec<(Delimiter, Span)>,
-    unmatched_braces: Vec<UnmatchedBrace>,
+    open_delims: Vec<(Delimiter, Span)>,
+    unmatched_delims: Vec<UnmatchedDelim>,
     /// The type and spans for all braces
     ///
     /// Used only for error recovery when arriving to EOF with mismatched braces.
@@ -31,19 +31,19 @@ pub(super) struct TokenTreesReader<'a> {
 impl<'a> TokenTreesReader<'a> {
     pub(super) fn parse_all_token_trees(
         string_reader: StringReader<'a>,
-    ) -> (PResult<'a, TokenStream>, Vec<UnmatchedBrace>) {
+    ) -> (PResult<'a, TokenStream>, Vec<UnmatchedDelim>) {
         let mut tt_reader = TokenTreesReader {
             string_reader,
             token: Token::dummy(),
-            open_braces: Vec::new(),
-            unmatched_braces: Vec::new(),
+            open_delims: Vec::new(),
+            unmatched_delims: Vec::new(),
             matching_delim_spans: Vec::new(),
             last_unclosed_found_span: None,
             empty_block_spans: FxHashMap::default(),
             matching_block_spans: Vec::new(),
         };
         let res = tt_reader.parse_token_trees(/* is_delimited */ false);
-        (res, tt_reader.unmatched_braces)
+        (res, tt_reader.unmatched_delims)
     }
 
     // Parse a stream of tokens into a list of `TokenTree`s.
@@ -94,9 +94,9 @@ impl<'a> TokenTreesReader<'a> {
     fn eof_err(&mut self) -> PErr<'a> {
         let msg = "this file contains an unclosed delimiter";
         let mut err = self.string_reader.sess.span_diagnostic.struct_span_err(self.token.span, msg);
-        for &(_, sp) in &self.open_braces {
+        for &(_, sp) in &self.open_delims {
             err.span_label(sp, "unclosed delimiter");
-            self.unmatched_braces.push(UnmatchedBrace {
+            self.unmatched_delims.push(UnmatchedDelim {
                 expected_delim: Delimiter::Brace,
                 found_delim: None,
                 found_span: self.token.span,
@@ -105,7 +105,7 @@ impl<'a> TokenTreesReader<'a> {
             });
         }
 
-        if let Some((delim, _)) = self.open_braces.last() {
+        if let Some((delim, _)) = self.open_delims.last() {
             self.report_error_prone_delim_block(*delim, &mut err);
         }
         err
@@ -115,7 +115,7 @@ impl<'a> TokenTreesReader<'a> {
         // The span for beginning of the delimited section
         let pre_span = self.token.span;
 
-        self.open_braces.push((open_delim, self.token.span));
+        self.open_delims.push((open_delim, self.token.span));
 
         // Parse the token trees within the delimiters.
         // We stop at any delimiter so we can try to recover if the user
@@ -128,7 +128,7 @@ impl<'a> TokenTreesReader<'a> {
         match self.token.kind {
             // Correct delimiter.
             token::CloseDelim(close_delim) if close_delim == open_delim => {
-                let (open_brace, open_brace_span) = self.open_braces.pop().unwrap();
+                let (open_brace, open_brace_span) = self.open_delims.pop().unwrap();
                 let close_brace_span = self.token.span;
 
                 if tts.is_empty() {
@@ -163,10 +163,10 @@ impl<'a> TokenTreesReader<'a> {
                     // This is a conservative error: only report the last unclosed
                     // delimiter. The previous unclosed delimiters could actually be
                     // closed! The parser just hasn't gotten to them yet.
-                    if let Some(&(_, sp)) = self.open_braces.last() {
+                    if let Some(&(_, sp)) = self.open_delims.last() {
                         unclosed_delimiter = Some(sp);
                     };
-                    for (brace, brace_span) in &self.open_braces {
+                    for (brace, brace_span) in &self.open_delims {
                         if self.same_identation_level(self.token.span, *brace_span)
                             && brace == &close_delim
                         {
@@ -174,9 +174,9 @@ impl<'a> TokenTreesReader<'a> {
                             candidate = Some(*brace_span);
                         }
                     }
-                    let (tok, _) = self.open_braces.pop().unwrap();
+                    let (tok, _) = self.open_delims.pop().unwrap();
                     debug!("yukang tok: {:?}", tok);
-                    self.unmatched_braces.push(UnmatchedBrace {
+                    self.unmatched_delims.push(UnmatchedDelim {
                         expected_delim: tok,
                         found_delim: Some(close_delim),
                         found_span: self.token.span,
@@ -184,7 +184,7 @@ impl<'a> TokenTreesReader<'a> {
                         candidate_span: candidate,
                     });
                 } else {
-                    self.open_braces.pop();
+                    self.open_delims.pop();
                 }
 
                 // If the incorrect delimiter matches an earlier opening
@@ -194,14 +194,14 @@ impl<'a> TokenTreesReader<'a> {
                 // fn foo() {
                 //     bar(baz(
                 // }  // Incorrect delimiter but matches the earlier `{`
-                if !self.open_braces.iter().any(|&(b, _)| b == close_delim) {
+                if !self.open_delims.iter().any(|&(b, _)| b == close_delim) {
                     self.token = self.string_reader.next_token().0;
                 }
             }
             token::Eof => {
                 // Silently recover, the EOF token will be seen again
                 // and an error emitted then. Thus we don't pop from
-                // self.open_braces here.
+                // self.open_delims here.
             }
             _ => unreachable!(),
         }

@@ -178,7 +178,7 @@ pub fn source_file_to_stream(
     sess: &ParseSess,
     source_file: Lrc<SourceFile>,
     override_span: Option<Span>,
-) -> (TokenStream, Vec<lexer::UnmatchedBrace>) {
+) -> (TokenStream, Vec<lexer::UnmatchedDelim>) {
     panictry_buffer!(&sess.span_diagnostic, maybe_file_to_stream(sess, source_file, override_span))
 }
 
@@ -188,7 +188,7 @@ pub fn maybe_file_to_stream(
     sess: &ParseSess,
     source_file: Lrc<SourceFile>,
     override_span: Option<Span>,
-) -> Result<(TokenStream, Vec<lexer::UnmatchedBrace>), Vec<Diagnostic>> {
+) -> Result<(TokenStream, Vec<lexer::UnmatchedDelim>), Vec<Diagnostic>> {
     let src = source_file.src.as_ref().unwrap_or_else(|| {
         sess.span_diagnostic.bug(&format!(
             "cannot lex `source_file` without source: {}",
