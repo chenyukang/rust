@@ -1338,7 +1338,13 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
         ribs: Option<&PerNS<Vec<Rib<'a>>>>,
         ignore_binding: Option<&'a NameBinding<'a>>,
     ) -> PathResult<'a> {
-        debug!("resolve_path(path={:?}, opt_ns={:?}, finalize={:?})", path, opt_ns, finalize);
+        debug!(
+            "resolve_path(path={:?}, opt_ns={:?}, finalize={:?}) path_len: {}",
+            path,
+            opt_ns,
+            finalize,
+            path.len()
+        );
 
         let mut module = None;
         let mut allow_super = true;
