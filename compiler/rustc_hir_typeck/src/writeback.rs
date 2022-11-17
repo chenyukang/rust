@@ -325,6 +325,20 @@ impl<'cx, 'tcx> Visitor<'tcx> for WritebackCx<'cx, 'tcx> {
         }
     }
 
+    fn visit_generic_arg(&mut self, arg: &'tcx hir::GenericArg<'tcx>) {
+        match arg {
+            hir::GenericArg::Type(ty) if let hir::TyKind::Err = ty.kind => {
+                // An generic argument with an error type will be reported
+                // We don't want to ICE here
+                self.tcx().sess.delay_span_bug(ty.span, format!("unexpected generic argument: {arg:?}"));
+            }
+            hir::GenericArg::Type(t) => self.visit_ty(t),
+            _ => {
+                // Nothing to write back here
+            }
+        }
+    }
+
     fn visit_block(&mut self, b: &'tcx hir::Block<'tcx>) {
         self.visit_node_id(b.span, b.hir_id);
         intravisit::walk_block(self, b);
