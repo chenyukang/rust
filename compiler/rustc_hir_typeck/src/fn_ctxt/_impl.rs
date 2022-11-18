@@ -138,7 +138,13 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
     #[inline]
     pub fn write_ty(&self, id: hir::HirId, ty: Ty<'tcx>) {
-        debug!("yukang write_ty({:?}, {:?}) in fcx {} ty: {:?}", id, self.resolve_vars_if_possible(ty), self.tag(), ty);
+        debug!(
+            "yukang write_ty({:?}, {:?}) in fcx {} ty: {:?}",
+            id,
+            self.resolve_vars_if_possible(ty),
+            self.tag(),
+            ty
+        );
         self.typeck_results.borrow_mut().node_types_mut().insert(id, ty);
 
         if ty.references_error() {

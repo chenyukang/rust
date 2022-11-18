@@ -1626,7 +1626,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     ) {
         if ty.references_error() {
             // Override the types everywhere with `err()` to avoid knock on errors.
-            debug!("yukang overwrite_local_ty_if_err: hir_id={:?} pat={:?} decl_ty={:?} ty={:?}", hir_id, pat, decl_ty, ty);
+            debug!(
+                "yukang overwrite_local_ty_if_err: hir_id={:?} pat={:?} decl_ty={:?} ty={:?}",
+                hir_id, pat, decl_ty, ty
+            );
             self.write_ty(hir_id, ty);
             self.write_ty(pat.hir_id, ty);
             let local_ty = LocalTy { decl_ty, revealed_ty: ty };

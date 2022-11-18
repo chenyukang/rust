@@ -254,7 +254,10 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 // input. We try to handle both sensibly.
                 match (args.peek(), params.peek()) {
                     (Some(&arg), Some(&param)) => {
-                        debug!("yukang create_substs_for_generic_args: arg={:?} param={:?}", arg, param);
+                        debug!(
+                            "yukang create_substs_for_generic_args: arg={:?} param={:?}",
+                            arg, param
+                        );
                         match (arg, &param.kind, arg_count.explicit_late_bound) {
                             (GenericArg::Lifetime(_), GenericParamDefKind::Lifetime, _)
                             | (

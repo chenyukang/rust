@@ -2760,7 +2760,10 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             hir::TyKind::Err => tcx.ty_error(),
         };
 
-        debug!("yukang ast_ty_to_ty_inner record_ty: hir_id={:?} result_ty={:?} ast_ty={:?}", ast_ty.hir_id, result_ty, ast_ty);
+        debug!(
+            "yukang ast_ty_to_ty_inner record_ty: hir_id={:?} result_ty={:?} ast_ty={:?}",
+            ast_ty.hir_id, result_ty, ast_ty
+        );
         self.record_ty(ast_ty.hir_id, result_ty, ast_ty.span);
         result_ty
     }
