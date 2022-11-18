@@ -1397,6 +1397,7 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
                         hir::TyKind::Err
                     }
                     ImplTraitContext::Disallowed(position) => {
+                        debug!("yukang misplaced impl trait {:?}", position);
                         self.tcx.sess.emit_err(MisplacedImplTrait {
                             span: t.span,
                             position: DiagnosticArgFromDisplay(&position),

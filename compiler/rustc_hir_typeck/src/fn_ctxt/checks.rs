@@ -1291,6 +1291,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     pub(in super::super) fn check_decl(&self, decl: Declaration<'tcx>) {
         // Determine and write the type which we'll check the pattern against.
         let decl_ty = self.local_ty(decl.span, decl.hir_id).decl_ty;
+        debug!("yukang check_decl: hir_id={:?} decl_ty={:?}", decl.hir_id, decl_ty);
         self.write_ty(decl.hir_id, decl_ty);
 
         // Type check the initializer.
@@ -1552,6 +1553,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         let ty = ctxt.coerce.unwrap().complete(self);
 
+        debug!("yukang check_block: blk.id={:?} ty={:?}", blk.hir_id, ty);
         self.write_ty(blk.hir_id, ty);
 
         self.ps.set(prev);
@@ -1624,6 +1626,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     ) {
         if ty.references_error() {
             // Override the types everywhere with `err()` to avoid knock on errors.
+            debug!("yukang overwrite_local_ty_if_err: hir_id={:?} pat={:?} decl_ty={:?} ty={:?}", hir_id, pat, decl_ty, ty);
             self.write_ty(hir_id, ty);
             self.write_ty(pat.hir_id, ty);
             let local_ty = LocalTy { decl_ty, revealed_ty: ty };

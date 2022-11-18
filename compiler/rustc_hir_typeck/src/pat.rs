@@ -189,6 +189,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             }
         };
 
+        debug!("yukang check_pat check_pat: hir={:?} ty={:?}", pat.hir_id, ty);
         self.write_ty(pat.hir_id, ty);
 
         // (note_1): In most of the cases where (note_1) is referenced

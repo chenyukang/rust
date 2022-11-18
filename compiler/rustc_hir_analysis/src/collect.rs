@@ -523,6 +523,7 @@ impl<'tcx> AstConv<'tcx> for ItemCtxt<'tcx> {
 
     fn set_tainted_by_errors(&self) {
         // There's no obvious place to track this, so just let it go.
+        debug!("yukang ast_converter set_tainted_by_errors");
     }
 
     fn record_ty(&self, _hir_id: hir::HirId, _ty: Ty<'tcx>, _span: Span) {

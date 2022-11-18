@@ -95,6 +95,7 @@ pub(super) fn check_fn<'a, 'tcx>(
             fcx.require_type_is_sized(param_ty, param.pat.span, traits::SizedArgumentType(ty_span));
         }
 
+        debug!("yukang check_fn: param_ty = {:?}", param_ty);
         fcx.write_ty(param.hir_id, param_ty);
     }
 

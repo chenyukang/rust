@@ -1378,6 +1378,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         let ty = fcx.check_expr_with_expectation(&body.value, expected);
         fcx.require_type_is_sized(ty, body.value.span, traits::ConstSized);
+        debug!("yukang check_expr_const_block anon_const.hir_id={:?} ty={:?}", anon_const.hir_id, ty);
         fcx.write_ty(anon_const.hir_id, ty);
         ty
     }

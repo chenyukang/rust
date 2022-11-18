@@ -658,6 +658,7 @@ impl<'tcx> TypeckResults<'tcx> {
     }
 
     pub fn node_types(&self) -> LocalTableInContext<'_, Ty<'tcx>> {
+        debug!("yukang node_types now ...");
         LocalTableInContext { hir_owner: self.hir_owner, data: &self.node_types }
     }
 

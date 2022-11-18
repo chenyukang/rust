@@ -312,6 +312,7 @@ fn typeck_with_fallback<'tcx>(
 
             fcx.check_expr_coercable_to_type(&body.value, expected_type, None);
 
+            debug!("yukang typeck_with_fallback id={:?} expected_type={:?}", id, expected_type);
             fcx.write_ty(id, expected_type);
 
             fcx

@@ -364,6 +364,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         // here and so associated type bindings will be handled regardless of whether there are any
         // non-`Self` generic parameters.
         if generics.params.is_empty() {
+            debug!("yukang now reutrn early: {:?}", generics);
             return (tcx.intern_substs(parent_substs), arg_count);
         }
 
@@ -392,7 +393,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 arg: &GenericArg<'_>,
             ) -> subst::GenericArg<'tcx> {
                 let tcx = self.astconv.tcx();
-
+                debug!("yukang provided_kind: param={:?} arg={:?}", param, arg);
                 let mut handle_ty_args = |has_default, ty: &hir::Ty<'_>| {
                     if has_default {
                         tcx.check_optional_stability(
@@ -414,6 +415,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                         self.inferred_params.push(ty.span);
                         tcx.ty_error().into()
                     } else {
+                        debug!("yukang provided_kind call ast_ty_to_ty: ty={:?}", ty);
                         self.astconv.ast_ty_to_ty(ty).into()
                     }
                 };
@@ -423,9 +425,11 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                         self.astconv.ast_region_to_region(lt, Some(param)).into()
                     }
                     (&GenericParamDefKind::Type { has_default, .. }, GenericArg::Type(ty)) => {
+                        debug!("yukang GenericParamDefKind::Type 1 : {:?}", ty);
                         handle_ty_args(has_default, ty)
                     }
                     (&GenericParamDefKind::Type { has_default, .. }, GenericArg::Infer(inf)) => {
+                        debug!("yukang GenericParamDefKind::Type 2 : {:?}", &inf.to_ty());
                         handle_ty_args(has_default, &inf.to_ty())
                     }
                     (GenericParamDefKind::Const { .. }, GenericArg::Const(ct)) => {
@@ -440,6 +444,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                     }
                     (&GenericParamDefKind::Const { .. }, hir::GenericArg::Infer(inf)) => {
                         let ty = tcx.at(self.span).type_of(param.def_id);
+                        debug!("yukang GenericParamDefKind::Type 3 : {:?}", ty);
                         if self.astconv.allow_ty_infer() {
                             self.astconv.ct_infer(ty, Some(param), inf.span).into()
                         } else {
@@ -2755,6 +2760,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             hir::TyKind::Err => tcx.ty_error(),
         };
 
+        debug!("yukang ast_ty_to_ty_inner record_ty: hir_id={:?} result_ty={:?} ast_ty={:?}", ast_ty.hir_id, result_ty, ast_ty);
         self.record_ty(ast_ty.hir_id, result_ty, ast_ty.span);
         result_ty
     }

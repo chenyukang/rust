@@ -138,7 +138,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
     #[inline]
     pub fn write_ty(&self, id: hir::HirId, ty: Ty<'tcx>) {
-        debug!("write_ty({:?}, {:?}) in fcx {}", id, self.resolve_vars_if_possible(ty), self.tag());
+        debug!("yukang write_ty({:?}, {:?}) in fcx {} ty: {:?}", id, self.resolve_vars_if_possible(ty), self.tag(), ty);
         self.typeck_results.borrow_mut().node_types_mut().insert(id, ty);
 
         if ty.references_error() {
@@ -1111,6 +1111,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         if let Res::Local(hid) = res {
             let ty = self.local_ty(span, hid).decl_ty;
             let ty = self.normalize_associated_types_in(span, ty);
+            debug!("instantiate_value_path: hir_id={:?} local ty={:?}", hir_id, ty);
             self.write_ty(hir_id, ty);
             return (ty, res);
         }

@@ -294,6 +294,11 @@ impl<'a, 'tcx> AstConv<'tcx> for FnCtxt<'a, 'tcx> {
     }
 
     fn record_ty(&self, hir_id: hir::HirId, ty: Ty<'tcx>, _span: Span) {
+        debug!("yukang record_ty(hir_id={:?}, ty={:?})", hir_id, ty);
+        if std::env::var("YUKANG_DEBUG").is_ok() {
+            assert!(0 == 1);
+            println!("yukang record_ty(hir_id={:?}, ty={:?})", hir_id, ty);
+        }
         self.write_ty(hir_id, ty)
     }
 }
