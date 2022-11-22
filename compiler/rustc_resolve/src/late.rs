@@ -3420,10 +3420,7 @@ impl<'a: 'ast, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
                         // let foo = Foo {};
                         // foo::bar(); // possibly suggest to foo.bar();
                         //```
-                        err.stash(
-                            prefix_path[0].ident.span,
-                            rustc_errors::StashKey::CallAssocMethod,
-                        );
+                        err.stash(prefix_path[0].ident.span, rustc_errors::StashKey::CallAssocMethod);
                     } else {
                         // When there is no suggested imports, we can just emit the error
                         // and suggestions immediately. Note that we bypass the usually error
