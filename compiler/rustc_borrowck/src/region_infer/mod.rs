@@ -995,7 +995,8 @@ impl<'tcx> RegionInferenceContext<'tcx> {
                 debug_assert!(self.universal_regions.is_universal_region(upper_bound));
                 debug_assert!(!self.universal_regions.is_local_free_region(upper_bound));
 
-                let requirement = ClosureOutlivesRequirement { subject,
+                let requirement = ClosureOutlivesRequirement {
+                    subject,
                     outlived_free_region: upper_bound,
                     blame_span: locations.span(body),
                     category: ConstraintCategory::Boring,

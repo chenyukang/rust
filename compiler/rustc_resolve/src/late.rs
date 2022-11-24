@@ -3406,7 +3406,8 @@ impl<'a: 'ast, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
                     std_path.push(Segment::from_ident(Ident::with_dummy_span(sym::std)));
                     std_path.extend(path);
                     if let PathResult::Module(_) | PathResult::NonModule(_) =
-                        self.resolve_path(&std_path, Some(ns), None)
+                        self.resolve_path(&std_path,
+                            Some(ns), None)
                     {
                         // Check if we wrote `str::from_utf8` instead of `std::str::from_utf8`
                         let item_span =
