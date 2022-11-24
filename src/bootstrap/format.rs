@@ -21,10 +21,12 @@ fn rustfmt(src: &Path, rustfmt: &Path, paths: &[PathBuf], check: bool) -> impl F
     }
     cmd.args(paths);
     let cmd_debug = format!("{:?}", cmd);
+    // eprintln!("cmd_debug: {:?}", cmd_debug);
     let mut cmd = cmd.spawn().expect("running rustfmt");
     // poor man's async: return a closure that'll wait for rustfmt's completion
     move || {
         let status = cmd.wait().unwrap();
+        eprintln!("status: {:?}", status);
         if !status.success() {
             eprintln!(
                 "Running `{}` failed.\nIf you're running `tidy`, \

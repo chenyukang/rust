@@ -919,6 +919,8 @@ def bootstrap(help_triggered):
     env = os.environ.copy()
     env["BOOTSTRAP_PARENT_ID"] = str(os.getpid())
     env["BOOTSTRAP_PYTHON"] = sys.executable
+    print(env)
+    print(args)
     run(args, env=env, verbose=build.verbose, is_bootstrap=True)
 
 
