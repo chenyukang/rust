@@ -548,7 +548,8 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
             {
                 let self_is_available = self.self_value_is_available(path[0].ident.span);
                 match candidate {
-                    AssocSuggestion::Field => {
+                    AssocSuggestion::Field =>
+                {
                         if self_is_available &&
                     !span.can_be_used_for_suggestions() {
                             err.span_suggestion(
@@ -561,7 +562,8 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
                             err.span_label(span, "a field by this name exists in `Self`");
                         }
                     }
-                    AssocSuggestion::MethodWithSelf { called } if self_is_available => {
+                    AssocSuggestion::MethodWithSelf { called }
+                    if self_is_available => {
                         let msg = if called {
                             "you might have meant to call the method"
                         } else {
