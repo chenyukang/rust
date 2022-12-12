@@ -561,12 +561,12 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
                         }
                     }
                     AssocSuggestion::MethodWithSelf { called } if self_is_available => {
-                    let msg = if called {
+                        let msg = if called {
                             "you might have meant to call the method"
                         } else {
                             "you might have meant to refer to the method"
                         };
-                        err.span_suggestion(
+                    err.span_suggestion(
                             span,
                             msg,
                             format!("self.{path_str}"),
