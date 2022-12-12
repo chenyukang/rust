@@ -2389,7 +2389,7 @@ impl<'a> Parser<'a> {
             _ => None,
         };
 
-        let pat = self.parse_pat_allow_top_alt(
+        let pat = self.parse_pat_allow_top_alt_fix(
             None,
             RecoverComma::Yes,
             RecoverColon::Yes,
