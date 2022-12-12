@@ -566,7 +566,7 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
                         } else {
                             "you might have meant to refer to the method"
                         };
-                    err.span_suggestion(
+                        err.span_suggestion(
                             span,
                             msg,
                             format!("self.{path_str}"),
