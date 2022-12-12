@@ -2375,7 +2375,7 @@ impl<'a> Parser<'a> {
             let ExprKind::If(cond, ..) = &right.kind {
                     Err(self.sess.create_err(UnexpectedIfWithIf(binop_span.shrink_to_hi().to(cond.span.shrink_to_lo()))))
             } else {
-                Ok(())
+    Ok(())
             }
     }
 

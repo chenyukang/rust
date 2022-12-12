@@ -344,7 +344,8 @@ impl<'a> Parser<'a> {
             let mut i = tokens.iter();
             // This might be a sign we need a connect method on `Iterator`.
             let b = i.next().map_or_else(String::new, |t| t.to_string());
-            i.enumerate().fold(b, |mut b, (i, a)| {
+            i.enumerate().fold(b, |mut b, (i, a)|
+            {
                 if tokens.len() > 2 && i == tokens.len() - 2 {
                     b.push_str(", or ");
                 } else if tokens.len() == 2 && i == tokens.len() - 2 {
