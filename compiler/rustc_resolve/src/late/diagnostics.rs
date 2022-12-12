@@ -549,7 +549,8 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
                 let self_is_available = self.self_value_is_available(path[0].ident.span);
                 match candidate {
                     AssocSuggestion::Field => {
-                        if self_is_available {
+                        if self_is_available &&
+                    !span.can_be_used_for_suggestions() {
                             err.span_suggestion(
                                 span,
                                 "you might have meant to use the available field",
