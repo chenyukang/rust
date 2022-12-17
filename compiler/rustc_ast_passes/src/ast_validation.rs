@@ -7,7 +7,6 @@
 // or type checking or some other kind of complex analysis.
 
 use itertools::{Either, Itertools};
-use rustc_ast::ptr::P;
 use rustc_ast::visit::{self, AssocCtxt, BoundKind, FnCtxt, FnKind, Visitor};
 use rustc_ast::walk_list;
 use rustc_ast::*;
@@ -644,27 +643,6 @@ impl<'a> AstValidator<'a> {
         }
     }
 
-    fn deny_items(&self, trait_items: &[P<AssocItem>], ident_span: Span) {
-        if !trait_items.is_empty() {
-            let spans: Vec<_> = trait_items.iter().map(|i| i.ident.span).collect();
-            let total_span = trait_items.first().unwrap().span.to(trait_items.last().unwrap().span);
-            struct_span_err!(
-                self.session,
-                spans,
-                E0380,
-                "auto traits cannot have associated items"
-            )
-            .span_suggestion(
-                total_span,
-                "remove these associated items",
-                "",
-                Applicability::MachineApplicable,
-            )
-            .span_label(ident_span, "auto trait cannot have associated items")
-            .emit();
-        }
-    }
-
     fn correct_generic_order_suggestion(&self, data: &AngleBracketedArgs) -> String {
         // Lifetimes always come first.
         let lt_sugg = data.args.iter().filter_map(|arg| match arg {
@@ -1152,7 +1130,6 @@ impl<'a> Visitor<'a> for AstValidator<'a> {
                     self.deny_generic_params(generics, item.ident.span);
                     self.deny_super_traits(bounds, item.ident.span);
                     self.deny_where_clause(&generics.where_clause, item.ident.span);
-                    self.deny_items(items, item.ident.span);
                 }
 
                 // Equivalent of `visit::walk_item` for `ItemKind::Trait` that inserts a bound

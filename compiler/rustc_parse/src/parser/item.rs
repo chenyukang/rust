@@ -16,7 +16,7 @@ use rustc_ast::{EnumDef, FieldDef, Generics, TraitRef, Ty, TyKind, Variant, Vari
 use rustc_ast::{FnHeader, ForeignItem, Path, PathSegment, Visibility, VisibilityKind};
 use rustc_ast::{MacCall, MacDelimiter};
 use rustc_ast_pretty::pprust;
-use rustc_errors::{struct_span_err, Applicability, IntoDiagnostic, PResult, StashKey};
+use rustc_errors::{error_code, struct_span_err, Applicability, IntoDiagnostic, PResult, StashKey};
 use rustc_span::edition::Edition;
 use rustc_span::lev_distance::lev_distance;
 use rustc_span::source_map::{self, Span};
@@ -870,12 +870,37 @@ impl<'a> Parser<'a> {
         } else {
             // It's a normal trait.
             generics.where_clause = self.parse_where_clause()?;
-            let items = self.parse_item_list(attrs, |p| p.parse_trait_item(ForceCollect::No))?;
+            let mut items =
+                self.parse_item_list(attrs, |p| p.parse_trait_item(ForceCollect::No))?;
+            if items.len() > 0 && is_auto == IsAuto::Yes {
+                self.deny_items(&items, ident.span);
+                items = vec![];
+            }
             Ok((
                 ident,
                 ItemKind::Trait(Box::new(Trait { is_auto, unsafety, generics, bounds, items })),
             ))
         }
+    }
+
+    fn deny_items(&self, items: &Vec<P<Item<AssocItemKind>>>, ident_span: Span) {
+        let spans: Vec<_> = items.iter().map(|i| i.ident.span).collect();
+        let total_span = items.first().unwrap().span.to(items.last().unwrap().span);
+        self.sess
+            .span_diagnostic
+            .struct_span_err_with_code(
+                spans,
+                "auto traits cannot have associated items",
+                error_code!(E0753),
+            )
+            .span_suggestion(
+                total_span,
+                "remove these associated items",
+                "",
+                Applicability::MachineApplicable,
+            )
+            .span_label(ident_span, "auto trait cannot have associated items")
+            .emit();
     }
 
     pub fn parse_impl_item(
