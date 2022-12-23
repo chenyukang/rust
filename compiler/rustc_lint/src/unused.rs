@@ -1038,7 +1038,20 @@ impl EarlyLintPass for UnusedParens {
         if let ast::TyKind::Paren(r) = &ty.kind {
             match &r.kind {
                 ast::TyKind::TraitObject(..) => {}
-                ast::TyKind::BareFn(b) if b.generic_params.len() > 0 => {}
+                ast::TyKind::BareFn(b) => {
+                    let spans = if let Some(r) = r.span.find_ancestor_inside(ty.span) {
+                        Some((ty.span.with_hi(r.lo()), ty.span.with_lo(r.hi())))
+                    } else {
+                        None
+                    };
+                    let sm = cx.sess().source_map();
+                    if let Some((_, r)) = spans &&
+                        b.generic_params.len() > 0 &&
+                        sm.span_followed_by(r, ":") {
+                            return;
+                    }
+                    self.emit_unused_delims(cx, ty.span, spans, "type", (false, false));
+                }
                 ast::TyKind::ImplTrait(_, bounds) if bounds.len() > 1 => {}
                 ast::TyKind::Array(_, len) => {
                     self.check_unused_delims_expr(

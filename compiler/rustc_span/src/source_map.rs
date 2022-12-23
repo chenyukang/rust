@@ -962,6 +962,14 @@ impl SourceMap {
         sp
     }
 
+    /// Check whether a `span` is followed by a specific string
+    pub fn span_followed_by(&self, span: Span, expect: &str) -> bool {
+        if let Ok(source) = self.span_to_next_source(span) {
+            return source.trim_start().starts_with(expect);
+        }
+        false
+    }
+
     /// Finds the width of the character, either before or after the end of provided span,
     /// depending on the `forwards` parameter.
     fn find_width_of_character_at_span(&self, sp: Span, forwards: bool) -> u32 {

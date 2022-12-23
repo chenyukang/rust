@@ -1158,8 +1158,7 @@ impl<'a: 'ast, 'ast> LateResolutionVisitor<'a, '_, 'ast> {
         // where a brace being opened means a block is being started. Look
         // ahead for the next text to see if `span` is followed by a `{`.
         let sm = self.r.session.source_map();
-        let sp = sm.span_look_ahead(span, None, Some(50));
-        let followed_by_brace = matches!(sm.span_to_snippet(sp), Ok(ref snippet) if snippet == "{");
+        let followed_by_brace = sm.span_followed_by(span, "{");
         // In case this could be a struct literal that needs to be surrounded
         // by parentheses, find the appropriate span.
         let closing_span = sm.span_look_ahead(span, Some("}"), Some(50));
