@@ -13,6 +13,14 @@ use rustc_middle::ty::{self, DefIdTree, Ty};
 use rustc_span::symbol::Symbol;
 use rustc_span::symbol::{kw, sym};
 use rustc_span::{BytePos, Span};
+//use rustc_ast::walk_list;
+//use rustc_ast::WhereRegionPredicate;
+use rustc_ast::visit::Visitor;
+//use rustc_ast::WhereEqPredicate;
+use rustc_ast::WhereBoundPredicate;
+use rustc_ast::WherePredicate;
+//use rustc_ast::visit::{BoundKind, LifetimeCtxt};
+use rustc_ast::visit::{self as ast_visit};
 use std::iter;
 
 declare_lint! {
@@ -644,7 +652,7 @@ trait UnusedDelimLint {
         // ```
         // fn f(){(print!(á
         // ```
-        use rustc_ast::visit::{walk_expr, Visitor};
+        use rustc_ast::visit::walk_expr;
         struct ErrExprVisitor {
             has_error: bool,
         }
@@ -1035,6 +1043,7 @@ impl EarlyLintPass for UnusedParens {
     }
 
     fn check_ty(&mut self, cx: &EarlyContext<'_>, ty: &ast::Ty) {
+        debug!("yukang ty: {:?}", ty);
         if let ast::TyKind::Paren(r) = &ty.kind {
             match &r.kind {
                 ast::TyKind::TraitObject(..) => {}
@@ -1075,8 +1084,54 @@ impl EarlyLintPass for UnusedParens {
         }
     }
 
+    fn check_where_predicate(&mut self, cx: &EarlyContext<'_>, pred: &ast::WherePredicate) {
+        debug!("yukang pred: {:?}", pred);
+        match predicate {
+            WherePredicate::BoundPredicate(WhereBoundPredicate {
+                bounded_ty,
+                bounds,
+                //bound_generic_params,
+                ..
+            }) => {
+                debug!("yukang walk_where_predicate2: {:?}", bounded_ty);
+                if let ast::TyKind::BareFn(b) = &bounded_ty.kind &&
+                    b.generic_params.len() > 0 &&
+                    bounds.len() > 0
+                {
+                    return;
+                }
+            }
+            _ => {}
+        }
+        ast_visit::walk_where_predicate(cx, p);
+    }
+
     fn check_item(&mut self, cx: &EarlyContext<'_>, item: &ast::Item) {
         <Self as UnusedDelimLint>::check_item(self, cx, item)
+    }
+}
+
+impl<'a> ast_visit::Visitor<'a> for UnusedParens {
+    fn visit_where_predicate(&mut self, predicate: &ast::WherePredicate) {
+        debug!("yukang finished check_where_predicate2: {:?}", predicate);
+        match predicate {
+            WherePredicate::BoundPredicate(WhereBoundPredicate {
+                bounded_ty,
+                bounds,
+                //bound_generic_params,
+                ..
+            }) => {
+                debug!("yukang walk_where_predicate2: {:?}", bounded_ty);
+                if let ast::TyKind::BareFn(b) = &bounded_ty.kind &&
+                    b.generic_params.len() > 0 &&
+                    bounds.len() > 0
+                {
+                    return;
+                }
+            }
+            _ => {}
+        }
+        ast_visit::walk_where_predicate(self, predicate);
     }
 }
 

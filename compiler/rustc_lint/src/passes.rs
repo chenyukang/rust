@@ -164,7 +164,7 @@ macro_rules! early_lint_methods {
             fn check_attribute(a: &ast::Attribute);
             fn check_mac_def(a: &ast::MacroDef);
             fn check_mac(a: &ast::MacCall);
-
+            fn check_where_predicate(a: &ast::WherePredicate);
             /// Called when entering a syntax node that can have lint attributes such
             /// as `#[allow(...)]`. Called with *all* the attributes of that node.
             fn enter_lint_attrs(a: &[ast::Attribute]);

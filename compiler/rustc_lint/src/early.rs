@@ -246,6 +246,8 @@ impl<'a, T: EarlyLintPass> ast_visit::Visitor<'a> for EarlyContextAndPass<'a, T>
     }
 
     fn visit_where_predicate(&mut self, p: &'a ast::WherePredicate) {
+        lint_callback!(self, check_where_predicate, p);
+        debug!("yukang finished check_where_predicate: {:?}", p);
         ast_visit::walk_where_predicate(self, p);
     }
 

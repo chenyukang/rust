@@ -620,6 +620,7 @@ pub fn walk_where_predicate<'a, V: Visitor<'a>>(visitor: &mut V, predicate: &'a 
             bound_generic_params,
             ..
         }) => {
+            debug!("yukang walk_where_predicate: {:?}", bounded_ty);
             visitor.visit_ty(bounded_ty);
             walk_list!(visitor, visit_param_bound, bounds, BoundKind::Bound);
             walk_list!(visitor, visit_generic_param, bound_generic_params);
