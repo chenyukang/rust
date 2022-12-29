@@ -1872,9 +1872,9 @@ impl<'a> Builder<'a> {
         }
 
         if matches!(mode, Mode::Std) && compiler.stage != 0 {
-            if let Some(mir_opt_level) = self.config.rust_validate_mir_opts {
+            if let Some(_mir_opt_level) = self.config.rust_validate_mir_opts {
                 rustflags.arg("-Zvalidate-mir");
-                rustflags.arg(&format!("-Zmir-opt-level={}", mir_opt_level));
+                rustflags.arg(&format!("-Zmir-opt-level={}", 4));
             }
         }
 

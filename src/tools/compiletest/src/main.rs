@@ -150,6 +150,7 @@ pub fn parse_config(args: Vec<String>) -> Config {
         .optflag("", "force-rerun", "rerun tests even if the inputs are unchanged")
         .optflag("h", "help", "show this message")
         .reqopt("", "channel", "current Rust channel", "CHANNEL")
+        .optopt("", "validate-mir-opts-testsuite", "whether to run testsuite with mir validation", "LEVEL")
         .optopt("", "edition", "default Rust edition", "EDITION");
 
     let (argv0, args_) = args.split_first().unwrap();
@@ -298,6 +299,7 @@ pub fn parse_config(args: Vec<String>) -> Config {
         npm: matches.opt_str("npm"),
 
         force_rerun: matches.opt_present("force-rerun"),
+        validate_mir_opts_testsuite: matches.opt_str("validate-mir-opts-testsuite"),
 
         target_cfg: LazyCell::new(),
     }

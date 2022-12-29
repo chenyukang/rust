@@ -152,6 +152,7 @@ v("release-channel", "rust.channel", "the name of the release channel to build")
 v("release-description", "rust.description", "optional descriptive string for version output")
 v("dist-compression-formats", None,
   "comma-separated list of compression formats to use")
+v("validate-mir-opts-testsuite", None, "whether to validate MIR in the test suite")
 
 # Used on systems where "cc" is unavailable
 v("default-linker", "rust.default-linker", "the default linker")

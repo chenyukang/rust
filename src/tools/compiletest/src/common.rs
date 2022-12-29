@@ -377,6 +377,9 @@ pub struct Config {
     /// Whether to rerun tests even if the inputs are unchanged.
     pub force_rerun: bool,
 
+    /// Whether to run tests in with validate mir
+    pub validate_mir_opts_testsuite: Option<String>,
+
     pub target_cfg: LazyCell<TargetCfg>,
 }
 

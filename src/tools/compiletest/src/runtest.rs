@@ -1983,6 +1983,16 @@ impl<'test> TestCx<'test> {
             }
         }
 
+        if let Some(level) = &self.config.validate_mir_opts_testsuite {
+            match self.config.mode {
+                MirOpt => (),
+                _ => {
+                    println!("yukang set validate-mir");
+                    rustc.args(&["-Zvalidate-mir", format!("-Zmir-opt-level={}", level).as_str()]);
+                }
+            }
+        }
+
         if !is_rustdoc {
             if self.config.target == "wasm32-unknown-unknown" || self.is_vxworks_pure_static() {
                 // rustc.arg("-g"); // get any backtrace at all on errors
