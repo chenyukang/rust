@@ -1955,8 +1955,6 @@ impl<'test> TestCx<'test> {
                     rustc.arg("-Zmir-opt-level=4");
                 }
 
-                debug!("rustc args: {:?}", rustc.get_args().collect::<Vec<_>>());
-
                 let mir_dump_dir = self.get_mir_dump_dir();
                 let _ = fs::remove_dir_all(&mir_dump_dir);
                 create_dir_all(mir_dump_dir.as_path()).unwrap();
