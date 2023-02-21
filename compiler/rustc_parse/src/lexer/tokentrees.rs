@@ -43,10 +43,11 @@ impl<'a> TokenTreesReader<'a> {
                     };
                 }
                 token::Eof => {
-                    if is_delimited {
-                        self.eof_err().emit();
-                    }
-                    return Ok(TokenStream::new(buf))
+                    return if is_delimited {
+                        Err(self.eof_err())
+                    } else {
+                        Ok(TokenStream::new(buf))
+                    };
                 }
                 _ => {
                     // Get the next normal token. This might require getting multiple adjacent
