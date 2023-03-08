@@ -76,11 +76,7 @@ impl From<Option<AttrWrapper>> for LhsExpr {
     ///
     /// This conversion does not allocate.
     fn from(o: Option<AttrWrapper>) -> Self {
-        if let Some(attrs) = o {
-            LhsExpr::AttributesParsed(attrs)
-        } else {
-            LhsExpr::NotYetParsed
-        }
+        if let Some(attrs) = o { LhsExpr::AttributesParsed(attrs) } else { LhsExpr::NotYetParsed }
     }
 }
 
@@ -1179,7 +1175,7 @@ impl<'a> Parser<'a> {
                                 r#type: path,
                                 braces_for_struct: errors::BracesForStructLiteral {
                                     first: open_paren,
-                                    
+
                                     second: close_paren,
                                 },
                                 no_fields_for_fn: errors::NoFieldsForFnCall {
