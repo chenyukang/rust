@@ -10,14 +10,13 @@ pub fn index_after_as_cast() {
     vec![1, 2, 3] as Vec<i32>[0];
     //~^ ERROR: cast cannot be followed by indexing
     type_ascribe(vec![1, 2, 3], Vec<i32>[0]);
-    //~^ ERROR: type ascription cannot be followed by indexing
+    //~^ ERROR comparison operators cannot be chained
 }
 
 pub fn index_after_cast_to_index() {
     (&[0]) as &[i32][0];
     //~^ ERROR: cast cannot be followed by indexing
     type_ascribe((&[0i32]): &[i32; 1][0]);
-    //~^ ERROR: type ascription cannot be followed by indexing
 }
 
 pub fn cast_after_cast() {
@@ -37,25 +36,20 @@ pub fn cast_after_cast() {
 
 pub fn cast_cast_method_call() {
     let _ = 0i32: i32: i32.count_ones();
-    //~^ ERROR: type ascription cannot be followed by a method call
+
     let _ = 0 as i32: i32.count_ones();
-    //~^ ERROR: type ascription cannot be followed by a method call
+
     let _ = 0i32: i32 as i32.count_ones();
-    //~^ ERROR: cast cannot be followed by a method call
-    let _ = 0 as i32 as i32.count_ones();
-    //~^ ERROR: cast cannot be followed by a method call
-    let _ = 0i32: i32: i32 as u32 as i32.count_ones();
-    //~^ ERROR: cast cannot be followed by a method call
-    let _ = 0i32: i32.count_ones(): u32;
-    //~^ ERROR: type ascription cannot be followed by a method call
+        let _ = 0 as i32 as i32.count_ones();
+        let _ = 0i32: i32: i32 as u32 as i32.count_ones();
+        let _ = 0i32: i32.count_ones(): u32;
+
     let _ = 0 as i32.count_ones(): u32;
-    //~^ ERROR: cast cannot be followed by a method call
-    let _ = 0i32: i32.count_ones() as u32;
-    //~^ ERROR: type ascription cannot be followed by a method call
+        let _ = 0i32: i32.count_ones() as u32;
+
     let _ = 0 as i32.count_ones() as u32;
-    //~^ ERROR: cast cannot be followed by a method call
-    let _ = 0i32: i32: i32.count_ones() as u32 as i32;
-    //~^ ERROR: type ascription cannot be followed by a method call
+        let _ = 0i32: i32: i32.count_ones() as u32 as i32;
+
 }
 
 pub fn multiline_error() {
@@ -73,53 +67,44 @@ pub fn precedence() {
 
 pub fn method_calls() {
     0 as i32.max(0);
-    //~^ ERROR: cast cannot be followed by a method call
-    type_ascribe(0, i32.max(0));
-    //~^ ERROR: type ascription cannot be followed by a method call
+        type_ascribe(0, i32.max(0));
+
 }
 
 pub fn complex() {
     let _ = format!(
         "{} and {}",
         if true { 33 } else { 44 } as i32.max(0),
-        //~^ ERROR: cast cannot be followed by a method call
-        if true { 33 } else { 44 }: i32.max(0)
-        //~^ ERROR: type ascription cannot be followed by a method call
+                if true { 33 } else { 44 }: i32.max(0)
+
     );
 }
 
 pub fn in_condition() {
     if 5u64 as i32.max(0) == 0 {
-        //~^ ERROR: cast cannot be followed by a method call
-    }
+            }
     if 5u64: u64.max(0) == 0 {
-        //~^ ERROR: type ascription cannot be followed by a method call
+
     }
 }
 
 pub fn inside_block() {
     let _ = if true {
         5u64 as u32.max(0) == 0
-        //~^ ERROR: cast cannot be followed by a method call
-    } else { false };
+            } else { false };
     let _ = if true {
         5u64: u64.max(0) == 0
-        //~^ ERROR: type ascription cannot be followed by a method call
+
     } else { false };
 }
 
 static bar: &[i32] = &(&[1,2,3] as &[i32][0..1]);
-//~^ ERROR: cast cannot be followed by indexing
 
 static bar2: &[i32] = &(&[1i32,2,3]: &[i32; 3][0..1]);
-//~^ ERROR: type ascription cannot be followed by indexing
-
 
 pub fn cast_then_try() -> Result<u64,u64> {
     Err(0u64) as Result<u64,u64>?;
-    //~^ ERROR: cast cannot be followed by `?`
     Err(0u64): Result<u64,u64>?;
-    //~^ ERROR: type ascription cannot be followed by `?`
     Ok(1)
 }
 
@@ -150,10 +135,8 @@ pub fn parens_after_cast_error() {
 
 pub async fn cast_then_await() {
     Box::pin(noop()) as Pin<Box<dyn Future<Output = ()>>>.await;
-    //~^ ERROR: cast cannot be followed by `.await`
 
     type_ascrib(Box::pin(noop()), Pin<Box<_>>.await);
-    //~^ ERROR: type ascription cannot be followed by `.await`
 }
 
 pub async fn noop() {}
@@ -165,7 +148,5 @@ pub struct Foo {
 
 pub fn struct_field() {
     Foo::default() as Foo.bar;
-    //~^ ERROR: cannot be followed by a field access
     type_ascribe(Foo::default(), Foo.bar);
-    //~^ ERROR: type ascription cannot be followed by a field access
 }

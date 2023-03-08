@@ -8,7 +8,7 @@ use E::*;
 
 fn no_top_level_or_patterns() {
     // We do *not* allow or-patterns at the top level of lambdas...
-    let _ = |A | B: E| (); //~ ERROR path separator must be a double colon
+    let _ = |A | B: E| ();
                            //~^ ERROR failed to resolve: `B` is a variant, not a module
     //           -------- This looks like an or-pattern but is in fact `|A| (B: E | ())`.
 

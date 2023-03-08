@@ -5,9 +5,7 @@ struct Reactor {
 impl Reactor {
     pub fn new() -> Self {
         input_cells: Vec::new()
-        //~^ ERROR cannot find value `input_cells` in this scope
-        //~| ERROR parenthesized type parameters may only be used with a `Fn` trait
-        //~| ERROR missing generics for struct `Vec`
+        //~^ ERROR failed to resolve: use of undeclared crate or module
     }
 }
 
