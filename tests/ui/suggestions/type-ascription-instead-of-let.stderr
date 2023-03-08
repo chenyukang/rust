@@ -1,11 +1,3 @@
-error: path separator must be a double colon
-  --> $DIR/type-ascription-instead-of-let.rs:5:13
-   |
-LL |         temp: i32 = fun(5i32);
-   |             ^ help: use a double colon instead: `::`
-   |
-   = note: type ascription syntax has been removed, see issue #101728 <https://github.com/rust-lang/rust/issues/101728>
-
 error[E0425]: cannot find value `temp` in this scope
   --> $DIR/type-ascription-instead-of-let.rs:7:9
    |
@@ -23,7 +15,7 @@ help: you might have meant to introduce a new binding
 LL |         let temp: i32 = fun(5i32);
    |         +++
 
-error: aborting due to 3 previous errors
+error: aborting due to 2 previous errors
 
 Some errors have detailed explanations: E0425, E0433.
 For more information about an error, try `rustc --explain E0425`.

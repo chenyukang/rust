@@ -1,11 +1,3 @@
-error: path separator must be a double colon
-  --> $DIR/missing-let-in-binding.rs:4:9
-   |
-LL |     _foo: i32 = 4;
-   |         ^ help: use a double colon instead: `::`
-   |
-   = note: type ascription syntax has been removed, see issue #101728 <https://github.com/rust-lang/rust/issues/101728>
-
 error[E0433]: failed to resolve: use of undeclared crate or module `_foo`
   --> $DIR/missing-let-in-binding.rs:4:5
    |
@@ -17,6 +9,6 @@ help: you might have meant to introduce a new binding
 LL |     let _foo: i32 = 4;
    |     +++
 
-error: aborting due to 2 previous errors
+error: aborting due to previous error
 
 For more information about this error, try `rustc --explain E0433`.

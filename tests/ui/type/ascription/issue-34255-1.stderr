@@ -1,11 +1,3 @@
-error: path separator must be a double colon
-  --> $DIR/issue-34255-1.rs:7:20
-   |
-LL |         input_cells: Vec::new()
-   |                    ^ help: use a double colon instead: `::`
-   |
-   = note: type ascription syntax has been removed, see issue #101728 <https://github.com/rust-lang/rust/issues/101728>
-
 error[E0433]: failed to resolve: use of undeclared crate or module `input_cells`
   --> $DIR/issue-34255-1.rs:7:9
    |
@@ -22,6 +14,6 @@ LL -         input_cells: Vec::new()
 LL +         Vec::new()
    |
 
-error: aborting due to 2 previous errors
+error: aborting due to previous error
 
 For more information about this error, try `rustc --explain E0433`.

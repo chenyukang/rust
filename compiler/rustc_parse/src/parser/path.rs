@@ -245,14 +245,18 @@ impl<'a> Parser<'a> {
                     && self.look_ahead(1, |token| token.is_ident() && !token.is_reserved_ident())
                 {
                     self.bump(); // bump past the colon
-                    self.sess.emit_err(PathSingleColon {
-                        span: self.prev_token.span,
-                        type_ascription: self
-                            .sess
-                            .unstable_features
-                            .is_nightly_build()
-                            .then_some(()),
-                    });
+                    // Emit a special error message for `a::b:c` to help users
+                    // otherwise, `a: c` might have meant to introduce a new binding
+                    if self.token.span.lo() == self.prev_token.span.hi() {
+                        self.sess.emit_err(PathSingleColon {
+                            span: self.prev_token.span,
+                            type_ascription: self
+                                .sess
+                                .unstable_features
+                                .is_nightly_build()
+                                .then_some(()),
+                        });
+                    }
                     continue;
                 }
 
