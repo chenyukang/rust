@@ -1,4 +1,3 @@
-
 fn main() {
     println!("test"): //~ ERROR statements are terminated with a semicolon
     0;
