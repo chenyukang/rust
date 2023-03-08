@@ -9,11 +9,14 @@ help: try surrounding the expression in parentheses
 LL |     (vec![1, 2, 3] as Vec<i32>)[0];
    |     +                         +
 
-error: expected one of `.`, `;`, `?`, `}`, or an operator, found `:`
-  --> $DIR/issue-35813-postfix-after-cast.rs:12:18
+error: comparison operators cannot be chained
+  --> $DIR/issue-35813-postfix-after-cast.rs:12:36
    |
-LL |     vec![1, 2, 3]: Vec<i32>[0];
-   |                  ^ expected one of `.`, `;`, `?`, `}`, or an operator
+LL |     type_ascribe(vec![1, 2, 3], Vec<i32>[0]);
+   |                                    ^   ^
+   |
+   = help: use `::<...>` instead of `<...>` to specify lifetime, type, or const arguments
+   = help: or use `(...)` if you meant to specify fn arguments
 
 error: cast cannot be followed by indexing
   --> $DIR/issue-35813-postfix-after-cast.rs:17:5
@@ -26,130 +29,11 @@ help: try surrounding the expression in parentheses
 LL |     ((&[0]) as &[i32])[0];
    |     +                +
 
-error: expected one of `.`, `;`, `?`, `}`, or an operator, found `:`
-  --> $DIR/issue-35813-postfix-after-cast.rs:19:14
-   |
-LL |     (&[0i32]): &[i32; 1][0];
-   |              ^ expected one of `.`, `;`, `?`, `}`, or an operator
-
-error: expected `{`, found `:`
-  --> $DIR/issue-35813-postfix-after-cast.rs:27:12
-   |
-LL |     if 5u64: u64: u64 == 0u64 {
-   |            ^ expected `{`
-   |
-note: the `if` expression is missing a block after this condition
-  --> $DIR/issue-35813-postfix-after-cast.rs:27:8
-   |
-LL |     if 5u64: u64: u64 == 0u64 {
-   |        ^^^^
-
-error: expected one of `.`, `;`, `?`, `else`, or an operator, found `:`
-  --> $DIR/issue-35813-postfix-after-cast.rs:39:17
-   |
-LL |     let _ = 0i32: i32: i32.count_ones();
-   |                 ^ expected one of `.`, `;`, `?`, `else`, or an operator
-   |
-   = note: type ascription syntax has been removed, see issue #101728 <https://github.com/rust-lang/rust/issues/101728>
-
-error: cast cannot be followed by a method call
-  --> $DIR/issue-35813-postfix-after-cast.rs:62:13
-   |
-LL |       let _ = 0
-   |  _____________^
-LL | |         as i32
-   | |______________^
-   |
-help: try surrounding the expression in parentheses
-   |
-LL ~     let _ = (0
-LL ~         as i32)
-   |
-
-error: cast cannot be followed by indexing
-  --> $DIR/issue-35813-postfix-after-cast.rs:70:18
-   |
-LL |     let x: i32 = &vec![1, 2, 3] as &Vec<i32>[0];
-   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-help: try surrounding the expression in parentheses
-   |
-LL |     let x: i32 = (&vec![1, 2, 3] as &Vec<i32>)[0];
-   |                  +                           +
-
-error: cast cannot be followed by a method call
-  --> $DIR/issue-35813-postfix-after-cast.rs:75:5
-   |
-LL |     0 as i32.max(0);
-   |     ^^^^^^^^
-   |
-help: try surrounding the expression in parentheses
-   |
-LL |     (0 as i32).max(0);
-   |     +        +
-
-error: expected one of `.`, `;`, `?`, `}`, or an operator, found `:`
-  --> $DIR/issue-35813-postfix-after-cast.rs:77:6
-   |
-LL |     0: i32.max(0);
-   |      ^ expected one of `.`, `;`, `?`, `}`, or an operator
-
-error: cast cannot be followed by a method call
-  --> $DIR/issue-35813-postfix-after-cast.rs:92:8
-   |
-LL |     if 5u64 as i32.max(0) == 0 {
-   |        ^^^^^^^^^^^
-   |
-help: try surrounding the expression in parentheses
-   |
-LL |     if (5u64 as i32).max(0) == 0 {
-   |        +           +
-
-error: expected `{`, found `:`
-  --> $DIR/issue-35813-postfix-after-cast.rs:95:12
-   |
-LL |     if 5u64: u64.max(0) == 0 {
-   |            ^ expected `{`
-   |
-note: the `if` expression is missing a block after this condition
-  --> $DIR/issue-35813-postfix-after-cast.rs:95:8
-   |
-LL |     if 5u64: u64.max(0) == 0 {
-   |        ^^^^
-
-error: cast cannot be followed by a method call
-  --> $DIR/issue-35813-postfix-after-cast.rs:102:9
-   |
-LL |         5u64 as u32.max(0) == 0
-   |         ^^^^^^^^^^^
-   |
-help: try surrounding the expression in parentheses
-   |
-LL |         (5u64 as u32).max(0) == 0
-   |         +           +
-
-error: expected one of `.`, `;`, `?`, `}`, or an operator, found `:`
-  --> $DIR/issue-35813-postfix-after-cast.rs:106:13
-   |
-LL |         5u64: u64.max(0) == 0
-   |             ^ expected one of `.`, `;`, `?`, `}`, or an operator
-
-error: cast cannot be followed by indexing
-  --> $DIR/issue-35813-postfix-after-cast.rs:111:24
-   |
-LL | static bar: &[i32] = &(&[1,2,3] as &[i32][0..1]);
-   |                        ^^^^^^^^^^^^^^^^^^
-   |
-help: try surrounding the expression in parentheses
-   |
-LL | static bar: &[i32] = &((&[1,2,3] as &[i32])[0..1]);
-   |                        +                  +
-
 error: expected one of `)`, `,`, `.`, `?`, or an operator, found `:`
-  --> $DIR/issue-35813-postfix-after-cast.rs:114:36
+  --> $DIR/issue-35813-postfix-after-cast.rs:19:27
    |
-LL | static bar2: &[i32] = &(&[1i32,2,3]: &[i32; 3][0..1]);
-   |                                    ^ expected one of `)`, `,`, `.`, `?`, or an operator
+LL |     type_ascribe((&[0i32]): &[i32; 1][0]);
+   |                           ^ expected one of `)`, `,`, `.`, `?`, or an operator
 
-error: aborting due to 16 previous errors
+error: aborting due to 4 previous errors
 

@@ -76,7 +76,11 @@ impl From<Option<AttrWrapper>> for LhsExpr {
     ///
     /// This conversion does not allocate.
     fn from(o: Option<AttrWrapper>) -> Self {
-        if let Some(attrs) = o { LhsExpr::AttributesParsed(attrs) } else { LhsExpr::NotYetParsed }
+        if let Some(attrs) = o {
+            LhsExpr::AttributesParsed(attrs)
+        } else {
+            LhsExpr::NotYetParsed
+        }
     }
 }
 
@@ -292,7 +296,6 @@ impl<'a> Parser<'a> {
                 continue;
             }
 
-            let op = op.node;
             // Special cases:
             if op.node == AssocOp::As {
                 lhs = self.parse_assoc_op_cast(lhs, lhs_span, ExprKind::Cast)?;
@@ -300,7 +303,7 @@ impl<'a> Parser<'a> {
             } else if op.node == AssocOp::DotDot || op.node == AssocOp::DotDotEq {
                 // If we didn't have to handle `x..`/`x..=`, it would be pretty easy to
                 // generalise it to the Fixity::None code.
-                lhs = self.parse_expr_range(prec, lhs, op, cur_op_span)?;
+                lhs = self.parse_expr_range(prec, lhs, op.node, cur_op_span)?;
                 break;
             }
 
@@ -954,7 +957,7 @@ impl<'a> Parser<'a> {
             };
             if has_dot {
                 // expr.f
-                e = self.parse_expr_dot_suffix(lo, e)?;
+                e = self.parse_dot_suffix_expr(lo, e)?;
                 continue;
             }
             if self.expr_is_complete(&e) {
@@ -1120,7 +1123,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a function call expression, `expr(...)`.
-    fn parse_fn_call_expr(&mut self, lo: Span, fun: P<Expr>) -> P<Expr> {
+    fn parse_expr_fn_call(&mut self, lo: Span, fun: P<Expr>) -> P<Expr> {
         let snapshot = if self.token.kind == token::OpenDelim(Delimiter::Parenthesis) {
             Some((self.create_snapshot_for_diagnostic(), fun.kind.clone()))
         } else {
@@ -1176,6 +1179,7 @@ impl<'a> Parser<'a> {
                                 r#type: path,
                                 braces_for_struct: errors::BracesForStructLiteral {
                                     first: open_paren,
+                                    
                                     second: close_paren,
                                 },
                                 no_fields_for_fn: errors::NoFieldsForFnCall {
@@ -1470,7 +1474,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse `'label: $expr`. The label is already parsed.
-    pub(super) fn parse_labeled_expr(
+    pub(super) fn parse_expr_labeled(
         &mut self,
         label_: Label,
         mut consume_colon: bool,

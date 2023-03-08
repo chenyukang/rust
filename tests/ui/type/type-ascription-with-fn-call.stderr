@@ -1,5 +1,5 @@
 error: statements are terminated with a semicolon
-  --> $DIR/type-ascription-with-fn-call.rs:5:10
+  --> $DIR/type-ascription-with-fn-call.rs:3:10
    |
 LL |     f()  :
    |          ^ help: use a semicolon instead: `;`

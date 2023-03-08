@@ -1783,14 +1783,9 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         start.to(sm.next_point(start))
     }
 
-<<<<<<< HEAD
-    fn type_ascription_suggestion(&self, err: &mut Diagnostic, base_span: Span) -> bool {
-        let sm = self.r.tcx.sess.source_map();
-=======
     #[instrument(level = "debug", skip(self, err))]
     fn suggest_missing_let(&self, err: &mut Diagnostic, base_span: Span) -> bool {
-        let sm = self.r.session.source_map();
->>>>>>> 9a59e5adf3a (wip)
+        let sm = self.r.tcx.sess.source_map();
         let base_snippet = sm.span_to_snippet(base_span);
         if let Some(&sp) = self.diagnostic_metadata.current_type_ascription.last() {
             if let Ok(snippet) = sm.span_to_snippet(sp) {

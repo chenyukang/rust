@@ -1,7 +1,7 @@
 error: expected one of `!`, `.`, `::`, `;`, `?`, `{`, `}`, or an operator, found `:`
-  --> $DIR/type-ascription-precedence.rs:29:7
+  --> $DIR/type-ascription-precedence.rs:26:7
    |
-LL |     &S: &S; // OK
+LL |     &S: &S;
    |       ^ expected one of 8 possible tokens
 
 error: aborting due to previous error

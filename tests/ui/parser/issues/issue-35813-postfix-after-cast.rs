@@ -9,14 +9,14 @@ use std::pin::Pin;
 pub fn index_after_as_cast() {
     vec![1, 2, 3] as Vec<i32>[0];
     //~^ ERROR: cast cannot be followed by indexing
-    vec![1, 2, 3]: Vec<i32>[0];
+    type_ascribe(vec![1, 2, 3], Vec<i32>[0]);
     //~^ ERROR: type ascription cannot be followed by indexing
 }
 
 pub fn index_after_cast_to_index() {
     (&[0]) as &[i32][0];
     //~^ ERROR: cast cannot be followed by indexing
-    (&[0i32]): &[i32; 1][0];
+    type_ascribe((&[0i32]): &[i32; 1][0]);
     //~^ ERROR: type ascription cannot be followed by indexing
 }
 
@@ -74,7 +74,7 @@ pub fn precedence() {
 pub fn method_calls() {
     0 as i32.max(0);
     //~^ ERROR: cast cannot be followed by a method call
-    0: i32.max(0);
+    type_ascribe(0, i32.max(0));
     //~^ ERROR: type ascription cannot be followed by a method call
 }
 
@@ -152,7 +152,7 @@ pub async fn cast_then_await() {
     Box::pin(noop()) as Pin<Box<dyn Future<Output = ()>>>.await;
     //~^ ERROR: cast cannot be followed by `.await`
 
-    Box::pin(noop()): Pin<Box<_>>.await;
+    type_ascrib(Box::pin(noop()), Pin<Box<_>>.await);
     //~^ ERROR: type ascription cannot be followed by `.await`
 }
 
@@ -166,6 +166,6 @@ pub struct Foo {
 pub fn struct_field() {
     Foo::default() as Foo.bar;
     //~^ ERROR: cannot be followed by a field access
-    Foo::default(): Foo.bar;
+    type_ascribe(Foo::default(), Foo.bar);
     //~^ ERROR: type ascription cannot be followed by a field access
 }

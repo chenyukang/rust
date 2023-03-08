@@ -1,18 +1,8 @@
-error: invalid `struct` delimiters or `fn` call arguments
-  --> $DIR/issue-34255-1.rs:8:5
+error: expected one of `!`, `)`, `,`, `.`, `::`, `?`, `{`, or an operator, found `:`
+  --> $DIR/issue-34255-1.rs:8:22
    |
 LL |     Test::Drill(field: 42);
-   |     ^^^^^^^^^^^^^^^^^^^^^^
-   |
-help: if `Test::Drill` is a struct, use braces as delimiters
-   |
-LL |     Test::Drill { field: 42 };
-   |                 ~           ~
-help: if `Test::Drill` is a function, use the arguments directly
-   |
-LL -     Test::Drill(field: 42);
-LL +     Test::Drill(42);
-   |
+   |                      ^ expected one of 8 possible tokens
 
 error: aborting due to previous error
 

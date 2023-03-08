@@ -10,6 +10,7 @@ use super::{
 use crate::errors;
 use crate::maybe_whole;
 
+use crate::errors::MalformedLoopLabel;
 use ast::Label;
 use rustc_ast as ast;
 use rustc_ast::ptr::P;
@@ -20,12 +21,8 @@ use rustc_ast::{Block, BlockCheckMode, Expr, ExprKind, HasAttrs, Local, Stmt};
 use rustc_ast::{StmtKind, DUMMY_NODE_ID};
 use rustc_errors::{Applicability, DiagnosticBuilder, ErrorGuaranteed, PResult};
 use rustc_span::source_map::{BytePos, Span};
-<<<<<<< HEAD
-use rustc_span::symbol::{kw, sym};
-=======
 use rustc_span::symbol::{kw, sym, Ident};
 
->>>>>>> 9a59e5adf3a (wip)
 use std::mem;
 use thin_vec::{thin_vec, ThinVec};
 
@@ -664,7 +661,7 @@ impl<'a> Parser<'a> {
                                                 segments[0].ident.span,
                                             ),
                                         };
-                                        match self.parse_labeled_expr(label, false) {
+                                        match self.parse_expr_labeled(label, false) {
                                             Ok(labeled_expr) => {
                                                 e.cancel();
                                                 self.sess.emit_err(MalformedLoopLabel {

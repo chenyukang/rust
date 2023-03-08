@@ -1,10 +1,37 @@
-error: expected one of `.`, `;`, `?`, `else`, or an operator, found `:`
-  --> $DIR/many-type-ascription.rs:2:14
+error[E0423]: expected value, found builtin type `i32`
+  --> $DIR/many-type-ascription.rs:2:29
    |
-LL |     let _ = 0: i32;
-   |              ^ expected one of `.`, `;`, `?`, `else`, or an operator
+LL |     let _ = type_ascribe(0, i32);
+   |                             ^^^ not a value
+
+error[E0423]: expected value, found builtin type `i32`
+  --> $DIR/many-type-ascription.rs:3:29
    |
-   = note: type ascription syntax has been removed, see issue #101728 <https://github.com/rust-lang/rust/issues/101728>
+LL |     let _ = type_ascribe(0, i32); // (error only emitted once)
+   |                             ^^^ not a value
 
-error: aborting due to previous error
+error[E0423]: expected function, found macro `type_ascribe`
+  --> $DIR/many-type-ascription.rs:2:13
+   |
+LL |     let _ = type_ascribe(0, i32);
+   |             ^^^^^^^^^^^^ not a function
+   |
+help: use `!` to invoke the macro
+   |
+LL |     let _ = type_ascribe!(0, i32);
+   |                         +
 
+error[E0423]: expected function, found macro `type_ascribe`
+  --> $DIR/many-type-ascription.rs:3:13
+   |
+LL |     let _ = type_ascribe(0, i32); // (error only emitted once)
+   |             ^^^^^^^^^^^^ not a function
+   |
+help: use `!` to invoke the macro
+   |
+LL |     let _ = type_ascribe!(0, i32); // (error only emitted once)
+   |                         +
+
+error: aborting due to 4 previous errors
+
+For more information about this error, try `rustc --explain E0423`.

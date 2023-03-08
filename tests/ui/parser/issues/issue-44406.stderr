@@ -1,49 +1,13 @@
-error: path separator must be a double colon
+error: expected one of `!`, `)`, `,`, `.`, `::`, `?`, `{`, or an operator, found `:`
   --> $DIR/issue-44406.rs:3:16
    |
 LL |         bar(baz: $rest)
-   |                ^ help: use a double colon instead: `::`
-...
-LL |     foo!(true);
-   |     ---------- in this macro invocation
-   |
-   = note: type ascription syntax has been removed, see issue #101728 <https://github.com/rust-lang/rust/issues/101728>
-   = note: this error originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error: expected identifier, found keyword `true`
-  --> $DIR/issue-44406.rs:8:10
-   |
-LL |     foo!(true);
-   |          ^^^^ expected identifier, found keyword
-   |
-help: escape `true` to use it as an identifier
-   |
-LL |     foo!(r#true);
-   |          ++
-
-error[E0433]: failed to resolve: use of undeclared crate or module `baz`
-  --> $DIR/issue-44406.rs:3:13
-   |
-LL |         bar(baz: $rest)
-   |             ^^^ use of undeclared crate or module `baz`
+   |                ^ expected one of 8 possible tokens
 ...
 LL |     foo!(true);
    |     ---------- in this macro invocation
    |
    = note: this error originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0425]: cannot find function `bar` in this scope
-  --> $DIR/issue-44406.rs:3:9
-   |
-LL |         bar(baz: $rest)
-   |         ^^^ not found in this scope
-...
-LL |     foo!(true);
-   |     ---------- in this macro invocation
-   |
-   = note: this error originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)
+error: aborting due to previous error
 
-error: aborting due to 4 previous errors
-
-Some errors have detailed explanations: E0425, E0433.
-For more information about an error, try `rustc --explain E0425`.
