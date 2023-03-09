@@ -42,6 +42,7 @@ pub use on_disk_cache::OnDiskCache;
 
 mod profiling_support;
 pub use self::profiling_support::alloc_self_profile_query_strings;
+use rustc_query_system::dep_graph::__rust_begin_short_backtrace;
 
 rustc_query_append! { define_queries! }
 

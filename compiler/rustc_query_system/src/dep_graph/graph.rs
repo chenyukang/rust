@@ -20,6 +20,7 @@ use std::sync::atomic::Ordering::Relaxed;
 use super::query::DepGraphQuery;
 use super::serialized::{GraphEncoder, SerializedDepGraph, SerializedDepNodeIndex};
 use super::{DepContext, DepKind, DepNode, HasDepContext, WorkProductId};
+use crate::dep_graph::debug::__rust_begin_short_backtrace;
 use crate::ich::StableHashingContext;
 use crate::query::{QueryContext, QuerySideEffects};
 
@@ -340,7 +341,7 @@ impl<K: DepKind> DepGraph<K> {
             None => TaskDepsRef::Ignore,
         };
 
-        let result = K::with_deps(task_deps_ref, || task(cx, arg));
+        let result = __rust_begin_short_backtrace(|| K::with_deps(task_deps_ref, || task(cx, arg)));
         let edges = task_deps.map_or_else(|| smallvec![], |lock| lock.into_inner().reads);
 
         let dcx = cx.dep_context();
