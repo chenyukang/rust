@@ -1,10 +1,8 @@
-error: statements are terminated with a semicolon
+error: expected one of `.`, `;`, `?`, `}`, or an operator, found `:`
   --> $DIR/type-ascription-with-fn-call.rs:3:10
    |
 LL |     f()  :
-   |          ^ help: use a semicolon instead: `;`
-   |
-   = note: type ascription syntax has been removed, see issue #101728 <https://github.com/rust-lang/rust/issues/101728>
+   |          ^ expected one of `.`, `;`, `?`, `}`, or an operator
 
 error: aborting due to previous error
 

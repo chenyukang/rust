@@ -10,8 +10,8 @@ use super::{
 use crate::errors;
 use crate::maybe_whole;
 
-use crate::errors::MalformedLoopLabel;
-use ast::Label;
+//use crate::errors::MalformedLoopLabel;
+//use ast::Label;
 use rustc_ast as ast;
 use rustc_ast::ptr::P;
 use rustc_ast::token::{self, Delimiter, TokenKind};
@@ -21,7 +21,7 @@ use rustc_ast::{Block, BlockCheckMode, Expr, ExprKind, HasAttrs, Local, Stmt};
 use rustc_ast::{StmtKind, DUMMY_NODE_ID};
 use rustc_errors::{Applicability, DiagnosticBuilder, ErrorGuaranteed, PResult};
 use rustc_span::source_map::{BytePos, Span};
-use rustc_span::symbol::{kw, sym, Ident};
+use rustc_span::symbol::{kw, sym};
 
 use std::mem;
 use thin_vec::{thin_vec, ThinVec};
@@ -561,6 +561,8 @@ impl<'a> Parser<'a> {
             }
             let stmt = match self.parse_full_stmt(recover) {
                 Err(mut err) if recover.yes() => {
+                    debug!("anan parse_block_tail: encountered error {:?}", err);
+                    self.suggest_semi_for_typo(&mut err);
                     if let Some(ref mut snapshot) = snapshot {
                         snapshot.recover_diff_marker();
                     }
@@ -587,8 +589,8 @@ impl<'a> Parser<'a> {
         Ok(self.mk_block(stmts, s, lo.to(self.prev_token.span)))
     }
 
-    /// Parses a statement, including the trailing semicolon.
-    pub fn parse_full_stmt(
+     /// Parses a statement, including the trailing semicolon.
+     pub fn parse_full_stmt(
         &mut self,
         recover: AttemptLocalParseRecovery,
     ) -> PResult<'a, Option<Stmt>> {
@@ -600,25 +602,19 @@ impl<'a> Parser<'a> {
         };
 
         let mut eat_semi = true;
-        let mut add_semi_to_stmt = false;
-
         match &mut stmt.kind {
             // Expression without semicolon.
             StmtKind::Expr(expr)
                 if self.token != token::Eof && classify::expr_requires_semi_to_be_stmt(expr) => {
                 // Just check for errors and recover; do not eat semicolon yet.
                 // `expect_one_of` returns PResult<'a, bool /* recovered */>
-
-                let expect_result = self.expect_one_of(&[], &[token::Semi, token::CloseDelim(Delimiter::Brace)]);
-
-                let replace_with_err = 'break_recover: {
-                    match expect_result {
+                let replace_with_err =
+                    match self.expect_one_of(&[], &[token::Semi, token::CloseDelim(Delimiter::Brace)]) {
                     // Recover from parser, skip type error to avoid extra errors.
-                        Ok(true) => true,
-                        Err(mut e) => {
-                            if let TokenKind::DocComment(..) = self.token.kind
-                                && let Ok(snippet) = self.span_to_snippet(self.token.span)
-                            {
+                    Ok(true) => true,
+                    Err(mut e) => {
+                        if let TokenKind::DocComment(..) = self.token.kind &&
+                            let Ok(snippet) = self.span_to_snippet(self.token.span) {
                                 let sp = self.token.span;
                                 let marker = &snippet[..3];
                                 let (comment_marker, doc_comment_marker) = marker.split_at(2);
@@ -632,72 +628,23 @@ impl<'a> Parser<'a> {
                                     format!("{} {}", comment_marker, doc_comment_marker),
                                     Applicability::MaybeIncorrect,
                                 );
-                            }
-
-                            if self.recover_colon_as_semi() {
-                                // recover_colon_as_semi has already emitted a nicer error.
-                                e.cancel();
-                                add_semi_to_stmt = true;
-                                eat_semi = false;
-
-                                break 'break_recover false;
-                            }
-
-                            match &expr.kind {
-                                ExprKind::Path(None, ast::Path { segments, .. }) if segments.len() == 1 => {
-                                    if self.token == token::Colon
-                                        && self.look_ahead(1, |token| {
-                                            token.is_whole_block() || matches!(
-                                                token.kind,
-                                                token::Ident(kw::For | kw::Loop | kw::While, false)
-                                                    | token::OpenDelim(Delimiter::Brace)
-                                            )
-                                        })
-                                    {
-                                        let snapshot = self.create_snapshot_for_diagnostic();
-                                        let label = Label {
-                                            ident: Ident::from_str_and_span(
-                                                &format!("'{}", segments[0].ident),
-                                                segments[0].ident.span,
-                                            ),
-                                        };
-                                        match self.parse_expr_labeled(label, false) {
-                                            Ok(labeled_expr) => {
-                                                e.cancel();
-                                                self.sess.emit_err(MalformedLoopLabel {
-                                                    span: label.ident.span,
-                                                    correct_label: label.ident,
-                                                });
-                                                *expr = labeled_expr;
-                                                break 'break_recover false;
-                                            }
-                                            Err(err) => {
-                                                err.cancel();
-                                                self.restore_snapshot(snapshot);
-                                            }
-                                        }
-                                    }
-                                }
-                                _ => {}
-                            }
-
-                            if let Err(mut e) =
-                                self.check_mistyped_turbofish_with_multiple_type_params(e, expr)
-                            {
-                                if recover.no() {
-                                    return Err(e);
-                                }
-                                e.emit();
-                                self.recover_stmt();
-                            }
-
-                            true
-
                         }
-                        Ok(false) => false
-                    }
-                };
 
+                        if let Err(mut e) =
+                            self.check_mistyped_turbofish_with_multiple_type_params(e, expr)
+                        {
+                            if recover.no() {
+                                return Err(e);
+                            }
+                            debug!("anan parse_block_tail: encountered error {:?}", e);
+                            self.suggest_semi_for_typo(&mut e);
+                            e.emit();
+                            self.recover_stmt();
+                        }
+                        true
+                    }
+                    _ => false
+                };
                 if replace_with_err {
                     // We already emitted an error, so don't emit another type error
                     let sp = expr.span.to(self.prev_token.span);
@@ -720,10 +667,9 @@ impl<'a> Parser<'a> {
             StmtKind::Empty | StmtKind::Item(_) | StmtKind::Local(_) | StmtKind::Semi(_) => eat_semi = false,
         }
 
-        if add_semi_to_stmt || (eat_semi && self.eat(&token::Semi)) {
+        if eat_semi && self.eat(&token::Semi) {
             stmt = stmt.add_trailing_semicolon();
         }
-
         stmt.span = stmt.span.to(self.prev_token.span);
         Ok(Some(stmt))
     }

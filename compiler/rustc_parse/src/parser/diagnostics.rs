@@ -723,6 +723,26 @@ impl<'a> Parser<'a> {
         None
     }
 
+    pub fn suggest_semi_for_typo(
+        &mut self,
+        err: &mut Diagnostic,
+    ) {
+        let sm = self.sess.source_map();
+        let sp = self.token.span;
+        let next_pos = sm.lookup_char_pos(self.token.span.lo());
+        let op_pos = sm.lookup_char_pos(sp.hi());
+        debug!("ananan suggest_semi_for_typo: {:?} {:?}", op_pos, next_pos);
+        debug!("ananan suggest_semi_for_typo: {:?} {:?}", self.token, self.token.kind);
+        if op_pos.line != next_pos.line && self.token.kind == token::Colon {
+            err.span_suggestion(
+                sp,
+                "try using a semicolon",
+                ";",
+                Applicability::MaybeIncorrect,
+            );
+        }
+    }
+
     /// Eats and discards tokens until one of `kets` is encountered. Respects token trees,
     /// passes through any errors encountered. Used for error recovery.
     pub(super) fn eat_to_tokens(&mut self, kets: &[&TokenKind]) {
