@@ -4,7 +4,7 @@ mod graph;
 mod query;
 mod serialized;
 
-pub use crate::dep_graph::debug::__rust_begin_short_backtrace;
+pub use crate::dep_graph::debug::{__rust_begin_short_backtrace, __rust_end_short_backtrace};
 pub use dep_node::{DepKindStruct, DepNode, DepNodeParams, WorkProductId};
 pub use graph::{
     hash_result, DepGraph, DepNodeColor, DepNodeIndex, TaskDeps, TaskDepsRef, WorkProduct,

@@ -506,10 +506,13 @@ macro_rules! define_queries {
             #[inline]
             #[allow(unused_variables)]
             fn compute(self, qcx: QueryCtxt<'tcx>, key: Self::Key) -> Self::Value {
-                query_provided_to_value::$name(
-                    qcx.tcx,
-                    get_provider!([$($modifiers)*][qcx, $name, key])(qcx.tcx, key)
-                )
+                let res = __rust_end_short_backtrace(||
+                    query_provided_to_value::$name(
+                        qcx.tcx,
+                        get_provider!([$($modifiers)*][qcx, $name, key])(qcx.tcx, key)
+                    )
+                );
+                res
             }
 
             #[inline]
@@ -779,7 +782,6 @@ macro_rules! define_queries_struct {
                 mode: QueryMode,
             ) -> Option<query_values::$name<'tcx>> {
                 let qcx = QueryCtxt { tcx, queries: self };
-                __rust_begin_short_backtrace(||
                     get_query(
                         queries::$name::default(),
                         qcx,
@@ -787,7 +789,6 @@ macro_rules! define_queries_struct {
                         key,
                         mode
                     )
-                )
             })*
         }
     };

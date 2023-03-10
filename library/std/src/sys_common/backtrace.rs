@@ -62,6 +62,7 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
     let mut res = Ok(());
     // Start immediately if we're not using a short backtrace.
     let mut start = print_fmt != PrintFmt::Short;
+    println!("start now: {}", start);
     backtrace_rs::trace_unsynchronized(|frame| {
         if print_fmt == PrintFmt::Short && idx > MAX_NB_FRAMES {
             return false;
@@ -73,6 +74,7 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
             hit = true;
             if print_fmt == PrintFmt::Short {
                 if let Some(sym) = symbol.name().and_then(|s| s.as_str()) {
+                    println!("sym: {}", sym);
                     if start && sym.contains("__rust_begin_short_backtrace") {
                         stop = true;
                         return;
@@ -85,9 +87,12 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
             }
 
             if start {
+                let filename = symbol.filename_raw();
                 res = bt_fmt.frame().symbol(frame, symbol);
+                println!("frame res: {:?} filename: {:?}", res, filename);
             }
         });
+        println!("ananan stop: {} start: {}, hit: {}", stop, start, hit);
         if stop {
             return false;
         }
@@ -105,6 +110,7 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
             return false;
         }
         if !hit && start {
+            println!("ananan add");
             res = bt_fmt.frame().print_raw(frame.ip(), None, None, None);
         }
 
