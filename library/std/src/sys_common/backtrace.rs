@@ -62,6 +62,7 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
     let mut res = Ok(());
     // Start immediately if we're not using a short backtrace.
     let mut start = print_fmt != PrintFmt::Short;
+    let mut ignore_backtrace: i32 = 0;
     backtrace_rs::trace_unsynchronized(|frame| {
         if print_fmt == PrintFmt::Short && idx > MAX_NB_FRAMES {
             return false;
@@ -73,6 +74,14 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
             hit = true;
             if print_fmt == PrintFmt::Short {
                 if let Some(sym) = symbol.name().and_then(|s| s.as_str()) {
+                    //println!("debug sym now: {:?}", sym);
+                    if sym.contains("__rust_end_ignore_backtrace") {
+                        ignore_backtrace += 1;
+                    }
+                    if sym.contains("__rust_begin_ignore_backtrace") {
+                        ignore_backtrace -= 1;
+                    }
+
                     if start && sym.contains("__rust_begin_short_backtrace") {
                         stop = true;
                         return;
@@ -81,9 +90,11 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
                         start = true;
                         return;
                     }
+                    //println!("debug now finished: {}", sym);
                 }
             }
 
+            //let _ = writeln!(bt_fmt.fmt, "yukang debug now: start={}, ignore_back={}", start, ignore_backtrace);
             if start {
                 res = bt_fmt.frame().symbol(frame, symbol);
             }
@@ -104,7 +115,7 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
             }
             return false;
         }
-        if !hit && start {
+        if !hit && start && ignore_backtrace == 0 {
             res = bt_fmt.frame().print_raw(frame.ip(), None, None, None);
         }
 

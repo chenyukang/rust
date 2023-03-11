@@ -66,9 +66,19 @@ impl<'a, T> std::ops::DerefMut for QueryResult<'a, T> {
     }
 }
 
+#[inline(never)]
+pub fn __rust_end_ignore_backtrace<F, T>(f: F) -> T
+where
+    F: FnOnce() -> T,
+{
+    let result = f();
+    std::hint::black_box(());
+    result
+}
+
 impl<'a, 'tcx> QueryResult<'a, &'tcx GlobalCtxt<'tcx>> {
     pub fn enter<T>(&mut self, f: impl FnOnce(TyCtxt<'tcx>) -> T) -> T {
-        (*self.0).get_mut().enter(f)
+        __rust_end_ignore_backtrace(|| (*self.0).get_mut().enter(f))
     }
 }
 

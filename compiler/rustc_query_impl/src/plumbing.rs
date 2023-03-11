@@ -779,7 +779,7 @@ macro_rules! define_queries_struct {
                 mode: QueryMode,
             ) -> Option<query_values::$name<'tcx>> {
                 let qcx = QueryCtxt { tcx, queries: self };
-                __rust_begin_short_backtrace(||
+                __rust_begin_ignore_backtrace(||
                     get_query(
                         queries::$name::default(),
                         qcx,

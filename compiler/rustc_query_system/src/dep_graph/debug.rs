@@ -63,7 +63,7 @@ impl<K: DepKind> EdgeFilter<K> {
 }
 
 #[inline(never)]
-pub fn __rust_begin_short_backtrace<F, T>(f: F) -> T
+pub fn __rust_begin_ignore_backtrace<F, T>(f: F) -> T
 where
     F: FnOnce() -> T,
 {
