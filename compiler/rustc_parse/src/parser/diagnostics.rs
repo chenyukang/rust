@@ -1723,21 +1723,13 @@ impl<'a> Parser<'a> {
         lo: Span,
         result: PResult<'a, P<Expr>>,
     ) -> P<Expr> {
-        use crate::parser::DUMMY_NODE_ID;
         match result {
             Ok(x) => x,
             Err(mut err) => {
                 err.emit();
                 // Recover from parse error, callers expect the closing delim to be consumed.
                 self.consume_block(delim, ConsumeClosingDelim::Yes);
-                debug!("recover_seq_parse_error: consumed tokens until {:?} {:?}", lo, self.token);
-                let res = self.mk_expr(lo.to(self.prev_token.span), ExprKind::Err);
-                if res.id == DUMMY_NODE_ID {
-                    //panic!("debug now ....: {:?}", res);
-                    res
-                } else {
-                    res
-                }
+                self.mk_expr(lo.to(self.prev_token.span), ExprKind::Err)
             }
         }
     }
@@ -1819,7 +1811,6 @@ impl<'a> Parser<'a> {
                         && brace_depth == 0
                         && bracket_depth == 0 =>
                 {
-                    debug!("recover_stmt_ return - Comma");
                     break;
                 }
                 _ => self.bump(),
