@@ -8,7 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 // FIXME: The following limits should be reduced eventually.
-const ENTRY_LIMIT: usize = 885;
+const ENTRY_LIMIT: usize = 883;
 const ROOT_ENTRY_LIMIT: usize = 894;
 const ISSUES_ENTRY_LIMIT: usize = 1953;
 
