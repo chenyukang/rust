@@ -402,8 +402,7 @@ impl<'a> Parser<'a> {
         // we suggest add the missing `let` before the identifier
         // `a: i32 = 1` -> `let a: i32 = 1`
         if self.token == token::Colon {
-            if self.look_ahead(1, |t| t.is_ident() ) &&
-                self.look_ahead(2, |t| *t == token::Eq) {
+            if self.look_ahead(1, |t| t.is_ident()) && self.look_ahead(2, |t| *t == token::Eq) {
                 err.span_suggestion_verbose(
                     self.prev_token.span.shrink_to_lo(),
                     "you might have meant to introduce a new binding",
