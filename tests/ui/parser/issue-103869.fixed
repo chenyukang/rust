@@ -1,6 +1,6 @@
 // run-rustfix
 
-enum VecOrMap {
+struct VecOrMap {
     //~^ HELP: perhaps you meant to use `struct` here
     vec: Vec<usize>,
     //~^ ERROR expected one of `(`, `,`, `=`, `{`, or `}`, found `:`
