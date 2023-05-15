@@ -2,6 +2,14 @@
 // run-fail
 // check-run-results
 // exec-env:RUST_BACKTRACE=1
+// ignore-android FIXME #17520
+// ignore-wasm no panic support
+// ignore-openbsd no support for libbacktrace without filename
+// ignore-emscripten no panic or subprocess support
+// ignore-sgx no subprocess support
+// ignore-fuchsia Backtraces not symbolized
+// ignore-msvc the `__rust_{begin,end}_short_backtrace` symbols aren't reliable.
+
 
 #[inline(never)]
 fn __rust_begin_short_backtrace<T, F: FnOnce() -> T>(f: F) -> T {
