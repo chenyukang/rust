@@ -59,6 +59,7 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
     let mut bt_fmt = BacktraceFmt::new(fmt, print_fmt, &mut print_path);
     bt_fmt.add_context()?;
     let mut idx = 0;
+    let mut emitted_count: usize = 0;
     let mut res = Ok(());
     // Start immediately if we're not using a short backtrace.
     let mut start = print_fmt != PrintFmt::Short;
@@ -85,10 +86,17 @@ unsafe fn _print_fmt(fmt: &mut fmt::Formatter<'_>, print_fmt: PrintFmt) -> fmt::
                         start = true;
                         return;
                     }
+                    if !start {
+                        emitted_count += 1;
+                    }
                 }
             }
 
             if start {
+                if emitted_count > 0 {
+                    let _ = bt_fmt.print_omitted_count(emitted_count);
+                    emitted_count = 0;
+                }
                 res = bt_fmt.frame().symbol(frame, symbol);
             }
         });

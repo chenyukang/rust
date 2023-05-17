@@ -5,8 +5,8 @@
 // ignore-android FIXME #17520
 // ignore-wasm no panic support
 // ignore-openbsd no support for libbacktrace without filename
-// ignore-emscripten no panic
-// ignore-sgx Backtraces not symbolized
+// ignore-emscripten no panic or subprocess support
+// ignore-sgx no subprocess support
 // ignore-fuchsia Backtraces not symbolized
 // ignore-msvc the `__rust_{begin,end}_short_backtrace` symbols aren't reliable.
 
@@ -25,30 +25,33 @@ fn __rust_end_short_backtrace<T, F: FnOnce() -> T>(f: F) -> T {
 
 fn first() {
     __rust_end_short_backtrace(|| second());
-    // do not take effect since we already has a inner call of __rust_end_short_backtrace
 }
 
 fn second() {
-    __rust_end_short_backtrace(|| third());
+    third(); // won't show up
 }
 
 fn third() {
-    fourth(); // won't show up in backtrace
+    fourth(); // won't show up
 }
 
 fn fourth() {
-    fifth(); // won't show up in backtrace
+    __rust_begin_short_backtrace(|| fifth());
 }
 
 fn fifth() {
-    __rust_begin_short_backtrace(|| sixth());
+    __rust_end_short_backtrace(|| sixth());
 }
 
 fn sixth() {
-    seven();
+    seven(); // won't show up
 }
 
 fn seven() {
+    __rust_begin_short_backtrace(|| eight());
+}
+
+fn eight() {
     panic!("debug!!!");
 }
 
