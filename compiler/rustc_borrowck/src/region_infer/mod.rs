@@ -1452,6 +1452,7 @@ impl<'tcx> RegionInferenceContext<'tcx> {
         errors_buffer: &mut RegionErrors<'tcx>,
     ) {
         for (fr, fr_definition) in self.definitions.iter_enumerated() {
+            // Yukang: this is where the `placeholder` comes from
             eprintln!("fr_definition = {:?}", fr_definition.origin);
             match fr_definition.origin {
                 NllRegionVariableOrigin::FreeRegion => {
