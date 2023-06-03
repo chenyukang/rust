@@ -1727,7 +1727,10 @@ impl<'tcx> RegionInferenceContext<'tcx> {
         placeholder: ty::PlaceholderRegion,
         errors_buffer: &mut RegionErrors<'tcx>,
     ) {
-        eprintln!("check_bound_universal_region(fr={:?}, placeholder={:?})", longer_fr, placeholder,);
+        eprintln!(
+            "check_bound_universal_region(fr={:?}, placeholder={:?})",
+            longer_fr, placeholder,
+        );
 
         let longer_fr_scc = self.constraint_sccs.scc(longer_fr);
         debug!("check_bound_universal_region: longer_fr_scc={:?}", longer_fr_scc,);
