@@ -375,9 +375,9 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                     );
 
                     let universe = placeholder.universe;
-                    let universe_info = self.regioncx.universe_info(universe);
-
-                    universe_info.report_error(self, placeholder, error_element, cause);
+                    if let Some(universe_info) = self.regioncx.universe_info(universe) {
+                        universe_info.report_error(self, placeholder, error_element, cause);
+                    }
                 }
 
                 RegionErrorKind::RegionError { fr_origin, longer_fr, shorter_fr, is_reported } => {

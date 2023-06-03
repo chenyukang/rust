@@ -342,6 +342,10 @@ impl<'tcx> RegionInferenceContext<'tcx> {
             .map(|info| RegionDefinition::new(info.universe, info.origin))
             .collect();
 
+        for def in definitions.iter() {
+            eprintln!("created definition: {:?}", def.origin);
+        }
+
         let constraints = Frozen::freeze(outlives_constraints);
         let constraint_graph = Frozen::freeze(constraints.graph(definitions.len()));
         let fr_static = universal_regions.fr_static;
@@ -525,7 +529,7 @@ impl<'tcx> RegionInferenceContext<'tcx> {
         // Update the names (if any)
         // This iterator has unstable order but we collect it all into an IndexVec
         for (external_name, variable) in self.universal_regions.named_universal_regions() {
-            debug!(
+            eprintln!(
                 "init_universal_regions: region {:?} has external name {:?}",
                 variable, external_name
             );
@@ -1448,6 +1452,7 @@ impl<'tcx> RegionInferenceContext<'tcx> {
         errors_buffer: &mut RegionErrors<'tcx>,
     ) {
         for (fr, fr_definition) in self.definitions.iter_enumerated() {
+            eprintln!("fr_definition = {:?}", fr_definition.origin);
             match fr_definition.origin {
                 NllRegionVariableOrigin::FreeRegion => {
                     // Go through each of the universal regions `fr` and check that
@@ -1722,7 +1727,7 @@ impl<'tcx> RegionInferenceContext<'tcx> {
         placeholder: ty::PlaceholderRegion,
         errors_buffer: &mut RegionErrors<'tcx>,
     ) {
-        debug!("check_bound_universal_region(fr={:?}, placeholder={:?})", longer_fr, placeholder,);
+        eprintln!("check_bound_universal_region(fr={:?}, placeholder={:?})", longer_fr, placeholder,);
 
         let longer_fr_scc = self.constraint_sccs.scc(longer_fr);
         debug!("check_bound_universal_region: longer_fr_scc={:?}", longer_fr_scc,);
@@ -1740,6 +1745,7 @@ impl<'tcx> RegionInferenceContext<'tcx> {
                 }
             }
 
+            eprintln!("insert place now: {:?}", placeholder);
             errors_buffer.push(RegionErrorKind::BoundUniversalRegionError {
                 longer_fr,
                 error_element,
@@ -2239,8 +2245,12 @@ impl<'tcx> RegionInferenceContext<'tcx> {
         (categorized_path.remove(0), extra_info)
     }
 
-    pub(crate) fn universe_info(&self, universe: ty::UniverseIndex) -> UniverseInfo<'tcx> {
-        self.universe_causes[&universe].clone()
+    pub(crate) fn universe_info(&self, universe: ty::UniverseIndex) -> Option<UniverseInfo<'tcx>> {
+        eprintln!("universe_info({:?})", universe);
+        for (k, _v) in self.universe_causes.iter() {
+            eprintln!("universe_causes[{:?}]", k);
+        }
+        self.universe_causes.get(&universe).cloned()
     }
 
     /// Tries to find the terminator of the loop in which the region 'r' resides.

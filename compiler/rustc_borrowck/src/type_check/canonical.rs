@@ -54,6 +54,7 @@ impl<'a, 'tcx> TypeChecker<'a, 'tcx> {
                 None => UniverseInfo::other(),
             };
             for u in (old_universe + 1)..=universe {
+                eprintln!("insert universe cause {:?}", u);
                 self.borrowck_context.constraints.universe_causes.insert(u, universe_info.clone());
             }
         }
