@@ -1920,6 +1920,12 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                     String::from("add `extern crate alloc` to use the `alloc` crate"),
                     Applicability::MaybeIncorrect,
                 ))
+            } else if ident.name == sym::fmt {
+                suggestion = Some((
+                    vec![],
+                    String::from("add `use std::fmt` to use the `fmt` crate"),
+                    Applicability::MaybeIncorrect,
+                ))
             }
 
             suggestion = suggestion.or_else(|| {

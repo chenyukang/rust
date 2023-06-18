@@ -97,6 +97,9 @@ parse_compound_assignment_expression_in_let = can't reassign to an uninitialized
 parse_const_bounds_missing_tilde = const bounds must start with `~`
     .suggestion = add `~`
 
+parse_const_bounds_maybe_const_ty = const generics are written `const` before parameter name
+    .suggestion = add `const` before the parameter name
+
 parse_const_generic_without_braces = expressions must be enclosed in braces to be used as const generic arguments
     .suggestion = enclose the `const` expression in braces
 

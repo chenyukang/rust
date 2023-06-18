@@ -687,6 +687,16 @@ impl<'a> Parser<'a> {
                 self.sess.emit_err(InvalidDynKeyword { span: self.token.span });
                 self.bump();
             }
+            if self.token.is_keyword(kw::Const) && self.prev_token.kind == TokenKind::Colon {
+                // Account for `&const Trait + const Other`.
+                let snapshot = self.create_snapshot_for_diagnostic();
+                self.bump();
+                //self.parse_trait_item(force_collect!(AllowPlus::No));
+                if let Ok(_) = self.parse_ty() {
+                    return Err(self.sess.create_err(InvalidDynKeyword { span: self.token.span }));
+                }
+                self.restore_snapshot(snapshot);
+            }
             bounds.push(self.parse_generic_bound()?);
             if allow_plus == AllowPlus::No || !self.eat_plus() {
                 break;
@@ -787,6 +797,7 @@ impl<'a> Parser<'a> {
     /// TY_BOUND_MODIFIERS = ["~const"] ["?"]
     /// ```
     fn parse_ty_bound_modifiers(&mut self) -> PResult<'a, BoundModifiers> {
+        let prev_token = self.prev_token.clone();
         let maybe_const = if self.eat(&token::Tilde) {
             let tilde = self.prev_token.span;
             self.expect_keyword(kw::Const)?;
@@ -794,11 +805,17 @@ impl<'a> Parser<'a> {
             self.sess.gated_spans.gate(sym::const_trait_impl, span);
             Some(span)
         } else if self.eat_keyword(kw::Const) {
-            let span = self.prev_token.span;
-            self.sess.gated_spans.gate(sym::const_trait_impl, span);
-            self.sess.emit_err(errors::ConstMissingTilde { span, start: span.shrink_to_lo() });
-
-            Some(span)
+            eprintln!("prev token: {:?}", prev_token);
+            if prev_token.kind == token::Colon {
+                let span = self.prev_token.span.shrink_to_lo();
+                self.sess.emit_err(errors::MaybeConstType { span, start: span.shrink_to_lo() });
+                Some(span)
+            } else {
+                let span = self.prev_token.span;
+                self.sess.gated_spans.gate(sym::const_trait_impl, span);
+                self.sess.emit_err(errors::ConstMissingTilde { span, start: span.shrink_to_lo() });
+                Some(span)
+            }
         } else {
             None
         };

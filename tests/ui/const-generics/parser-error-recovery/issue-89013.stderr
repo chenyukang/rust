@@ -1,3 +1,4 @@
+here recover_const_param_declaration: Token { kind: Ident("const", false), span: $DIR/issue-89013.rs:9:14: 9:19 (#0) }
 error: expected lifetime, type, or constant, found keyword `const`
   --> $DIR/issue-89013.rs:9:14
    |

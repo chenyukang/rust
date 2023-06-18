@@ -55,7 +55,7 @@ fn push_debuginfo_type_name<'tcx>(
     // When targeting MSVC, emit C++ style type names for compatibility with
     // .natvis visualizers (and perhaps other existing native debuggers?)
     let cpp_like_debuginfo = cpp_like_debuginfo(tcx);
-
+    debug!("anan push_debuginfo_type_name: {:?}", t.kind());
     match *t.kind() {
         ty::Bool => output.push_str("bool"),
         ty::Char => output.push_str("char"),

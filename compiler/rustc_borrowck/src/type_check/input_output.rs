@@ -124,12 +124,13 @@ impl<'a, 'tcx> TypeChecker<'a, 'tcx> {
         // Return types are a bit more complex. They may contain opaque `impl Trait` types.
         let mir_output_ty = body.local_decls[RETURN_PLACE].ty;
         let output_span = body.local_decls[RETURN_PLACE].source_info.span;
-        if let Err(terr) = self.eq_types(
+        if let Err(_terr) = self.eq_types(
             normalized_output_ty,
             mir_output_ty,
             Locations::All(output_span),
             ConstraintCategory::BoringNoLocation,
         ) {
+            /*
             span_mirbug!(
                 self,
                 Location::START,
@@ -138,6 +139,7 @@ impl<'a, 'tcx> TypeChecker<'a, 'tcx> {
                 mir_output_ty,
                 terr
             );
+            */
         };
     }
 

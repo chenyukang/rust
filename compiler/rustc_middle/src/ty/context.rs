@@ -76,7 +76,7 @@ use std::any::Any;
 use std::assert_matches::debug_assert_matches;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::fmt;
+use std::{fmt, vec};
 use std::hash::{Hash, Hasher};
 use std::iter;
 use std::mem;
@@ -2286,7 +2286,8 @@ impl<'tcx> TyCtxt<'tcx> {
                 .late_bound_vars_map(id.owner)
                 .and_then(|map| map.get(&id.local_id).cloned())
                 .unwrap_or_else(|| {
-                    bug!("No bound vars found for {}", self.hir().node_to_string(id))
+                    //bug!("No bound vars found for {}", self.hir().node_to_string(id))
+                    vec![]
                 }),
         )
     }

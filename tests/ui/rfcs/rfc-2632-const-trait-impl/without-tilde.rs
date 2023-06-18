@@ -2,5 +2,14 @@
 
 #![feature(const_trait_impl)]
 
-struct S<T: const Tr>;
+#[const_trait]
+trait Tr {}
+
+struct S<T: const usize> { //~ ERROR const bounds must start with `~`
+    field: T,
+}
 //~^ ERROR const bounds must start with `~`
+
+fn main() {
+
+}

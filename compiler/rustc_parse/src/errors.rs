@@ -2437,6 +2437,15 @@ pub(crate) struct ConstMissingTilde {
 }
 
 #[derive(Diagnostic)]
+#[diag(parse_const_bounds_maybe_const_ty)]
+pub(crate) struct MaybeConstType {
+    #[primary_span]
+    pub span: Span,
+    #[suggestion(code = "~", applicability = "machine-applicable")]
+    pub start: Span,
+}
+
+#[derive(Diagnostic)]
 #[diag(parse_underscore_literal_suffix)]
 pub(crate) struct UnderscoreLiteralSuffix {
     #[primary_span]

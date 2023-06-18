@@ -2261,6 +2261,7 @@ impl<'a> Parser<'a> {
             return Ok(Some(arg));
         }
 
+        eprintln!("here recover_const_param_declaration: {:?}", self.token);
         // We haven't consumed `const` yet.
         let start = self.token.span;
         self.bump(); // `const`
