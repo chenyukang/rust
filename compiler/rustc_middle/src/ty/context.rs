@@ -76,11 +76,11 @@ use std::any::Any;
 use std::assert_matches::debug_assert_matches;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::{fmt, vec};
 use std::hash::{Hash, Hasher};
 use std::iter;
 use std::mem;
 use std::ops::{Bound, Deref};
+use std::{fmt, vec};
 
 #[allow(rustc::usage_of_ty_tykind)]
 impl<'tcx> Interner for TyCtxt<'tcx> {
