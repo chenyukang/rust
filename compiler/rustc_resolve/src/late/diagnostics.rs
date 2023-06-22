@@ -1,7 +1,7 @@
 use crate::diagnostics::{ImportSuggestion, LabelSuggestion, TypoSuggestion};
 use crate::late::{AliasPossibility, LateResolutionVisitor, RibKind};
 use crate::late::{LifetimeBinderKind, LifetimeRes, LifetimeRibKind, LifetimeUseSet};
-use crate::{errors, path_names_to_string};
+use crate::{errors, path_names_to_string, NameBinding, NameBindingKind};
 use crate::{Module, ModuleKind, ModuleOrUniformRoot};
 use crate::{PathResult, PathSource, Segment};
 use rustc_hir::def::Namespace::{self, *};
@@ -338,12 +338,48 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             return Vec::new();
         }
         let ident = prefix_path.last().unwrap().ident;
-        self.r.lookup_import_candidates(
+        let candidates: Vec<ImportSuggestion> = self.r.lookup_import_candidates(
             ident,
             Namespace::TypeNS,
             &self.parent_scope,
             &|res: Res| matches!(res, Res::Def(DefKind::Mod, _)),
-        )
+        );
+        // double check the left segments are matched
+        candidates
+            .into_iter()
+            .filter_map(|candidate| {
+                let mut invalid = false;
+                let mut crate_id = candidate.did;
+                for (i, name) in path[1..].iter().enumerate() {
+                    let next_seg = name.ident;
+                    let Some(module) = crate_id.and_then(|id| self.r.get_module(id)) else { invalid = true; break;};
+                    let mut found = false;
+                    for (key, resolution) in self.r.resolutions(module).borrow().iter() {
+                        match resolution.borrow().binding {
+                            Some(NameBinding {
+                                kind: NameBindingKind::Module(module), ..
+                            }) if key.ident.name == next_seg.name => {
+                                crate_id = Some(module.def_id());
+                                found = true;
+                                break;
+                            }
+                            Some(NameBinding { kind: NameBindingKind::Res(..), .. })
+                                if i == path.len() - 2 && key.ident.name == next_seg.name =>
+                            {
+                                found = true;
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
+                    if !found {
+                        invalid = true;
+                        break;
+                    }
+                }
+                if invalid { None } else { Some(candidate) }
+            })
+            .collect::<Vec<_>>()
     }
 
     /// Handles error reporting for `smart_resolve_path_fragment` function.

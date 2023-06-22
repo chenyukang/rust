@@ -1,4 +1,10 @@
 error[E0433]: failed to resolve: use of undeclared crate or module `fmt`
+  --> $DIR/issue-112590-suggest-import.rs:10:6
+   |
+LL | impl fmt::Invalid::Debug for S {}
+   |      ^^^ use of undeclared crate or module `fmt`
+
+error[E0433]: failed to resolve: use of undeclared crate or module `fmt`
   --> $DIR/issue-112590-suggest-import.rs:3:6
    |
 LL | impl fmt::Debug for S {
@@ -31,6 +37,29 @@ help: consider importing this module
 LL + use std::fmt;
    |
 
-error: aborting due to 3 previous errors
+error[E0433]: failed to resolve: use of undeclared crate or module `cell`
+  --> $DIR/issue-112590-suggest-import.rs:15:10
+   |
+LL | type A = cell::RefCell;
+   |          ^^^^ use of undeclared crate or module `cell`
+   |
+help: consider importing this module
+   |
+LL + use std::cell;
+   |
+
+error[E0433]: failed to resolve: use of undeclared crate or module `fmt`
+  --> $DIR/issue-112590-suggest-import.rs:13:6
+   |
+LL | impl fmt::Invalid for S {}
+   |      ^^^ use of undeclared crate or module `fmt`
+
+error[E0433]: failed to resolve: use of undeclared crate or module `cell`
+  --> $DIR/issue-112590-suggest-import.rs:16:10
+   |
+LL | type B = cell::RefError;
+   |          ^^^^ use of undeclared crate or module `cell`
+
+error: aborting due to 7 previous errors
 
 For more information about this error, try `rustc --explain E0433`.
