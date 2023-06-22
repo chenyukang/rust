@@ -334,16 +334,30 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         prefix_path: &[Segment],
         path: &[Segment],
     ) -> Vec<ImportSuggestion> {
-        if path.len() <= 1 {
-            return Vec::new();
+        if let Some(segment) = prefix_path.last() && path.len() > 1 {
+            let candidates = self.r.lookup_import_candidates(
+                segment.ident,
+                Namespace::TypeNS,
+                &self.parent_scope,
+                &|res: Res| matches!(res, Res::Def(DefKind::Mod, _)),
+            );
+            // double check next seg is valid
+            candidates
+                .into_iter()
+                .filter(|candidate| {
+                    if let Some(def_id) = candidate.did &&
+                        let Some(module) = self.r.get_module(def_id) {
+                            self.r.resolutions(module).borrow().iter().any(|(key, _resolution)| {
+                                key.ident.name == path[1].ident.name
+                            })
+                    } else {
+                        false
+                    }
+                })
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
         }
-        let ident = prefix_path.last().unwrap().ident;
-        self.r.lookup_import_candidates(
-            ident,
-            Namespace::TypeNS,
-            &self.parent_scope,
-            &|res: Res| matches!(res, Res::Def(DefKind::Mod, _)),
-        )
     }
 
     /// Handles error reporting for `smart_resolve_path_fragment` function.
@@ -351,6 +365,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
     pub(crate) fn smart_resolve_report_errors(
         &mut self,
         path: &[Segment],
+        full_path: &[Segment],
         span: Span,
         source: PathSource<'_>,
         res: Option<Res>,
@@ -392,7 +407,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         }
 
         let (found, candidates) =
-            self.try_lookup_name_relaxed(&mut err, source, path, span, res, &base_error);
+            self.try_lookup_name_relaxed(&mut err, source, path, full_path, span, res, &base_error);
         if found {
             return (err, candidates);
         }
@@ -498,6 +513,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         err: &mut Diagnostic,
         source: PathSource<'_>,
         path: &[Segment],
+        full_path: &[Segment],
         span: Span,
         res: Option<Res>,
         base_error: &BaseError,
@@ -665,6 +681,10 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
                     return (true, candidates);
                 }
             }
+        }
+
+        if candidates.is_empty() {
+            candidates = self.smart_resolve_partial_mod_path_errors(path, full_path);
         }
 
         return (false, candidates);
