@@ -338,12 +338,32 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             return Vec::new();
         }
         let ident = prefix_path.last().unwrap().ident;
-        self.r.lookup_import_candidates(
+        let candidates = self.r.lookup_import_candidates(
             ident,
             Namespace::TypeNS,
             &self.parent_scope,
             &|res: Res| matches!(res, Res::Def(DefKind::Mod, _)),
-        )
+        );
+
+        // double check next seg is valid
+        candidates
+            .into_iter()
+            .filter(|candidate| {
+                let next_seg = path[1].ident;
+                let def_id = candidate.did;
+                let mut found = false;
+                if let Some(def_id) = def_id &&
+                    let Some(module) = self.r.get_module(def_id) {
+                    for (key, _resolution) in self.r.resolutions(module).borrow().iter() {
+                        if key.ident.name == next_seg.name {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                found
+            })
+            .collect::<Vec<_>>()
     }
 
     /// Handles error reporting for `smart_resolve_path_fragment` function.
@@ -351,6 +371,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
     pub(crate) fn smart_resolve_report_errors(
         &mut self,
         path: &[Segment],
+        full_path: &[Segment],
         span: Span,
         source: PathSource<'_>,
         res: Option<Res>,
@@ -391,7 +412,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             return (err, Vec::new());
         }
 
-        let (found, candidates) =
+        let (found, mut candidates) =
             self.try_lookup_name_relaxed(&mut err, source, path, span, res, &base_error);
         if found {
             return (err, candidates);
@@ -411,6 +432,10 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
 
         if let Some(module) = base_error.module {
             self.r.find_cfg_stripped(&mut err, &path.last().unwrap().ident.name, module);
+        }
+
+        if candidates.is_empty() {
+            candidates = self.smart_resolve_partial_mod_path_errors(path, full_path);
         }
 
         (err, candidates)
