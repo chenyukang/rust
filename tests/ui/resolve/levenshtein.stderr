@@ -40,11 +40,8 @@ LL |     let v = [0u32; MAXITEM]; // Misspelled constant name.
 error[E0412]: cannot find type `first` in module `m`
   --> $DIR/levenshtein.rs:28:15
    |
-LL |     pub struct First;
-   |     ----------------- similarly named struct `First` defined here
-...
 LL |     let b: m::first = m::second; // Misspelled item in module.
-   |               ^^^^^ help: a struct with a similar name exists (notice the capitalization): `First`
+   |               ^^^^^ not found in `m`
 
 error[E0425]: cannot find value `second` in module `m`
   --> $DIR/levenshtein.rs:28:26

@@ -19,7 +19,7 @@ resolve_associated_const_with_similar_name_exists =
     there is an associated constant with a similar name
 
 resolve_associated_fn_with_similar_name_exists =
-    there is an associated function with a similar name
+    there is an associated function with a similar namex
 
 resolve_associated_type_with_similar_name_exists =
     there is an associated type with a similar name

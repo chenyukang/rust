@@ -416,7 +416,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
 
         // if we have suggested using pattern matching, then don't add needless suggestions
         // for typos.
-        fallback |= self.suggest_typo(&mut err, source, path, span, &base_error);
+        fallback |= self.suggest_typo(&mut err, source, path, full_path, span, &base_error);
 
         if fallback {
             // Fallback label.
@@ -584,8 +584,9 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         }
 
         // Try finding a suitable replacement.
-        let typo_sugg =
-            self.lookup_typo_candidate(path, source.namespace(), is_expected).to_opt_suggestion();
+        let typo_sugg = self
+            .lookup_typo_candidate(path, full_path, source.namespace(), is_expected)
+            .to_opt_suggestion();
         if path.len() == 1 && self.self_type_is_available() {
             if let Some(candidate) =
                 self.lookup_assoc_candidate(ident, ns, is_expected, source.is_call())
@@ -770,12 +771,14 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         err: &mut Diagnostic,
         source: PathSource<'_>,
         path: &[Segment],
+        full_path: &[Segment],
         span: Span,
         base_error: &BaseError,
     ) -> bool {
         let is_expected = &|res| source.is_expected(res);
         let ident_span = path.last().map_or(span, |ident| ident.ident.span);
-        let typo_sugg = self.lookup_typo_candidate(path, source.namespace(), is_expected);
+        let typo_sugg =
+            self.lookup_typo_candidate(path, full_path, source.namespace(), is_expected);
         let is_in_same_file = &|sp1, sp2| {
             let source_map = self.r.tcx.sess.source_map();
             let file1 = source_map.span_to_filename(sp1);
@@ -1709,10 +1712,16 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
     fn lookup_typo_candidate(
         &mut self,
         path: &[Segment],
+        full_path: &[Segment],
         ns: Namespace,
         filter_fn: &impl Fn(Res) -> bool,
     ) -> TypoCandidate {
         let mut names = Vec::new();
+        let next_seg_name = if full_path.len() - path.len() >= 1 {
+            full_path.get(path.len()).map(|s| s.ident.name)
+        } else {
+            None
+        };
         if path.len() == 1 {
             let mut ctxt = path.last().unwrap().ident.span.ctxt();
 
@@ -1787,6 +1796,35 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             }
         }
 
+        // if next_seg is present, let's filter everything that does not continue the path
+        // so that we give out less false positives
+        if let Some(next_seg) = next_seg_name {
+            names.retain(|suggestion| match suggestion.res {
+                Res::Def(DefKind::Struct, def_id) => {
+                    let r = self.r.tcx.associated_items(def_id);
+                    debug!("anan items: {:?}", r);
+                    // let res = self.r.tcx.associated_items(def_id).iter().any(|&field_id| {
+                    //         debug!("anan next_seg: {:?} {:?}::{:?}", next_seg, suggestion.candidate, self.r.tcx.item_name(field_id));
+                    //         next_seg == self.r.tcx.item_name(field_id)
+                    // });
+                    // debug!("anan now for {:?} next_seg: {:?} => {:?}", suggestion.candidate, next_seg, res);
+                    // res
+                    true
+                }
+                Res::Def(DefKind::Mod, def_id) => {
+                    if let Some(module) = self.r.get_module(def_id) {
+                        self.r
+                            .resolutions(module)
+                            .borrow()
+                            .iter()
+                            .any(|(key, _)| key.ident.name == next_seg)
+                    } else {
+                        false
+                    }
+                }
+                _ => true,
+            });
+        }
         let name = path[path.len() - 1].ident.name;
         // Make sure error reporting is deterministic.
         names.sort_by(|a, b| a.candidate.as_str().cmp(b.candidate.as_str()));
