@@ -1,0 +1,39 @@
+error[E0433]: failed to resolve: use of undeclared crate or module `vec`
+  --> $DIR/112590-2.rs:3:14
+   |
+LL |     type B = vec::Vec::<u8>;
+   |              ^^^ use of undeclared crate or module `vec`
+   |
+help: consider importing this module
+   |
+LL + use std::vec;
+   |
+
+error[E0433]: failed to resolve: could not find `sync_error` in `std`
+  --> $DIR/112590-2.rs:4:19
+   |
+LL |     let _t = std::sync_error::atomic::AtomicBool;
+   |                   ^^^^^^^^^^ could not find `sync_error` in `std`
+   |
+help: consider importing this module
+   |
+LL + use std::sync::atomic;
+   |
+help: if you import `atomic`, refer to it directly
+   |
+LL -     let _t = std::sync_error::atomic::AtomicBool;
+LL +     let _t = atomic::AtomicBool;
+   |
+
+error[E0433]: failed to resolve: use of undeclared crate or module `vec`
+  --> $DIR/112590-2.rs:2:14
+   |
+LL |     let _t = vec::new();
+   |              ^^^
+   |              |
+   |              use of undeclared crate or module `vec`
+   |              help: a struct with a similar name exists (notice the capitalization): `Vec`
+
+error: aborting due to 3 previous errors
+
+For more information about this error, try `rustc --explain E0433`.
