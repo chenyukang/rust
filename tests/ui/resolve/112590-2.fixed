@@ -1,0 +1,10 @@
+// run-rustfix
+use std::vec;
+
+use std::sync::atomic::AtomicBool;
+
+fn main() {
+    let _t: Vec<i32> = Vec::new(); //~ ERROR failed to resolve
+    type _B = vec::Vec::<u8>; //~ ERROR failed to resolve
+    let _t = AtomicBool::new(true); //~ ERROR failed to resolve
+}

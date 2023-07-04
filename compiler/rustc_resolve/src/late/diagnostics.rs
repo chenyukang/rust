@@ -335,7 +335,8 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         following_seg: Option<&Segment>,
     ) -> Vec<ImportSuggestion> {
         if let Some(segment) = prefix_path.last() &&
-            let Some(following_seg) = following_seg {
+            let Some(following_seg) = following_seg
+        {
             let candidates = self.r.lookup_import_candidates(
                 segment.ident,
                 Namespace::TypeNS,
@@ -1803,7 +1804,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         if let Some(following_seg) = following_seg {
             names.retain(|suggestion| match suggestion.res {
                 Res::Def(DefKind::Struct | DefKind::Enum | DefKind::Union, _) => {
-                    // this is not totally accurate, but mostly works
+                    // FIXME: this is not totally accurate, but mostly works
                     suggestion.candidate != following_seg.ident.name
                 }
                 Res::Def(DefKind::Mod, def_id) => self.r.get_module(def_id).map_or_else(
