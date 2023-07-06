@@ -334,6 +334,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         prefix_path: &[Segment],
         following_seg: Option<&Segment>,
     ) -> Vec<ImportSuggestion> {
+        debug!("anan prefix_path: {:?} following_seg: {:?}", prefix_path, following_seg);
         if let Some(segment) = prefix_path.last() &&
             let Some(following_seg) = following_seg
         {
@@ -344,7 +345,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
                 &|res: Res| matches!(res, Res::Def(DefKind::Mod, _)),
             );
             // double check next seg is valid
-            candidates
+            let res = candidates
                 .into_iter()
                 .filter(|candidate| {
                     if let Some(def_id) = candidate.did &&
@@ -356,7 +357,9 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
                         false
                     }
                 })
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>();
+            debug!("anan smart_resolve_partial_mod_path_errors res: {:?}", res);
+            res
         } else {
             Vec::new()
         }
@@ -418,9 +421,11 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             &base_error,
         );
         if found {
+            debug!("anan found candidate: {:?}", candidates);
             return (err, candidates);
         }
 
+        debug!("anan in the middle : {:?}", candidates);
         let mut fallback = self.suggest_trait_and_bounds(&mut err, source, res, span, &base_error);
 
         // if we have suggested using pattern matching, then don't add needless suggestions
@@ -437,6 +442,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             self.r.find_cfg_stripped(&mut err, &path.last().unwrap().ident.name, module);
         }
 
+        debug!("anan finallly: {:?}", candidates);
         (err, candidates)
     }
 
@@ -528,7 +534,9 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         base_error: &BaseError,
     ) -> (bool, Vec<ImportSuggestion>) {
         // Try to lookup name in more relaxed fashion for better error reporting.
+        // let ident = following_seg.map_or_else (|| path.last().unwrap().ident, |seg| seg.ident);
         let ident = path.last().unwrap().ident;
+        debug!("anan next ident: {:?}", ident);
         let is_expected = &|res| source.is_expected(res);
         let ns = source.namespace();
         let is_enum_variant = &|res| matches!(res, Res::Def(DefKind::Variant, _));
@@ -545,6 +553,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
                 }
             })
             .collect::<Vec<_>>();
+        debug!("anan candidates this is right place: {:?}", candidates);
         let crate_def_id = CRATE_DEF_ID.to_def_id();
         // Try to filter out intrinsics candidates, as long as we have
         // some other candidates to suggest.
@@ -596,6 +605,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         let typo_sugg = self
             .lookup_typo_candidate(path, following_seg, source.namespace(), is_expected)
             .to_opt_suggestion();
+        debug!("anan typo_sugg got here: {:?}", typo_sugg);
         if path.len() == 1 && self.self_type_is_available() {
             if let Some(candidate) =
                 self.lookup_assoc_candidate(ident, ns, is_expected, source.is_call())
@@ -694,6 +704,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         }
 
         if candidates.is_empty() {
+            debug!("anan candidates is empty");
             candidates = self.smart_resolve_partial_mod_path_errors(path, following_seg);
         }
 
@@ -788,6 +799,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         let ident_span = path.last().map_or(span, |ident| ident.ident.span);
         let typo_sugg =
             self.lookup_typo_candidate(path, following_seg, source.namespace(), is_expected);
+        debug!("anan suggest_typo: typo_sugg={:?}", typo_sugg);
         let is_in_same_file = &|sp1, sp2| {
             let source_map = self.r.tcx.sess.source_map();
             let file1 = source_map.span_to_filename(sp1);
@@ -829,6 +841,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
 
             // If the trait has a single item (which wasn't matched by the algorithm), suggest it
             let suggestion = self.get_single_associated_item(&path, &source, is_expected);
+            debug!("anan suggest_typo: suggestion={:?}", suggestion);
             if !self.r.add_typo_suggestion(err, suggestion, ident_span) {
                 fallback = !self.let_binding_suggestion(err, ident_span);
             }

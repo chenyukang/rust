@@ -777,7 +777,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                 .tcx
                 .sess
                 .create_err(errs::SelfImportOnlyInImportListWithNonEmptyPrefix { span }),
-            ResolutionError::FailedToResolve { last_segment, label, suggestion, module } => {
+            ResolutionError::FailedToResolve { last_segment, label, suggestion, module , ..} => {
                 let mut err =
                     struct_span_err!(self.tcx.sess, span, E0433, "failed to resolve: {}", &label);
                 err.span_label(span, label);
@@ -983,6 +983,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                 span,
                 ResolutionError::FailedToResolve {
                     last_segment: None,
+                    err_segment_index: 0,
                     label,
                     suggestion,
                     module: None,

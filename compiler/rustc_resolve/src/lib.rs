@@ -212,6 +212,7 @@ enum ResolutionError<'a> {
     /// Error E0433: failed to resolve.
     FailedToResolve {
         last_segment: Option<Symbol>,
+        err_segment_index: usize,
         label: String,
         suggestion: Option<Suggestion>,
         module: Option<ModuleOrUniformRoot<'a>>,
@@ -410,6 +411,7 @@ enum PathResult<'a> {
         label: String,
         suggestion: Option<Suggestion>,
         is_error_from_last_segment: bool,
+        err_segment_index: usize,
         module: Option<ModuleOrUniformRoot<'a>>,
     },
 }
@@ -418,13 +420,14 @@ impl<'a> PathResult<'a> {
     fn failed(
         span: Span,
         is_error_from_last_segment: bool,
+        err_segment_index: usize,
         finalize: bool,
         module: Option<ModuleOrUniformRoot<'a>>,
         label_and_suggestion: impl FnOnce() -> (String, Option<Suggestion>),
     ) -> PathResult<'a> {
         let (label, suggestion) =
             if finalize { label_and_suggestion() } else { (String::new(), None) };
-        PathResult::Failed { span, label, suggestion, is_error_from_last_segment, module }
+        PathResult::Failed { span, label, suggestion, is_error_from_last_segment, err_segment_index, module }
     }
 }
 

@@ -838,6 +838,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
             }
             PathResult::Failed {
                 is_error_from_last_segment: false,
+                err_segment_index,
                 span,
                 label,
                 suggestion,
@@ -849,6 +850,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                         span,
                         ResolutionError::FailedToResolve {
                             last_segment: None,
+                            err_segment_index,
                             label,
                             suggestion,
                             module,

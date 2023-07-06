@@ -3,16 +3,6 @@ error[E0433]: failed to resolve: could not find `hahmap` in `std`
    |
 LL |     let _map = std::hahmap::HashMap::new();
    |                     ^^^^^^ could not find `hahmap` in `std`
-   |
-help: consider importing this struct
-   |
-LL + use std::collections::HashMap;
-   |
-help: if you import `HashMap`, refer to it directly
-   |
-LL -     let _map = std::hahmap::HashMap::new();
-LL +     let _map = HashMap::new();
-   |
 
 error: aborting due to previous error
 

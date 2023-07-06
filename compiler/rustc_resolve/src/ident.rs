@@ -1387,6 +1387,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
             };
 
             let is_last = segment_idx + 1 == path.len();
+            let err_segment_index = segment_idx;
             let ns = if is_last { opt_ns.unwrap_or(TypeNS) } else { TypeNS };
             let name = ident.name;
 
@@ -1413,6 +1414,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                     return PathResult::failed(
                         ident.span,
                         false,
+                        err_segment_index,
                         finalize.is_some(),
                         module,
                         || ("there are too many leading `super` keywords".to_string(), None),
@@ -1448,7 +1450,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
 
             // Report special messages for path segment keywords in wrong positions.
             if ident.is_path_segment_keyword() && segment_idx != 0 {
-                return PathResult::failed(ident.span, false, finalize.is_some(), module, || {
+                return PathResult::failed(ident.span, false, err_segment_index, finalize.is_some(), module, || {
                     let name_str = if name == kw::PathRoot {
                         "crate root".to_string()
                     } else {
@@ -1544,6 +1546,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                         return PathResult::failed(
                             ident.span,
                             is_last,
+                            err_segment_index,
                             finalize.is_some(),
                             module,
                             || {
@@ -1568,9 +1571,11 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                         }
                     }
 
+                    debug!("anan PathResult failed: {:?}", is_last);
                     return PathResult::failed(
                         ident.span,
                         is_last,
+                        err_segment_index,
                         finalize.is_some(),
                         module,
                         || {

@@ -3555,11 +3555,24 @@ impl<'a: 'ast, 'b, 'ast, 'tcx> LateResolutionVisitor<'a, 'b, 'ast, 'tcx> {
             // Before we start looking for candidates, we have to get our hands
             // on the type user is trying to perform invocation on; basically:
             // we're transforming `HashMap::new` into just `HashMap`.
+            let err_segment_index =
+                if let ResolutionError::FailedToResolve{err_segment_index, ..} = parent_err.node {
+                    err_segment_index
+                } else {
+                    0 as usize
+                };
+            debug!("anan now err_segment_index: {:?}", err_segment_index);
             let (following_seg, prefix_path) = match path.split_last() {
                 Some((last, path)) if !path.is_empty() => (Some(last), path),
                 _ => return Some(parent_err),
             };
 
+            // let prefix_path = &path[..=err_segment_index];
+            // let following_seg = path.get(err_segment_index + 1);
+            // if prefix_path.is_empty() {
+            //     return Some(parent_err);
+            // }
+            debug!("anan begin smart_resolve_report_errors: {:?} {:?}", prefix_path, following_seg);
             let (mut err, candidates) = this.smart_resolve_report_errors(
                 prefix_path,
                 following_seg,
@@ -3695,6 +3708,7 @@ impl<'a: 'ast, 'b, 'ast, 'tcx> LateResolutionVisitor<'a, 'b, 'ast, 'tcx> {
             }
 
             Err(err) => {
+                debug!("anan : {:?}", err);
                 if let Some(err) = report_errors_for_call(self, err) {
                     self.report_error(err.span, err.node);
                 }
@@ -3852,6 +3866,7 @@ impl<'a: 'ast, 'b, 'ast, 'tcx> LateResolutionVisitor<'a, 'b, 'ast, 'tcx> {
             )));
         }
 
+        debug!("anan now begin resolve_path: {:?}", path);
         let result = match self.resolve_path(&path, Some(ns), Some(finalize)) {
             PathResult::NonModule(path_res) => path_res,
             PathResult::Module(ModuleOrUniformRoot::Module(module)) if !module.is_normal() => {
@@ -3881,6 +3896,7 @@ impl<'a: 'ast, 'b, 'ast, 'tcx> LateResolutionVisitor<'a, 'b, 'ast, 'tcx> {
             }
             PathResult::Failed {
                 is_error_from_last_segment: false,
+                err_segment_index,
                 span,
                 label,
                 suggestion,
@@ -3890,6 +3906,7 @@ impl<'a: 'ast, 'b, 'ast, 'tcx> LateResolutionVisitor<'a, 'b, 'ast, 'tcx> {
                     span,
                     ResolutionError::FailedToResolve {
                         last_segment: None,
+                        err_segment_index,
                         label,
                         suggestion,
                         module,

@@ -728,8 +728,10 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                 }
                 path_res @ (PathResult::NonModule(..) | PathResult::Failed { .. }) => {
                     let mut suggestion = None;
-                    let (span, label, module) = if let PathResult::Failed { span, label, module, .. } = path_res {
+                    let mut err_seg_index = 0;
+                    let (span, label, module) = if let PathResult::Failed { span, label, module, err_segment_index, .. } = path_res {
                         // try to suggest if it's not a macro, maybe a function
+                        err_seg_index = err_segment_index;
                         if let PathResult::NonModule(partial_res) = self.maybe_resolve_path(&path, Some(ValueNS), &parent_scope)
                             && partial_res.unresolved_segments() == 0 {
                             let sm = self.tcx.sess.source_map();
@@ -754,7 +756,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                     };
                     self.report_error(
                         span,
-                        ResolutionError::FailedToResolve { last_segment: path.last().map(|segment| segment.ident.name), label, suggestion, module },
+                        ResolutionError::FailedToResolve { last_segment: path.last().map(|segment| segment.ident.name), err_segment_index: err_seg_index, label, suggestion, module },
                     );
                 }
                 PathResult::Module(..) | PathResult::Indeterminate => unreachable!(),
