@@ -152,7 +152,7 @@ struct BaseError {
     module: Option<DefId>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum TypoCandidate {
     Typo(TypoSuggestion),
     Shadowed(Res, Option<Span>),
@@ -409,7 +409,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             return (err, Vec::new());
         }
 
-        let (found, candidates) = self.try_lookup_name_relaxed(
+        let (found, mut candidates) = self.try_lookup_name_relaxed(
             &mut err,
             source,
             path,
@@ -422,16 +422,10 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             return (err, candidates);
         }
 
-        let mut fallback = self.suggest_trait_and_bounds(&mut err, source, res, span, &base_error);
-
-        // if we have suggested using pattern matching, then don't add needless suggestions
-        // for typos.
-        fallback |= self.suggest_typo(&mut err, source, path, following_seg, span, &base_error);
-
-        if fallback {
-            // Fallback label.
-            err.span_label(base_error.span, base_error.fallback_label);
+        if candidates.is_empty() {
+            candidates = self.smart_resolve_partial_mod_path_errors(path, following_seg);
         }
+
         self.err_code_special_cases(&mut err, source, path, span);
 
         if let Some(module) = base_error.module {
@@ -603,9 +597,10 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         }
 
         // Try finding a suitable replacement.
-        let typo_sugg = self
-            .lookup_typo_candidate(path, following_seg, source.namespace(), is_expected)
-            .to_opt_suggestion();
+        let typo_candidates =
+            self.lookup_typo_candidate(path, following_seg, source.namespace(), is_expected);
+        let typo_sugg = typo_candidates.clone().to_opt_suggestion();
+
         if path.len() == 1 && self.self_type_is_available() {
             if let Some(candidate) =
                 self.lookup_assoc_candidate(ident, ns, is_expected, source.is_call())
@@ -703,10 +698,16 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             }
         }
 
-        if candidates.is_empty() {
-            candidates = self.smart_resolve_partial_mod_path_errors(path, following_seg);
-        }
+        let mut fallback = self.suggest_trait_and_bounds(err, source, res, span, &base_error);
 
+        // if we have suggested using pattern matching, then don't add needless suggestions
+        // for typos.
+        fallback |= self.suggest_typo(err, source, path, span, &base_error, typo_candidates);
+
+        if fallback {
+            // Fallback label.
+            err.span_label(base_error.span, base_error.fallback_label.clone());
+        }
         return (false, candidates);
     }
 
@@ -790,14 +791,12 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         err: &mut Diagnostic,
         source: PathSource<'_>,
         path: &[Segment],
-        following_seg: Option<&Segment>,
         span: Span,
         base_error: &BaseError,
+        typo_candidate: TypoCandidate,
     ) -> bool {
         let is_expected = &|res| source.is_expected(res);
         let ident_span = path.last().map_or(span, |ident| ident.ident.span);
-        let typo_sugg =
-            self.lookup_typo_candidate(path, following_seg, source.namespace(), is_expected);
         let is_in_same_file = &|sp1, sp2| {
             let source_map = self.r.tcx.sess.source_map();
             let file1 = source_map.span_to_filename(sp1);
@@ -808,7 +807,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
         // accessible definition and (2) either defined in the same crate as the typo
         // (could be in a different file) or introduced in the same file as the typo
         // (could belong to a different crate)
-        if let TypoCandidate::Shadowed(res, Some(sugg_span)) = typo_sugg
+        if let TypoCandidate::Shadowed(res, Some(sugg_span)) = typo_candidate
             && res
                 .opt_def_id()
                 .is_some_and(|id| id.is_local() || is_in_same_file(span, sugg_span))
@@ -820,7 +819,7 @@ impl<'a: 'ast, 'ast, 'tcx> LateResolutionVisitor<'a, '_, 'ast, 'tcx> {
             return true;
         }
         let mut fallback = false;
-        let typo_sugg = typo_sugg.to_opt_suggestion();
+        let typo_sugg = typo_candidate.to_opt_suggestion();
         if !self.r.add_typo_suggestion(err, typo_sugg, ident_span) {
             fallback = true;
             match self.diagnostic_metadata.current_let_binding {
