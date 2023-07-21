@@ -132,11 +132,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                         ", as `Fn` closures cannot mutate their captured variables".to_string()
                     }
                 } else {
-
-                    let place_ref = PlaceRef {
-                        local: the_place_err.local,
-                        projection: proj_base,
-                    };
+                    let place_ref = PlaceRef { local: the_place_err.local, projection: proj_base };
                     place_err_ty = Some(place_ref.ty(self.body, self.infcx.tcx).ty);
                     let source = self.borrowed_content_source(place_ref);
                     debug!("ty 0 = {:?}", place_err_ty);

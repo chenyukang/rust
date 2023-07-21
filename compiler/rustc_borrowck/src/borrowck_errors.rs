@@ -356,7 +356,8 @@ impl<'cx, 'tcx> crate::MirBorrowckCtxt<'cx, 'tcx> {
             .sess
             .source_map()
             .span_to_snippet(span)
-            .is_ok_and(|snippet| snippet.starts_with("&mut ")) && place_err_ty.is_some()
+            .is_ok_and(|snippet| snippet.starts_with("&mut "))
+            && place_err_ty.is_some()
         {
             span.with_lo(span.lo() + rustc_span::BytePos(5))
         } else {
@@ -366,7 +367,10 @@ impl<'cx, 'tcx> crate::MirBorrowckCtxt<'cx, 'tcx> {
         let mut err =
             struct_span_err!(self, span, E0596, "cannot borrow {} as mutable{}", path, reason,);
         if let Some(ty) = place_err_ty {
-            err.help(format!("`{}` is of type `{:?}`, which is an immutable reference", snippet, ty));
+            err.help(format!(
+                "`{}` is of type `{:?}`, which is an immutable reference",
+                snippet, ty
+            ));
         }
         err
     }
