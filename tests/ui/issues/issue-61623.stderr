@@ -4,6 +4,7 @@ error[E0596]: cannot borrow `*x.1` as mutable, as it is behind a `&` reference
 LL |     f2(|| x.0, f1(x.1))
    |                   ^^^ `x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `x.1` is of type `&((), &mut ())`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn f3<'a>(x: &'a mut ((), &'a mut ())) {

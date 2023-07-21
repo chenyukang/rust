@@ -49,6 +49,8 @@ error[E0596]: cannot borrow data in a `&` reference as mutable
    |
 LL |         (&mut self).bar();
    |         ^^^^^^^^^^^ cannot borrow as mutable
+   |
+   = help: `(&mut self)` is of type `&Struct`, which is an immutable reference
 
 error[E0596]: cannot borrow `self` as mutable, as it is not declared as mutable
   --> $DIR/issue-51191.rs:28:9

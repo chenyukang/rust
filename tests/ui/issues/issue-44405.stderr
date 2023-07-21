@@ -4,6 +4,7 @@ error[E0596]: cannot borrow data in an index of `Container` as mutable
 LL |     container[&mut val].test();
    |     ^^^^^^^^^^^^^^^^^^^ cannot borrow as mutable
    |
+   = help: `container[&mut val]` is of type `&Test`, which is an immutable reference
    = help: trait `IndexMut` is required to modify indexed content, but it is not implemented for `Container`
 
 error: aborting due to previous error

@@ -3,6 +3,8 @@ error[E0596]: cannot borrow data in a `&` reference as mutable
    |
 LL |     Index::index(&v, 1..2).make_ascii_uppercase();
    |     ^^^^^^^^^^^^^^^^^^^^^^ cannot borrow as mutable
+   |
+   = help: `Index::index(&v, 1..2)` is of type `&str`, which is an immutable reference
 
 error: aborting due to previous error
 

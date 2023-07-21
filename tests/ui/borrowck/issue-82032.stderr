@@ -8,6 +8,8 @@ LL |         for v in self.0.values() {
    |                  this iterator yields `&` references
 LL |             v.flush();
    |             ^ `v` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+   |
+   = help: `v` is of type `&std::io::BufWriter<std::fs::File>`, which is an immutable reference
 
 error: aborting due to previous error
 

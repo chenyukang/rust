@@ -4,6 +4,7 @@ error[E0596]: cannot borrow `*self.s` as mutable, as it is behind a `&` referenc
 LL |         self.s.push('x');
    |         ^^^^^^ cannot borrow as mutable
    |
+   = help: `self.s` is of type `&std::string::String`, which is an immutable reference
 help: consider changing this to be mutable
    |
 LL |     s: &'a mut String

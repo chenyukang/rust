@@ -4,6 +4,7 @@ error[E0596]: cannot borrow data in an index of `HashMap<&str, String>` as mutab
 LL |     map["peter"].clear();
    |     ^^^^^^^^^^^^ cannot borrow as mutable
    |
+   = help: `map["peter"]` is of type `&std::string::String`, which is an immutable reference
    = help: trait `IndexMut` is required to modify indexed content, but it is not implemented for `HashMap<&str, String>`
    = help: to modify a `HashMap<&str, String>`, use `.get_mut()`, `.insert()` or the entry API
 
@@ -24,11 +25,14 @@ LL |     let val = map.entry("peter").or_insert("0".to_string());
    |     +++++++++    ~~~~~~~       ~~~~~~~~~~~~               +
 
 error[E0596]: cannot borrow data in an index of `HashMap<&str, String>` as mutable
-  --> $DIR/index-mut-help.rs:12:13
+  --> $DIR/index-mut-help.rs:12:18
    |
 LL |     let _ = &mut map["peter"];
-   |             ^^^^^^^^^^^^^^^^^ cannot borrow as mutable
+   |             -----^^^^^^^^^^^^
+   |             |
+   |             cannot borrow as mutable
    |
+   = help: `map["peter"]` is of type `&std::string::String`, which is an immutable reference
    = help: trait `IndexMut` is required to modify indexed content, but it is not implemented for `HashMap<&str, String>`
    = help: to modify a `HashMap<&str, String>`, use `.get_mut()`, `.insert()` or the entry API
 

@@ -6,6 +6,8 @@ LL |     let mut c = || {
 LL |
 LL |         z.0.0.0 = format!("X1");
    |         ------- mutable borrow occurs due to use of `*z.0.0` in closure
+   |
+   = help: `||` is of type `&(std::string::String, std::string::String)`, which is an immutable reference
 
 error: aborting due to previous error
 

@@ -21,22 +21,28 @@ LL | fn named_ref(x: &mut (i32,)) {
    |                  +++
 
 error[E0596]: cannot borrow `*x` as mutable, as it is behind a `&` reference
-  --> $DIR/mutability-errors.rs:11:5
+  --> $DIR/mutability-errors.rs:11:10
    |
 LL |     &mut *x;
-   |     ^^^^^^^ `x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+   |     -----^^
+   |     |
+   |     `x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*x` is of type `&(i32,)`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn named_ref(x: &mut (i32,)) {
    |                  +++
 
 error[E0596]: cannot borrow `x.0` as mutable, as it is behind a `&` reference
-  --> $DIR/mutability-errors.rs:12:5
+  --> $DIR/mutability-errors.rs:12:10
    |
 LL |     &mut x.0;
-   |     ^^^^^^^^ `x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+   |     -----^^^
+   |     |
+   |     `x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `x.0` is of type `&(i32,)`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn named_ref(x: &mut (i32,)) {
@@ -55,16 +61,24 @@ LL |     f().0 = 1;
    |     ^^^^^^^^^ cannot assign
 
 error[E0596]: cannot borrow data in a `&` reference as mutable
-  --> $DIR/mutability-errors.rs:18:5
+  --> $DIR/mutability-errors.rs:18:10
    |
 LL |     &mut *f();
-   |     ^^^^^^^^^ cannot borrow as mutable
+   |     -----^^^^
+   |     |
+   |     cannot borrow as mutable
+   |
+   = help: `*f()` is of type `&(i32,)`, which is an immutable reference
 
 error[E0596]: cannot borrow data in a `&` reference as mutable
-  --> $DIR/mutability-errors.rs:19:5
+  --> $DIR/mutability-errors.rs:19:10
    |
 LL |     &mut f().0;
-   |     ^^^^^^^^^^ cannot borrow as mutable
+   |     -----^^^^^
+   |     |
+   |     cannot borrow as mutable
+   |
+   = help: `f().0` is of type `&(i32,)`, which is an immutable reference
 
 error[E0594]: cannot assign to `*x`, which is behind a `*const` pointer
   --> $DIR/mutability-errors.rs:23:5
@@ -89,22 +103,28 @@ LL | unsafe fn named_ptr(x: *mut const (i32,)) {
    |                         +++
 
 error[E0596]: cannot borrow `*x` as mutable, as it is behind a `*const` pointer
-  --> $DIR/mutability-errors.rs:25:5
+  --> $DIR/mutability-errors.rs:25:10
    |
 LL |     &mut *x;
-   |     ^^^^^^^ `x` is a `*const` pointer, so the data it refers to cannot be borrowed as mutable
+   |     -----^^
+   |     |
+   |     `x` is a `*const` pointer, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*x` is of type `*const (i32,)`, which is an immutable reference
 help: consider changing this to be a mutable pointer
    |
 LL | unsafe fn named_ptr(x: *mut const (i32,)) {
    |                         +++
 
 error[E0596]: cannot borrow `x.0` as mutable, as it is behind a `*const` pointer
-  --> $DIR/mutability-errors.rs:26:5
+  --> $DIR/mutability-errors.rs:26:10
    |
 LL |     &mut (*x).0;
-   |     ^^^^^^^^^^^ `x` is a `*const` pointer, so the data it refers to cannot be borrowed as mutable
+   |     -----^^^^^^
+   |     |
+   |     `x` is a `*const` pointer, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `(*x).0` is of type `*const (i32,)`, which is an immutable reference
 help: consider changing this to be a mutable pointer
    |
 LL | unsafe fn named_ptr(x: *mut const (i32,)) {
@@ -123,16 +143,24 @@ LL |     (*f()).0 = 1;
    |     ^^^^^^^^^^^^ cannot assign
 
 error[E0596]: cannot borrow data in a `*const` pointer as mutable
-  --> $DIR/mutability-errors.rs:32:5
+  --> $DIR/mutability-errors.rs:32:10
    |
 LL |     &mut *f();
-   |     ^^^^^^^^^ cannot borrow as mutable
+   |     -----^^^^
+   |     |
+   |     cannot borrow as mutable
+   |
+   = help: `*f()` is of type `*const (i32,)`, which is an immutable reference
 
 error[E0596]: cannot borrow data in a `*const` pointer as mutable
-  --> $DIR/mutability-errors.rs:33:5
+  --> $DIR/mutability-errors.rs:33:10
    |
 LL |     &mut (*f()).0;
-   |     ^^^^^^^^^^^^^ cannot borrow as mutable
+   |     -----^^^^^^^^
+   |     |
+   |     cannot borrow as mutable
+   |
+   = help: `(*f()).0` is of type `*const (i32,)`, which is an immutable reference
 
 error[E0594]: cannot assign to `x`, as it is a captured variable in a `Fn` closure
   --> $DIR/mutability-errors.rs:40:9

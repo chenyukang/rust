@@ -4,6 +4,7 @@ error[E0596]: cannot borrow `**t` as mutable, as it is behind a `&` reference
 LL |     *t
    |     ^^ `t` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*t` is of type `&&mut i32`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn reborrow_mut<'a>(t: &'a mut &'a mut i32) -> &'a mut i32 where &'a mut i32: Copy {
@@ -15,6 +16,7 @@ error[E0596]: cannot borrow `**t` as mutable, as it is behind a `&` reference
 LL |     {*t}
    |      ^^ `t` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*t` is of type `&&mut i32`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn copy_reborrow_mut<'a>(t: &'a mut &'a mut i32) -> &'a mut i32 where &'a mut i32: Copy {

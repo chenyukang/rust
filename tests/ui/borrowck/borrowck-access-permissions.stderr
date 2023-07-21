@@ -27,33 +27,42 @@ LL |         let mut box_x = Box::new(1);
    |             +++
 
 error[E0596]: cannot borrow `*ref_x` as mutable, as it is behind a `&` reference
-  --> $DIR/borrowck-access-permissions.rs:30:19
+  --> $DIR/borrowck-access-permissions.rs:30:24
    |
 LL |         let _y1 = &mut *ref_x;
-   |                   ^^^^^^^^^^^ `ref_x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+   |                   -----^^^^^^
+   |                   |
+   |                   `ref_x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*ref_x` is of type `&i32`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL |         let ref_x = &mut x;
    |                      +++
 
 error[E0596]: cannot borrow `*ptr_x` as mutable, as it is behind a `*const` pointer
-  --> $DIR/borrowck-access-permissions.rs:39:23
+  --> $DIR/borrowck-access-permissions.rs:39:28
    |
 LL |             let _y1 = &mut *ptr_x;
-   |                       ^^^^^^^^^^^ `ptr_x` is a `*const` pointer, so the data it refers to cannot be borrowed as mutable
+   |                       -----^^^^^^
+   |                       |
+   |                       `ptr_x` is a `*const` pointer, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*ptr_x` is of type `*const i32`, which is an immutable reference
 help: consider changing this to be a mutable pointer
    |
 LL |         let ptr_x : *const _ = &mut x;
    |                                 +++
 
 error[E0596]: cannot borrow `*foo_ref.f` as mutable, as it is behind a `&` reference
-  --> $DIR/borrowck-access-permissions.rs:48:18
+  --> $DIR/borrowck-access-permissions.rs:48:23
    |
 LL |         let _y = &mut *foo_ref.f;
-   |                  ^^^^^^^^^^^^^^^ `foo_ref` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+   |                  -----^^^^^^^^^^
+   |                  |
+   |                  `foo_ref` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*foo_ref.f` is of type `&main::Foo<'_>`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL |         let foo_ref = &mut foo;

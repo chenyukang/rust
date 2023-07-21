@@ -40,6 +40,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
         );
 
         let mut err;
+        let mut place_err_ty = None;
         let item_msg;
         let reason;
         let mut opt_source = None;
@@ -131,11 +132,16 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                         ", as `Fn` closures cannot mutate their captured variables".to_string()
                     }
                 } else {
-                    let source = self.borrowed_content_source(PlaceRef {
+
+                    let place_ref = PlaceRef {
                         local: the_place_err.local,
                         projection: proj_base,
-                    });
+                    };
+                    place_err_ty = Some(place_ref.ty(self.body, self.infcx.tcx).ty);
+                    let source = self.borrowed_content_source(place_ref);
+                    debug!("ty 0 = {:?}", place_err_ty);
                     let pointer_type = source.describe_for_immutable_place(self.infcx.tcx);
+                    debug!("report_mutability_error: pointer_type={:?}", pointer_type);
                     opt_source = Some(source);
                     if let Some(desc) = self.describe_place(access_place.as_ref()) {
                         item_msg = format!("`{desc}`");
@@ -212,6 +218,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                                 borrow_span,
                                 &item_msg,
                                 &reason,
+                                &None,
                             );
                         }
                     }
@@ -220,6 +227,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                             borrow_span,
                             &item_msg,
                             &reason,
+                            &place_err_ty,
                         );
                     }
                 }

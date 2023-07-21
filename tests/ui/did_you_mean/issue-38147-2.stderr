@@ -4,6 +4,7 @@ error[E0596]: cannot borrow `*self.s` as mutable, as it is behind a `&` referenc
 LL |         self.s.push('x');
    |         ^^^^^^ cannot borrow as mutable
    |
+   = help: `self.s` is of type `&std::string::String`, which is an immutable reference
 help: consider changing this to be mutable
    |
 LL |     s: &'a mut String,
@@ -15,6 +16,7 @@ error[E0596]: cannot borrow `*self.longer_name` as mutable, as it is behind a `&
 LL |         self.longer_name.push(13);
    |         ^^^^^^^^^^^^^^^^ cannot borrow as mutable
    |
+   = help: `self.longer_name` is of type `&std::vec::Vec<u8>`, which is an immutable reference
 help: consider changing this to be mutable
    |
 LL |     longer_name:   &   'a mut Vec<u8>

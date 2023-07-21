@@ -1,33 +1,45 @@
 error[E0596]: cannot borrow data in an `Rc` as mutable
-  --> $DIR/borrowck-borrow-overloaded-deref.rs:12:19
+  --> $DIR/borrowck-borrow-overloaded-deref.rs:12:24
    |
 LL |     let __isize = &mut *x;
-   |                   ^^^^^^^ cannot borrow as mutable
+   |                   -----^^
+   |                   |
+   |                   cannot borrow as mutable
    |
+   = help: `*x` is of type `&isize`, which is an immutable reference
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Rc<isize>`
 
 error[E0596]: cannot borrow data in an `Rc` as mutable
-  --> $DIR/borrowck-borrow-overloaded-deref.rs:16:19
+  --> $DIR/borrowck-borrow-overloaded-deref.rs:16:24
    |
 LL |     let __isize = &mut *x;
-   |                   ^^^^^^^ cannot borrow as mutable
+   |                   -----^^
+   |                   |
+   |                   cannot borrow as mutable
    |
+   = help: `*x` is of type `&isize`, which is an immutable reference
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Rc<isize>`
 
 error[E0596]: cannot borrow data in an `Rc` as mutable
-  --> $DIR/borrowck-borrow-overloaded-deref.rs:24:5
+  --> $DIR/borrowck-borrow-overloaded-deref.rs:24:10
    |
 LL |     &mut **x
-   |     ^^^^^^^^ cannot borrow as mutable
+   |     -----^^^
+   |     |
+   |     cannot borrow as mutable
    |
+   = help: `**x` is of type `&isize`, which is an immutable reference
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Rc<isize>`
 
 error[E0596]: cannot borrow data in an `Rc` as mutable
-  --> $DIR/borrowck-borrow-overloaded-deref.rs:28:5
+  --> $DIR/borrowck-borrow-overloaded-deref.rs:28:10
    |
 LL |     &mut **x
-   |     ^^^^^^^^ cannot borrow as mutable
+   |     -----^^^
+   |     |
+   |     cannot borrow as mutable
    |
+   = help: `**x` is of type `&isize`, which is an immutable reference
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Rc<isize>`
 
 error[E0594]: cannot assign to data in an `Rc`

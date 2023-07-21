@@ -3,6 +3,8 @@ error[E0596]: cannot borrow data in a `&` reference as mutable
    |
 LL | async fn async_fn(&ref mut s: &[i32]) {}
    |                    ^^^^^^^^^ cannot borrow as mutable through `&` reference
+   |
+   = help: `ref mut s` is of type `&[i32]`, which is an immutable reference
 
 error: aborting due to previous error
 

@@ -15,6 +15,7 @@ error[E0596]: cannot borrow `*self.0` as mutable, as it is behind a `&` referenc
 LL |         self.0.iter_mut()
    |         ^^^^^^ `self` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `self.0` is of type `&EntriesBuffer`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL |     fn a(&mut self) -> impl Iterator {

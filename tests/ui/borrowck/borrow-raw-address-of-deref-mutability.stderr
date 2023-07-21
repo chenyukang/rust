@@ -4,6 +4,7 @@ error[E0596]: cannot borrow `*x` as mutable, as it is behind a `&` reference
 LL |     let q = &raw mut *x;
    |             ^^^^^^^^^^^ `x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `&raw mut *x` is of type `&i32`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL |     let x = &mut 0;
@@ -15,6 +16,7 @@ error[E0596]: cannot borrow `*x` as mutable, as it is behind a `*const` pointer
 LL |     let q = &raw mut *x;
    |             ^^^^^^^^^^^ `x` is a `*const` pointer, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `&raw mut *x` is of type `*const i32`, which is an immutable reference
 help: consider changing this to be a mutable pointer
    |
 LL |     let x = &mut 0 as *const i32;

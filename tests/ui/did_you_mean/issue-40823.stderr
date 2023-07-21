@@ -4,6 +4,7 @@ error[E0596]: cannot borrow `*buf` as mutable, as it is behind a `&` reference
 LL |     buf.iter_mut();
    |     ^^^ `buf` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `buf` is of type `&[i32; 4]`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL |     let mut buf = &mut [1, 2, 3, 4];

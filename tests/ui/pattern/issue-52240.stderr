@@ -3,6 +3,8 @@ error[E0596]: cannot borrow data in a `&` reference as mutable
    |
 LL |     if let (Some(Foo::Bar(ref mut val)), _) = (&arr.get(0), 0) {
    |                           ^^^^^^^^^^^ cannot borrow as mutable
+   |
+   = help: `ref mut val` is of type `&Foo`, which is an immutable reference
 
 error: aborting due to previous error
 

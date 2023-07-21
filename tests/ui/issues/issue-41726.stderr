@@ -4,6 +4,7 @@ error[E0596]: cannot borrow data in an index of `HashMap<String, Vec<String>>` a
 LL |         things[src.as_str()].sort();
    |         ^^^^^^^^^^^^^^^^^^^^ cannot borrow as mutable
    |
+   = help: `things[src.as_str()]` is of type `&std::vec::Vec<std::string::String>`, which is an immutable reference
    = help: trait `IndexMut` is required to modify indexed content, but it is not implemented for `HashMap<String, Vec<String>>`
    = help: to modify a `HashMap<String, Vec<String>>`, use `.get_mut()`, `.insert()` or the entry API
 

@@ -7,6 +7,7 @@ LL |
 LL |         **ref_mref_x = y;
    |         ------------ mutable borrow occurs due to use of `**ref_mref_x` in closure
    |
+   = help: `||` is of type `&&mut std::string::String`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL |     let ref_mref_x = &mut mref_x;
@@ -20,6 +21,8 @@ LL |     let c = || {
 LL |
 LL |         **mref_ref_x = y;
    |         ------------ mutable borrow occurs due to use of `**mref_ref_x` in closure
+   |
+   = help: `||` is of type `&std::string::String`, which is an immutable reference
 
 error: aborting due to 2 previous errors
 

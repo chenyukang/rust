@@ -15,6 +15,7 @@ error[E0596]: cannot borrow `*x` as mutable, as it is behind a `&` reference
 LL |     &mut **x
    |           ^^ `x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*x` is of type `&Own<isize>`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn deref_extend_mut1<'a>(x: &'a mut Own<isize>) -> &'a mut isize {
@@ -37,6 +38,7 @@ error[E0596]: cannot borrow `*x` as mutable, as it is behind a `&` reference
 LL |     **x = 3;
    |      ^^ `x` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `*x` is of type `&Own<isize>`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn assign2<'a>(x: &'a mut Own<isize>) {

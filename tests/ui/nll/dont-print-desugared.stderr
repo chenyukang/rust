@@ -3,6 +3,8 @@ error[E0596]: cannot borrow data in a `&` reference as mutable
    |
 LL |     for &ref mut x in s {}
    |          ^^^^^^^^^ cannot borrow as mutable
+   |
+   = help: `ref mut x` is of type `&i32`, which is an immutable reference
 
 error[E0597]: `y` does not live long enough
   --> $DIR/dont-print-desugared.rs:17:16

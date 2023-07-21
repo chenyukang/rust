@@ -16,6 +16,7 @@ error[E0596]: cannot borrow `*f` as mutable, as it is behind a `&` reference
 LL |     (*f)();
    |     ^^^^ `f` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `(*f)` is of type `&F`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn test2<F>(f: &mut F) where F: FnMut() {
@@ -27,6 +28,7 @@ error[E0596]: cannot borrow `f.f` as mutable, as it is behind a `&` reference
 LL |     f.f.call_mut(())
    |     ^^^ `f` is a `&` reference, so the data it refers to cannot be borrowed as mutable
    |
+   = help: `f.f` is of type `&Test<'_>`, which is an immutable reference
 help: consider changing this to be a mutable reference
    |
 LL | fn test4(f: &mut Test) {
