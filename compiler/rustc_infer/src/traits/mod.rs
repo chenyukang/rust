@@ -157,7 +157,7 @@ impl<'tcx, O> Obligation<'tcx, O> {
     /// To deal with this evaluate and fulfill explicitly update the depth
     /// of nested obligations using this function.
     pub fn set_depth_from_parent(&mut self, parent_depth: usize) {
-        self.recursion_depth = cmp::max(parent_depth + 1, self.recursion_depth);
+        self.recursion_depth = cmp::max(parent_depth, self.recursion_depth) + 1;
     }
 
     pub fn with_depth(

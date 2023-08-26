@@ -731,7 +731,7 @@ dependencies = [
  "indexmap 2.0.0",
  "itertools",
  "limit",
- "line-index 0.1.0-pre.1",
+ "line-index 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr",
  "nohash-hasher",
  "once_cell",
@@ -948,9 +948,7 @@ version = "0.0.0"
 
 [[package]]
 name = "line-index"
-version = "0.1.0-pre.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cad96769710c1745e11d4f940a8ff36000ade4bbada4285b001cb8aa2f745ce"
+version = "0.1.0"
 dependencies = [
  "nohash-hasher",
  "text-size",
@@ -959,6 +957,8 @@ dependencies = [
 [[package]]
 name = "line-index"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ee59ea2e50e61bae4f09eee6416820f2ba9796d6e924c86f6e4f699dcb1a7ac"
 dependencies = [
  "nohash-hasher",
  "text-size",
@@ -1010,9 +1010,9 @@ dependencies = [
 
 [[package]]
 name = "lsp-server"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72417faa455bfb4e5bf14b157d8e2ca2ed74b4e89b8cf42ea2d864825ae5c8a2"
+checksum = "b52dccdf3302eefab8c8a1273047f0a3c3dca4b527c8458d00c09484c8371928"
 dependencies = [
  "crossbeam-channel",
  "log",
@@ -1555,7 +1555,7 @@ dependencies = [
  "ide-ssr",
  "itertools",
  "load-cargo",
- "lsp-server 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lsp-server 0.7.4",
  "lsp-types",
  "mbe",
  "mimalloc",

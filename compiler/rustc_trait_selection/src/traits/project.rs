@@ -373,6 +373,15 @@ pub(crate) fn normalize_with_depth_to<'a, 'b, 'tcx, T>(
 where
     T: TypeFoldable<TyCtxt<'tcx>>,
 {
+    if let Some(_) = std::env::var_os("RUSTC_LOG") {
+        eprintln!("anan depth: {:?}", depth);
+        if depth >= 32 {
+            // if we've set an panic environment, then panic
+            if let Some(_) = std::env::var_os("RUSTC_PANIC_ON_ICE") {
+                panic!("now");
+            }
+        }
+    }
     debug!(obligations.len = obligations.len());
     let mut normalizer = AssocTypeNormalizer::new(selcx, param_env, cause, depth, obligations);
     let result = ensure_sufficient_stack(|| normalizer.fold(value));
