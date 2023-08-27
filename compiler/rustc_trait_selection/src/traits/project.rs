@@ -361,6 +361,8 @@ where
     Normalized { value, obligations }
 }
 
+static mut PREV_DEPTH: usize = 0;
+
 #[instrument(level = "info", skip(selcx, param_env, cause, obligations))]
 pub(crate) fn normalize_with_depth_to<'a, 'b, 'tcx, T>(
     selcx: &'a mut SelectionContext<'b, 'tcx>,
@@ -374,13 +376,21 @@ where
     T: TypeFoldable<TyCtxt<'tcx>>,
 {
     if let Some(_) = std::env::var_os("RUSTC_LOG") {
-        eprintln!("anan depth: {:?}", depth);
-        if depth >= 32 {
+        //eprintln!("anan depth: {:?}", depth);
+        unsafe {
+            if PREV_DEPTH == 77 && depth < 77 {
+                panic!("now");
+            }
+        }
+        if depth >= 77 {
             // if we've set an panic environment, then panic
             if let Some(_) = std::env::var_os("RUSTC_PANIC_ON_ICE") {
                 panic!("now");
             }
         }
+    }
+    unsafe {
+        PREV_DEPTH = depth;
     }
     debug!(obligations.len = obligations.len());
     let mut normalizer = AssocTypeNormalizer::new(selcx, param_env, cause, depth, obligations);
