@@ -589,9 +589,18 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         mutate_fulfillment_errors: impl Fn(&mut Vec<traits::FulfillmentError<'tcx>>),
     ) {
         let mut result = self.fulfillment_cx.borrow_mut().select_where_possible(self);
+        // for r in result.iter() {
+        //     debug!("anan result obligation: {:#?}", r.obligation.cause);
+        // }
         if !result.is_empty() {
             mutate_fulfillment_errors(&mut result);
+            for r in result.iter() {
+                debug!("anan result obligation: {:?}", r.obligation.cause);
+            }
             self.adjust_fulfillment_errors_for_expr_obligation(&mut result);
+            for r in result.iter() {
+                debug!("anan result obligation xxx: {:#?}", r.obligation.cause);
+            }
             self.err_ctxt().report_fulfillment_errors(&result);
         }
     }

@@ -637,6 +637,15 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
             dump_proof_tree(root_obligation, self.infcx);
         }
 
+        debug!("anan obligation: {:?}", obligation);
+        debug!("anan cause: {:?}", obligation.cause);
+        debug!("anan root_obligation: {:?}", root_obligation);
+        debug!("anan root span: {:?}", root_obligation.cause);
+        // if set panic environment variable, then panic
+        if let Ok(_panic) = std::env::var("RUST_PANIC") {
+            panic!("panic on selection error");
+        }
+
         let mut span = obligation.cause.span;
         // FIXME: statically guarantee this by tainting after the diagnostic is emitted
         self.set_tainted_by_errors(

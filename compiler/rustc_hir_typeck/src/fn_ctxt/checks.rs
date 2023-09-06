@@ -1881,6 +1881,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 if *predicate == error.obligation.predicate
                     && span.contains(error.obligation.cause.span)
                 {
+                    debug!(
+                        "anan update span from: {:?} to new span: {:?}",
+                        error.obligation.cause.span, span
+                    );
                     error.obligation.cause = cause.clone();
                     continue;
                 }

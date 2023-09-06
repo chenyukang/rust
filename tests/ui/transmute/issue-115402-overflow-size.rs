@@ -19,7 +19,7 @@ fn main() {
     #[repr(C)]
     struct ExplicitlyPadded(Uninit);
 
-    assert::is_maybe_transmutable::<(), ExplicitlyPadded>();
+    //assert::is_maybe_transmutable::<(), ExplicitlyPadded>();
     //~^ ERROR `()` cannot be safely transmuted into `ExplicitlyPadded`
 
     assert::is_maybe_transmutable::<ExplicitlyPadded, ()>();

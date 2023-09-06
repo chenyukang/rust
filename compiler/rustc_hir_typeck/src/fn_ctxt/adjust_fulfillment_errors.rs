@@ -14,6 +14,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         &self,
         error: &mut traits::FulfillmentError<'tcx>,
     ) -> bool {
+        debug!("anan begin update: {:?}", error.obligation.cause.span);
         let (traits::ExprItemObligation(def_id, hir_id, idx)
         | traits::ExprBindingObligation(def_id, _, hir_id, idx)) =
             *error.obligation.cause.code().peel_derives()
@@ -43,6 +44,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             _ => return false,
         };
 
+        debug!("anan predicate_args: {:?}", predicate_args);
         let direct_param = if let ty::ClauseKind::Trait(pred) = unsubstituted_pred.kind().skip_binder()
             && let ty = pred.trait_ref.self_ty()
             && let ty::Param(_param) = ty.kind()
@@ -120,9 +122,13 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         if let Some(qpath) = qpath {
             if let Some(param) = direct_param {
+                debug!("anan begin update2: {:?}", error.obligation.cause.span);
+                debug!("anan param: {:?}", param);
                 if self.point_at_path_if_possible(error, def_id, param, &qpath) {
+                    debug!("anan return update: {:?}", error.obligation.cause.span);
                     return true;
                 }
+                debug!("anan begin update3: {:?}", error.obligation.cause.span);
             }
             if let hir::Node::Expr(hir::Expr {
                 kind: hir::ExprKind::Call(callee, args),
@@ -166,6 +172,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             }
         }
 
+        debug!("anan begin update2: {:?}", error.obligation.cause.span);
         match expr.map(|e| e.kind) {
             Some(hir::ExprKind::MethodCall(segment, receiver, args, ..)) => {
                 if let Some(param) = direct_param
