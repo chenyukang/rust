@@ -1,35 +1,71 @@
-error[E0600]: cannot apply unary operator `-` to type `u8`
+error[E0277]: the trait bound `u8: Neg` is not satisfied
   --> $DIR/enum-discrim-too-small.rs:5:11
    |
 LL |     Cu8 = -23,
-   |           ^^^ cannot apply unary operator `-`
+   |           ^^^ the trait `Neg` is not implemented for `u8`
    |
-   = note: unsigned values cannot be negated
+   = help: the following other types implement trait `Neg`:
+             isize
+             i8
+             i16
+             i32
+             i64
+             i128
+             f32
+             f64
+           and 8 others
 
-error[E0600]: cannot apply unary operator `-` to type `u16`
+error[E0277]: the trait bound `u16: Neg` is not satisfied
   --> $DIR/enum-discrim-too-small.rs:13:12
    |
 LL |     Cu16 = -22333,
-   |            ^^^^^^ cannot apply unary operator `-`
+   |            ^^^^^^ the trait `Neg` is not implemented for `u16`
    |
-   = note: unsigned values cannot be negated
+   = help: the following other types implement trait `Neg`:
+             isize
+             i8
+             i16
+             i32
+             i64
+             i128
+             f32
+             f64
+           and 8 others
 
-error[E0600]: cannot apply unary operator `-` to type `u32`
+error[E0277]: the trait bound `u32: Neg` is not satisfied
   --> $DIR/enum-discrim-too-small.rs:21:12
    |
 LL |     Cu32 = -2_000_000_000,
-   |            ^^^^^^^^^^^^^^ cannot apply unary operator `-`
+   |            ^^^^^^^^^^^^^^ the trait `Neg` is not implemented for `u32`
    |
-   = note: unsigned values cannot be negated
+   = help: the following other types implement trait `Neg`:
+             isize
+             i8
+             i16
+             i32
+             i64
+             i128
+             f32
+             f64
+           and 8 others
 
-error[E0600]: cannot apply unary operator `-` to type `u64`
+error[E0277]: the trait bound `u64: Neg` is not satisfied
   --> $DIR/enum-discrim-too-small.rs:29:12
    |
 LL |     Cu32 = -2_000_000_000,
-   |            ^^^^^^^^^^^^^^ cannot apply unary operator `-`
+   |            ^^^^^^^^^^^^^^ the trait `Neg` is not implemented for `u64`
    |
-   = note: unsigned values cannot be negated
+   = help: the following other types implement trait `Neg`:
+             isize
+             i8
+             i16
+             i32
+             i64
+             i128
+             f32
+             f64
+           and 8 others
 
 error: aborting due to 4 previous errors
 
-For more information about this error, try `rustc --explain E0600`.
+For more information about this error, try `rustc --explain E0277`.

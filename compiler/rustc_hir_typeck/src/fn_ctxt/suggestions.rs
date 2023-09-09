@@ -805,10 +805,14 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
                 // Only point to return type if the expected type is the return type, as if they
                 // are not, the expectation must have been caused by something else.
-                debug!("return type {:?}", hir_ty);
+                debug!("anan return type {:?}", hir_ty);
                 let ty = self.astconv().ast_ty_to_ty(hir_ty);
-                debug!("return type {:?}", ty);
-                debug!("expected type {:?}", expected);
+                debug!("anan return type {:?}", ty);
+                debug!("anan expected type {:?}", expected);
+                // if set panic environment variable, then panic
+                if let Ok(_panic) = std::env::var("RUST_PANIC") {
+                    panic!("panic on selection error");
+                }
                 let bound_vars = self.tcx.late_bound_vars(hir_ty.hir_id.owner.into());
                 let ty = Binder::bind_with_vars(ty, bound_vars);
                 let ty = self.normalize(span, ty);

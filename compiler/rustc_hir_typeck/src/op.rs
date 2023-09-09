@@ -781,7 +781,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         match self.lookup_op_method(operand_ty, None, Op::Unary(op, ex.span), expected) {
             Ok(method) => {
                 self.write_method_call(ex.hir_id, method);
-                method.sig.output()
+                let res = method.sig.output();
+                debug!("anan lookup_op_method: {:?} from operand_ty: {:?}", res, operand_ty);
+                res
             }
             Err(errors) => {
                 let actual = self.resolve_vars_if_possible(operand_ty);

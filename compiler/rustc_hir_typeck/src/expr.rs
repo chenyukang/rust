@@ -225,7 +225,15 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             ) => self.check_expr_path(qpath, expr, args),
             _ => self.check_expr_kind(expr, expected),
         });
+
+        // if set panic environment variable, then panic
+        if let Ok(_panic) = std::env::var("RUST_PANIC") && ty.references_error() {
+            panic!("panic on selection error");
+        }
+
+        debug!("anan before ty: {:?} expected_ty: {:?}", ty, expected);
         let ty = self.resolve_vars_if_possible(ty);
+        debug!("anan after ty: {:?} expected_ty: {:?}", ty, expected);
 
         // Warn for non-block expressions with diverging children.
         match expr.kind {
@@ -362,11 +370,13 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     ) -> Ty<'tcx> {
         let tcx = self.tcx;
         let expected_inner = match unop {
-            hir::UnOp::Not | hir::UnOp::Neg => expected,
+            hir::UnOp::Not => expected,
+            hir::UnOp::Neg => NoExpectation,
             hir::UnOp::Deref => NoExpectation,
         };
         let mut oprnd_t = self.check_expr_with_expectation(&oprnd, expected_inner);
 
+        debug!("anan oprnd_t: {:?} expected_ty: {:?}", oprnd_t, expected_inner);
         if !oprnd_t.references_error() {
             oprnd_t = self.structurally_resolve_type(expr.span, oprnd_t);
             match unop {
@@ -403,6 +413,24 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     if !oprnd_t.is_numeric() {
                         oprnd_t = result;
                     }
+                }
+            }
+        } else {
+            if unop == hir::UnOp::Neg {
+                oprnd_t = self.check_expr_with_expectation(&oprnd, NoExpectation);
+                debug!("anan here oprnd_t: {:?} expected_ty: {:?}", oprnd_t, expected_inner);
+                let result = self.check_user_unop(expr, oprnd_t, unop, expected_inner);
+                debug!("anan result here: {:?}", result);
+                if let Some(ty) = expected_inner.to_option(self) {
+                    debug!("anan inner ty: {:?} result: {:?}", ty, result);
+                    let cmp_result = ty == result;
+                    debug!("anan cmp_result: {:?}", cmp_result);
+
+                    eprintln!("add diagnostic here");
+                }
+                if !oprnd_t.references_error() {
+                    oprnd_t = result;
+                    debug!("anan update returned ty: {:?}", oprnd_t);
                 }
             }
         }

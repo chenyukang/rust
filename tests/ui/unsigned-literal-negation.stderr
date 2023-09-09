@@ -1,36 +1,54 @@
-error[E0600]: cannot apply unary operator `-` to type `usize`
-  --> $DIR/unsigned-literal-negation.rs:2:13
-   |
-LL |     let x = -1 as usize;
-   |             ^^
-   |             |
-   |             cannot apply unary operator `-`
-   |             help: you may have meant the maximum value of `usize`: `usize::MAX`
-   |
-   = note: unsigned values cannot be negated
-
-error[E0600]: cannot apply unary operator `-` to type `usize`
-  --> $DIR/unsigned-literal-negation.rs:3:13
-   |
-LL |     let x = (-1) as usize;
-   |             ^^^^
-   |             |
-   |             cannot apply unary operator `-`
-   |             help: you may have meant the maximum value of `usize`: `usize::MAX`
-   |
-   = note: unsigned values cannot be negated
-
-error[E0600]: cannot apply unary operator `-` to type `u32`
+error[E0277]: the trait bound `u32: Neg` is not satisfied
   --> $DIR/unsigned-literal-negation.rs:4:18
    |
 LL |     let x: u32 = -1;
-   |                  ^^
-   |                  |
-   |                  cannot apply unary operator `-`
-   |                  help: you may have meant the maximum value of `u32`: `u32::MAX`
+   |                  ^^ the trait `Neg` is not implemented for `u32`
    |
-   = note: unsigned values cannot be negated
+   = help: the following other types implement trait `Neg`:
+             isize
+             i8
+             i16
+             i32
+             i64
+             i128
+             f32
+             f64
+           and 8 others
+
+error[E0277]: the trait bound `usize: Neg` is not satisfied
+  --> $DIR/unsigned-literal-negation.rs:2:13
+   |
+LL |     let x = -1 as usize;
+   |             ^^ the trait `Neg` is not implemented for `usize`
+   |
+   = help: the following other types implement trait `Neg`:
+             isize
+             i8
+             i16
+             i32
+             i64
+             i128
+             f32
+             f64
+           and 8 others
+
+error[E0277]: the trait bound `usize: Neg` is not satisfied
+  --> $DIR/unsigned-literal-negation.rs:3:13
+   |
+LL |     let x = (-1) as usize;
+   |             ^^^^ the trait `Neg` is not implemented for `usize`
+   |
+   = help: the following other types implement trait `Neg`:
+             isize
+             i8
+             i16
+             i32
+             i64
+             i128
+             f32
+             f64
+           and 8 others
 
 error: aborting due to 3 previous errors
 
-For more information about this error, try `rustc --explain E0600`.
+For more information about this error, try `rustc --explain E0277`.
