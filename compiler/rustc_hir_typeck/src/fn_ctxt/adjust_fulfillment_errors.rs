@@ -21,6 +21,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         else {
             return false;
         };
+        debug!("anan idx: {:?}", idx);
 
         let Some(unsubstituted_pred) = self
             .tcx
@@ -35,8 +36,14 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         let generics = self.tcx.generics_of(def_id);
         let predicate_args = match unsubstituted_pred.kind().skip_binder() {
-            ty::ClauseKind::Trait(pred) => pred.trait_ref.args.to_vec(),
-            ty::ClauseKind::Projection(pred) => pred.projection_ty.args.to_vec(),
+            ty::ClauseKind::Trait(pred) => {
+                debug!("anan trait_ref: {:?}", pred.trait_ref.args);
+                pred.trait_ref.args.to_vec()
+            }
+            ty::ClauseKind::Projection(pred) => {
+                debug!("anan projection_ty: {:?}", pred.projection_ty);
+                pred.projection_ty.args.to_vec()
+            }
             ty::ClauseKind::ConstArgHasType(arg, ty) => {
                 vec![ty.into(), arg.into()]
             }
@@ -45,6 +52,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         };
 
         debug!("anan predicate_args: {:?}", predicate_args);
+        // reverse the predicate_args
+        // let predicate_args = predicate_args.into_iter().rev().collect::<Vec<_>>();
         let direct_param = if let ty::ClauseKind::Trait(pred) = unsubstituted_pred.kind().skip_binder()
             && let ty = pred.trait_ref.self_ty()
             && let ty::Param(_param) = ty.kind()
@@ -52,10 +61,13 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             && let ty::GenericArgKind::Type(arg_ty) = arg.unpack()
             && arg_ty == ty
         {
+            debug!("anan debug now arg_ty: {:?}", arg_ty);
+            debug!("anan debug now ty: {:?}", ty);
             Some(*arg)
         } else {
             None
         };
+        debug!("anan now direct_param: {:?}", direct_param);
         let find_param_matching = |matches: &dyn Fn(ty::ParamTerm) -> bool| {
             predicate_args.iter().find_map(|arg| {
                 arg.walk().find_map(|arg| {
@@ -120,7 +132,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             _ => return false,
         };
 
+        debug!("anan debug param_to_point_at: {:?}", param_to_point_at);
         if let Some(qpath) = qpath {
+            debug!("anan begin update qpath: {:?}", error.obligation.cause.span);
+            debug!("anan direct params: {:?}", direct_param);
             if let Some(param) = direct_param {
                 debug!("anan begin update2: {:?}", error.obligation.cause.span);
                 debug!("anan param: {:?}", param);
@@ -139,6 +154,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 && callee.hir_id == hir_id
             {
                 if self.closure_span_overlaps_error(error, *call_span) {
+                    debug!("anan return closure_span_overlaps_error: {:?} {:?}", error.obligation.cause.span, *call_span);
                     return false;
                 }
 
@@ -157,6 +173,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                             args,
                         )
                     {
+                        debug!("anan return blame_specific_arg_if_possible: {:?}", error.obligation.cause.span);
                         return true;
                     }
                 }
@@ -167,6 +184,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 .flatten()
             {
                 if self.point_at_path_if_possible(error, def_id, param, &qpath) {
+                    debug!(
+                        "anan return point_at_path_if_possible: {:?}",
+                        error.obligation.cause.span
+                    );
                     return true;
                 }
             }
