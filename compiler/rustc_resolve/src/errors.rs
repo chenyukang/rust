@@ -320,6 +320,14 @@ pub(crate) struct ForwardDeclaredGenericParam {
 }
 
 #[derive(Diagnostic)]
+#[diag(resolve_generic_params_from_outer_function, code = "E0401")]
+pub(crate) struct GenericParamsFromOuterFunction {
+    #[primary_span]
+    #[label]
+    pub(crate) span: Span,
+}
+
+#[derive(Diagnostic)]
 #[diag(resolve_param_in_ty_of_const_param, code = "E0770")]
 pub(crate) struct ParamInTyOfConstParam {
     #[primary_span]

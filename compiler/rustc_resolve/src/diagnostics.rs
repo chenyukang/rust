@@ -554,14 +554,8 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
     ) -> DiagnosticBuilder<'_, ErrorGuaranteed> {
         match resolution_error {
             ResolutionError::GenericParamsFromOuterFunction(outer_res, has_generic_params) => {
-                let mut err = struct_span_err!(
-                    self.tcx.sess,
-                    span,
-                    E0401,
-                    "can't use generic parameters from outer function",
-                );
-                err.span_label(span, "use of generic parameter from outer function");
-
+                let mut err =
+                    self.tcx.sess.create_err(errs::GenericParamsFromOuterFunction { span });
                 let sm = self.tcx.sess.source_map();
                 let def_id = match outer_res {
                     Res::SelfTyParam { .. } => {
