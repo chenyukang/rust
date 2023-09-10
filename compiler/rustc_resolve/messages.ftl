@@ -64,9 +64,6 @@ resolve_cannot_find_ident_in_this_scope =
 resolve_cannot_glob_import_possible_crates =
     cannot glob-import all possible crates
 
-resolve_cannot_use_self_type_here =
-    can't use `Self` here
-
 resolve_change_import_binding =
     you can use `as` to change the binding name of the import
 
@@ -85,9 +82,6 @@ resolve_consider_marking_as_pub =
 resolve_const_not_member_of_trait =
     const `{$const_}` is not a member of trait `{$trait_}`
     .label = not a member of trait `{$trait_}`
-
-resolve_const_param_from_outer_fn =
-    const parameter from outer function
 
 resolve_const_param_in_enum_discriminant =
     const parameters may not be used in enum discriminant values
@@ -273,9 +267,6 @@ resolve_type_not_member_of_trait =
     type `{$type_}` is not a member of trait `{$trait_}`
     .label = not a member of trait `{$trait_}`
 
-resolve_type_param_from_outer_fn =
-    type parameter from outer function
-
 resolve_type_param_in_enum_discriminant =
     type parameters may not be used in enum discriminant values
 
@@ -310,9 +301,6 @@ resolve_unreachable_label_suggestion_use_similarly_named =
 
 resolve_unreachable_label_with_similar_name_exists =
     a label with a similar name exists but is unreachable
-
-resolve_use_a_type_here_instead =
-    use a type here instead
 
 resolve_variable_bound_with_different_mode =
     variable `{$variable_name}` is bound inconsistently across alternatives separated by `|`
