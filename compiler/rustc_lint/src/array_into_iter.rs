@@ -1,5 +1,5 @@
 use crate::{
-    lints::{ArrayIntoIterDiag, ArrayIntoIterDiagSub},
+    lints::{ArrayIntoIterDiag, ArrayIntoIterDiagSub, IterEmptyRangeDiag},
     LateContext, LateLintPass, LintContext,
 };
 use rustc_hir as hir;
@@ -137,6 +137,64 @@ impl<'tcx> LateLintPass<'tcx> for ArrayIntoIter {
                 call.ident.span,
                 ArrayIntoIterDiag { target, suggestion: call.ident.span, sub },
             );
+        }
+    }
+}
+
+declare_lint! {
+    pub ITER_EMPTY_RANGE,
+    Warn,
+    "detects using an empty range for iteration",
+}
+
+#[derive(Copy, Clone, Default)]
+pub struct IterEmptyRange {
+    span: Span,
+}
+
+impl_lint_pass!(IterEmptyRange => [ITER_EMPTY_RANGE]);
+
+use rustc_ast::LitKind;
+impl<'tcx> LateLintPass<'tcx> for IterEmptyRange {
+    fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx hir::Expr<'tcx>) {
+        if let hir::ExprKind::Match(arg, [_arms], hir::MatchSource::ForLoopDesugar) = &expr.kind {
+            if let hir::ExprKind::Call(path, [arg]) = &arg.kind {
+                if let hir::ExprKind::Path(hir::QPath::LangItem(
+                    hir::LangItem::IntoIterIntoIter,
+                    ..,
+                )) = &path.kind
+                {
+                    debug!("anan found for loop with empty range");
+                    self.span = arg.span;
+                    debug!("anan arg: {:#?}", arg);
+                    if let hir::ExprKind::Struct(def_path, elems, _) = &arg.kind &&
+                        let hir::QPath::LangItem(
+                            hir::LangItem::Range,
+                            ..,
+                        ) = &def_path
+                    {
+                        let start_expr = elems[0].expr;
+                        let end_expr = elems[1].expr;
+                        if let hir::ExprKind::Lit(start) = &start_expr.kind &&
+                            let hir::ExprKind::Lit(end) = &end_expr.kind &&
+                            let LitKind::Int(start_val, _) = &start.node &&
+                            let LitKind::Int(end_val, _) = &end.node &&
+                                start_val > end_val {
+                                    debug!("anan start: {:#?}", start);
+                                    debug!("anan end: {:#?}", end);
+                                    debug!("anan suggestion span: {:#?}", expr.span);
+                                    let sm = cx.sess().source_map();
+                                    let block_start = sm.next_point(arg.span).shrink_to_hi();
+                                    let block_end = expr.span.shrink_to_hi();
+                                    cx.emit_spanned_lint(
+                                        ITER_EMPTY_RANGE,
+                                        self.span,
+                                        IterEmptyRangeDiag { span: self.span.shrink_to_hi(), block_start, block_end },
+                                    );
+                                }
+                    }
+                }
+            }
         }
     }
 }

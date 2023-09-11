@@ -327,6 +327,12 @@ lint_invalid_reference_casting_borrow_as_mut = casting `&T` to `&mut T` is undef
 
 lint_invalid_reference_casting_note_book = for more information, visit <https://doc.rust-lang.org/book/ch15-05-interior-mutability.html>
 
+lint_iter_empty_range =
+    this range is empty, so the loop body will never run
+    .use_iter_rev_suggestion = you may want to use `.rev()` to reverse the iterator
+    .block_start_here = the iterator loop block starts here
+    .block_end_here = the iterator loop block ends here
+
 lint_lintpass_by_hand = implementing `LintPass` by hand
     .help = try using `declare_lint_pass!` or `impl_lint_pass!` instead
 

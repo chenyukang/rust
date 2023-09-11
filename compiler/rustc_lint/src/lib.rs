@@ -100,6 +100,7 @@ use rustc_span::symbol::Ident;
 use rustc_span::Span;
 
 use array_into_iter::ArrayIntoIter;
+use array_into_iter::IterEmptyRange;
 use builtin::*;
 use deref_into_dyn_supertrait::*;
 use drop_forget_useless::*;
@@ -213,7 +214,7 @@ late_lint_methods!(
             MutableTransmutes: MutableTransmutes,
             TypeAliasBounds: TypeAliasBounds,
             TrivialConstraints: TrivialConstraints,
-            TypeLimits: TypeLimits::new(),
+            TypeLimits: TypeLimits::default(),
             NonSnakeCase: NonSnakeCase,
             InvalidNoMangleItems: InvalidNoMangleItems,
             // Depends on effective visibilities
@@ -226,6 +227,7 @@ late_lint_methods!(
             UnstableFeatures: UnstableFeatures,
             UngatedAsyncFnTrackCaller: UngatedAsyncFnTrackCaller,
             ArrayIntoIter: ArrayIntoIter::default(),
+            IterEmptyRange: IterEmptyRange::default(),
             DropTraitConstraints: DropTraitConstraints,
             TemporaryCStringAsPtr: TemporaryCStringAsPtr,
             NonPanicFmt: NonPanicFmt,

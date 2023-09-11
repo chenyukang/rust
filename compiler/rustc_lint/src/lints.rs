@@ -49,6 +49,40 @@ pub enum ArrayIntoIterDiagSub {
     },
 }
 
+#[derive(LintDiagnostic)]
+#[diag(lint_iter_empty_range)]
+pub struct IterEmptyRangeDiag {
+    #[suggestion(
+        lint_use_iter_rev_suggestion,
+        code = ".rev()",
+        applicability = "machine-applicable"
+    )]
+    pub span: Span,
+    #[label(lint_block_start_here)]
+    pub block_start: Span,
+    #[label(lint_block_end_here)]
+    pub block_end: Span,
+}
+
+// #[derive(Subdiagnostic)]
+// pub enum IterEmptyRangeDiagSub {
+//     #[suggestion(lint_remove_into_iter_suggestion]
+//     RemoveIntoIter {
+//         #[primary_span]
+//         span: Span,
+//     },
+//     #[multipart_suggestion(
+//         lint_use_explicit_into_iter_suggestion,
+//         applicability = "maybe-incorrect"
+//     )]
+//     UseExplicitIntoIter {
+//         #[suggestion_part(code = "IntoIterator::into_iter(")]
+//         start_span: Span,
+//         #[suggestion_part(code = ")")]
+//         end_span: Span,
+//     },
+// }
+
 // builtin.rs
 #[derive(LintDiagnostic)]
 #[diag(lint_builtin_while_true)]

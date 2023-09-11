@@ -136,19 +136,13 @@ declare_lint! {
     "detects invalid floating point NaN comparisons"
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct TypeLimits {
     /// Id of the last visited negated expression
     negated_expr_id: Option<hir::HirId>,
 }
 
 impl_lint_pass!(TypeLimits => [UNUSED_COMPARISONS, OVERFLOWING_LITERALS, INVALID_NAN_COMPARISONS]);
-
-impl TypeLimits {
-    pub fn new() -> TypeLimits {
-        TypeLimits { negated_expr_id: None }
-    }
-}
 
 /// Attempts to special-case the overflowing literal lint when it occurs as a range endpoint (`expr..MAX+1`).
 /// Returns `true` iff the lint was emitted.
