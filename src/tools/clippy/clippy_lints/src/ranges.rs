@@ -216,7 +216,8 @@ fn check_possible_range_contains(
         if l.id != r.id || l.ord == r.ord {
             return;
         }
-        let ord = Constant::partial_cmp(cx.tcx, cx.typeck_results().expr_ty(l.expr), &l.val, &r.val);
+        let ord =
+            Constant::partial_cmp(cx.tcx, cx.typeck_results().expr_ty(l.expr), &l.val, &r.val);
         if combine_and && ord == Some(r.ord) {
             // order lower bound and upper bound
             let (l_span, u_span, l_inc, u_inc) = if r.ord == Ordering::Less {
@@ -228,11 +229,8 @@ fn check_possible_range_contains(
             if !l_inc {
                 return;
             }
-            let (range_type, range_op) = if u_inc {
-                ("RangeInclusive", "..=")
-            } else {
-                ("Range", "..")
-            };
+            let (range_type, range_op) =
+                if u_inc { ("RangeInclusive", "..=") } else { ("Range", "..") };
             let mut applicability = Applicability::MachineApplicable;
             let name = snippet_with_applicability(cx, l.name_span, "_", &mut applicability);
             let lo = snippet_with_applicability(cx, l_span, "_", &mut applicability);
@@ -258,11 +256,8 @@ fn check_possible_range_contains(
             if l_inc {
                 return;
             }
-            let (range_type, range_op) = if u_inc {
-                ("Range", "..")
-            } else {
-                ("RangeInclusive", "..=")
-            };
+            let (range_type, range_op) =
+                if u_inc { ("Range", "..") } else { ("RangeInclusive", "..=") };
             let mut applicability = Applicability::MachineApplicable;
             let name = snippet_with_applicability(cx, l.name_span, "_", &mut applicability);
             let lo = snippet_with_applicability(cx, l_span, "_", &mut applicability);
@@ -308,7 +303,10 @@ struct RangeBounds<'a, 'tcx> {
 // Takes a binary expression such as x <= 2 as input
 // Breaks apart into various pieces, such as the value of the number,
 // hir id of the variable, and direction/inclusiveness of the operator
-fn check_range_bounds<'a, 'tcx>(cx: &'a LateContext<'tcx>, ex: &'a Expr<'_>) -> Option<RangeBounds<'a, 'tcx>> {
+fn check_range_bounds<'a, 'tcx>(
+    cx: &'a LateContext<'tcx>,
+    ex: &'a Expr<'_>,
+) -> Option<RangeBounds<'a, 'tcx>> {
     if let ExprKind::Binary(ref op, l, r) = ex.kind {
         let (inclusive, ordering) = match op.node {
             BinOpKind::Gt => (false, Ordering::Greater),
@@ -418,13 +416,7 @@ fn check_inclusive_range_minus_one(cx: &LateContext<'_>, expr: &Expr<'_>) {
 
 fn check_reversed_empty_range(cx: &LateContext<'_>, expr: &Expr<'_>) {
     fn inside_indexing_expr(cx: &LateContext<'_>, expr: &Expr<'_>) -> bool {
-        matches!(
-            get_parent_expr(cx, expr),
-            Some(Expr {
-                kind: ExprKind::Index(..),
-                ..
-            })
-        )
+        matches!(get_parent_expr(cx, expr), Some(Expr { kind: ExprKind::Index(..), .. }))
     }
 
     fn is_for_loop_arg(cx: &LateContext<'_>, expr: &Expr<'_>) -> bool {
@@ -498,13 +490,7 @@ fn check_reversed_empty_range(cx: &LateContext<'_>, expr: &Expr<'_>) {
 
 fn y_plus_one<'t>(cx: &LateContext<'_>, expr: &'t Expr<'_>) -> Option<&'t Expr<'t>> {
     match expr.kind {
-        ExprKind::Binary(
-            Spanned {
-                node: BinOpKind::Add, ..
-            },
-            lhs,
-            rhs,
-        ) => {
+        ExprKind::Binary(Spanned { node: BinOpKind::Add, .. }, lhs, rhs) => {
             if is_integer_const(cx, lhs, 1) {
                 Some(rhs)
             } else if is_integer_const(cx, rhs, 1) {
@@ -512,20 +498,18 @@ fn y_plus_one<'t>(cx: &LateContext<'_>, expr: &'t Expr<'_>) -> Option<&'t Expr<'
             } else {
                 None
             }
-        },
+        }
         _ => None,
     }
 }
 
 fn y_minus_one<'t>(cx: &LateContext<'_>, expr: &'t Expr<'_>) -> Option<&'t Expr<'t>> {
     match expr.kind {
-        ExprKind::Binary(
-            Spanned {
-                node: BinOpKind::Sub, ..
-            },
-            lhs,
-            rhs,
-        ) if is_integer_const(cx, rhs, 1) => Some(lhs),
+        ExprKind::Binary(Spanned { node: BinOpKind::Sub, .. }, lhs, rhs)
+            if is_integer_const(cx, rhs, 1) =>
+        {
+            Some(lhs)
+        }
         _ => None,
     }
 }
