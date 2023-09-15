@@ -60,7 +60,7 @@ pub mod error_codes;
 pub mod ext_tool_checks;
 pub mod extdeps;
 pub mod features;
-pub mod fluent_alphabetical;
+pub mod fluent_checks;
 pub mod mir_opt_tests;
 pub mod pal;
 pub mod primitive_docs;
