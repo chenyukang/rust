@@ -30,26 +30,27 @@ impl<'a> DiagnosticDerive<'a> {
     pub(crate) fn into_tokens(self) -> TokenStream {
         let DiagnosticDerive { mut structure, mut builder } = self;
 
-        let slugs = RefCell::new(Vec::new());
         let implementation = builder.each_variant(&mut structure, |mut builder, variant| {
+            let diag = &builder.parent.diag;
+            let DiagnosticDeriveKind::Diagnostic { handler } = &builder.parent.kind else {
+                eprintln!("BUG: DiagnosticDeriveKind::Diagnostic expected");
+                unreachable!()
+            };
+
             let preamble = builder.preamble(variant);
             let body = builder.body(variant);
 
-            let diag = &builder.parent.diag;
-            let DiagnosticDeriveKind::Diagnostic { handler } = &builder.parent.kind else {
-                unreachable!()
-            };
-            let init = match builder.slug.value_ref() {
-                None => {
-                    span_err(builder.span, "diagnostic slug not specified")
+            let init = match (builder.slug.value_ref(), builder.label.value_ref()) {
+                (None, None) => {
+                        span_err(builder.span, "diagnostic slug or label is not specified")
                         .help(
                             "specify the slug as the first argument to the `#[diag(...)]` \
-                            attribute, such as `#[diag(hir_analysis_example_error)]`",
+                            attribute, such as `#[diag(hir_analysis_example_error)]`, or use format #[diag(label = \"the message ..\")]",
                         )
                         .emit();
                     return DiagnosticDeriveError::ErrorHandled.to_compile_error();
                 }
-                Some(slug)
+                (Some(slug), None)
                     if let Some(Mismatch { slug_name, crate_name, slug_prefix }) =
                         Mismatch::check(slug) =>
                 {
@@ -59,11 +60,18 @@ impl<'a> DiagnosticDerive<'a> {
                         .emit();
                     return DiagnosticDeriveError::ErrorHandled.to_compile_error();
                 }
-                Some(slug) => {
-                    slugs.borrow_mut().push(slug.clone());
+                (Some(slug), None) => {
                     quote! {
                         let mut #diag = #handler.struct_diagnostic(crate::fluent_generated::#slug);
                     }
+                }
+                (None, Some(text)) => {
+                    quote! {
+                        let mut #diag = #handler.struct_diagnostic(DiagnosticMessage::Str(#text.into()));
+                    }
+                }
+                (Some(_slug), Some(_text)) => {
+                    unreachable!("BUG: slug and text specified");
                 }
             };
 
@@ -77,9 +85,11 @@ impl<'a> DiagnosticDerive<'a> {
             }
         });
 
-        let DiagnosticDeriveKind::Diagnostic { handler } = &builder.kind else { unreachable!() };
+        let DiagnosticDeriveKind::Diagnostic { handler } = &builder.kind else {
+            unreachable!();
+        };
 
-        let mut imp = structure.gen_impl(quote! {
+        let imp = structure.gen_impl(quote! {
             gen impl<'__diagnostic_handler_sess, G>
                     rustc_errors::IntoDiagnostic<'__diagnostic_handler_sess, G>
                     for @Self
@@ -96,9 +106,6 @@ impl<'a> DiagnosticDerive<'a> {
                 }
             }
         });
-        for test in slugs.borrow().iter().map(|s| generate_test(s, &structure)) {
-            imp.extend(test);
-        }
         imp
     }
 }
