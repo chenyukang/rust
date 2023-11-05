@@ -532,6 +532,7 @@ impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
                     applicability,
                     code_init,
                     code_field,
+                    ..
                 } => {
                     self.formatting_init.extend(code_init);
 

@@ -117,7 +117,7 @@ decl_derive!(
 decl_derive!(
     [DiagnosticNew, attributes(
         // struct attributes
-        diag_new,
+        diag,
         help,
         note,
         warning,

@@ -8,8 +8,11 @@ use crate::diagnostics::utils::SetOnce;
 use proc_macro2::TokenStream;
 use quote::quote;
 //use std::fmt;
+use std::collections::HashMap;
 use syn::spanned::Spanned;
+use syn::LitStr;
 use synstructure::Structure;
+
 /// The central struct for constructing the `into_diagnostic` method from an annotated struct.
 pub(crate) struct DiagnosticDerive<'a> {
     structure: Structure<'a>,
@@ -93,9 +96,10 @@ impl<'a> DiagnosticDerive<'a> {
             }
         });
 
+        eprintln!("implementation: {}", implementation);
+
         let DiagnosticDeriveKind::Diagnostic { handler } = &builder.kind else {
-            eprintln!("here is a bug");
-            unreachable!("bug here...");
+            unreachable!();
         };
 
         let mut imp = structure.gen_impl(quote! {
@@ -131,15 +135,21 @@ impl<'a> DiagnosticDerive<'a> {
                 unreachable!()
             };
 
-            let preamble = builder.preamble_new(variant);
-
+            let attrs: HashMap<String, LitStr> =
+                builder.preamble_new(variant).unwrap().into_iter().collect();
             let body = builder.body(variant);
-            eprintln!("body: {}", body);
+            let msg = attrs.get("diag").unwrap();
+            let note = if let Some(note) = attrs.get("note") {
+                quote! {
+                    #diag.note(#note);
+                }
+            } else {
+                quote! {}
+            };
 
-            let attrs = preamble.unwrap();
-            let msg = attrs.first().unwrap();
             quote! {
                 let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#msg));
+                #note
                 let __code_40 = [
                     {
                         let res = std::fmt::format(format_args!(""));

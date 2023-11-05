@@ -540,15 +540,17 @@ pub(crate) struct CommaAfterBaseStruct {
 }
 
 #[derive(DiagnosticNew)]
-#[diag_new(
-    msg = "cannot use a comma after the base struct",
-    note = "the base struct must always be the last field",
-    suggestion = "remove this comma"
-)]
+#[diag("cannot use a comma after the base struct")]
+#[note("the base struct must always be the last field")]
 pub(crate) struct CommaAfterBaseStructNew {
     #[primary_span]
     pub span: Span,
-    #[suggestion(style = "short", applicability = "machine-applicable", code = "test now")]
+    #[suggestion(
+        style = "short",
+        applicability = "machine-applicable",
+        code = "",
+        label = "remove this comma"
+    )]
     pub comma: Span,
 }
 

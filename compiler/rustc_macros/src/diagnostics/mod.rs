@@ -61,8 +61,7 @@ pub fn session_diagnostic_derive(s: Structure<'_>) -> TokenStream {
 }
 
 pub fn session_diagnostic_derive_new(s: Structure<'_>) -> TokenStream {
-    DiagnosticDerive::diag_new(format_ident!("diag_new"), format_ident!("handler"), s)
-        .into_tokens_new()
+    DiagnosticDerive::diag_new(format_ident!("diag"), format_ident!("handler"), s).into_tokens_new()
 }
 
 /// Implements `#[derive(LintDiagnostic)]`, which allows for lints to be specified as a struct,

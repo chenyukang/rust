@@ -1,5 +1,6 @@
 #![deny(unused_must_use)]
 
+use super::utils::SubdiagnosticVariant;
 use crate::diagnostics::error::{
     span_err, throw_invalid_attr, throw_span_err, DiagnosticDeriveError,
 };
@@ -10,11 +11,10 @@ use crate::diagnostics::utils::{
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned};
+use syn::punctuated::Punctuated;
 use syn::Token;
 use syn::{parse_quote, spanned::Spanned, Attribute, Meta, Path, Type};
 use synstructure::{BindingInfo, Structure, VariantInfo};
-
-use super::utils::SubdiagnosticVariant;
 
 /// What kind of diagnostic is being derived - a fatal/error/warning or a lint?
 #[derive(Clone, PartialEq, Eq)]
@@ -139,7 +139,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
     pub fn preamble_new(
         &mut self,
         variant: &VariantInfo<'_>,
-    ) -> Result<Vec<LitStr>, DiagnosticDeriveError> {
+    ) -> Result<Vec<(String, LitStr)>, DiagnosticDeriveError> {
         let ast = variant.ast();
         let attrs = &ast.attrs;
         let preamble = attrs
@@ -173,7 +173,6 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         let Some(subdiag) = SubdiagnosticVariant::from_attr(attr, self)? else {
             // Some attributes aren't errors - like documentation comments - but also aren't
             // subdiagnostics.
-            eprintln!("no subdiag");
             return Ok(None);
         };
         if let SubdiagnosticKind::MultipartSuggestion { .. } = subdiag.kind {
@@ -196,7 +195,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
     fn generate_structure_code_for_attr_new(
         &mut self,
         attr: &Attribute,
-    ) -> Result<Vec<LitStr>, DiagnosticDeriveError> {
+    ) -> Result<Vec<(String, LitStr)>, DiagnosticDeriveError> {
         let _diag = &self.parent.diag;
 
         // Always allow documentation comments.
@@ -204,59 +203,17 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
             return Ok(vec![]);
         }
 
-        eprintln!("attr: {:?}", attr);
         let last = attr.path().segments.last();
-        eprintln!("here ............................");
         if last.is_none() {
             return Ok(vec![]);
         }
-        let name = attr.path().segments.last().unwrap().ident.to_string();
-        let _name = name.as_str();
-
-        let meta = &attr.meta;
-        eprintln!("meta: {:?}", meta);
-        let mut label = None;
-        let mut msg = None;
-        let mut note = None;
-        let mut help = None;
-        let mut suggestion = None;
         let mut res = vec![];
-        let _err = attr.parse_nested_meta(|meta| {
-            eprintln!("meta parsed: {:?}", meta.path);
-            if meta.path.is_ident("msg") {
-                let v = meta.value()?.parse::<syn::LitStr>()?;
-                msg = Some(v.clone());
-                res.push(v.clone());
-            } else if meta.path.is_ident("label") {
-                label = Some(meta.value()?.parse::<syn::LitStr>()?);
-            } else if meta.path.is_ident("note") {
-                note = Some(meta.value()?.parse::<syn::LitStr>()?);
-            } else if meta.path.is_ident("help") {
-                help = Some(meta.value()?.parse::<syn::LitStr>()?);
-            } else if meta.path.is_ident("suggestion") {
-                suggestion = Some(meta.value()?.parse::<syn::LitStr>()?);
-            } else {
-                let value = meta.value();
-                let value = value?.parse::<syn::LitStr>()?;
-                eprintln!("value: {:?}", value);
+        let keys = vec!["diag", "note", "help"];
+        for key in keys {
+            if attr.path().is_ident(key) {
+                let meta = attr.parse_args::<syn::LitStr>()?;
+                res.push((key.to_string(), meta.clone()));
             }
-            Ok(())
-        });
-
-        if msg.is_some() {
-            eprintln!("msg: {:?}", msg.unwrap());
-        }
-        if label.is_some() {
-            eprintln!("label: {:?}", label.unwrap());
-        }
-        if note.is_some() {
-            eprintln!("note: {:?}", note.unwrap());
-        }
-        if help.is_some() {
-            eprintln!("help: {:?}", help.unwrap());
-        }
-        if suggestion.is_some() {
-            eprintln!("suggestion: {:?}", suggestion.unwrap());
         }
         return Ok(res);
     }
@@ -345,13 +302,10 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
         let field = binding_info.ast();
         let mut field_binding = binding_info.binding.clone();
-        //eprintln!("field_binding: {:?}", field_binding);
         field_binding.set_span(field.ty.span());
 
         let ident = field.ident.as_ref().unwrap();
         let ident = format_ident!("{}", ident); // strip `r#` prefix, if present
-
-        //eprintln!("ident: {:?}", ident);
         quote! {
             #diag.set_arg(
                 stringify!(#ident),
@@ -513,6 +467,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                 applicability: static_applicability,
                 code_field,
                 code_init,
+                suggestion_label,
             } => {
                 if let FieldInnerTy::Vec(_) = info.ty {
                     throw_invalid_attr!(attr, |diag| {
@@ -534,11 +489,21 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                     .unwrap_or_else(|| quote! { rustc_errors::Applicability::Unspecified });
                 let style = suggestion_kind.to_suggestion_style();
 
+                let suggestion_label = if let Some(label) = suggestion_label {
+                    quote! {
+                        #label
+                    }
+                } else {
+                    quote! {
+                        crate::fluent_generated::#slug
+                    }
+                };
+
                 self.formatting_init.extend(code_init);
                 Ok(quote! {
                     #diag.span_suggestions_with_style(
                         #span_field,
-                        crate::fluent_generated::#slug,
+                        #suggestion_label,
                         #code_field,
                         #applicability,
                         #style

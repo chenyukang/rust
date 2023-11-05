@@ -589,6 +589,7 @@ pub(super) enum SubdiagnosticKind {
         /// Initialization logic for `code_field`'s variable, e.g.
         /// `let __formatted_code = /* whatever */;`
         code_init: TokenStream,
+        suggestion_label: Option<String>,
     },
     /// `#[multipart_suggestion{,_short,_hidden,_verbose}]`
     MultipartSuggestion {
@@ -646,6 +647,7 @@ impl SubdiagnosticVariant {
                         applicability: None,
                         code_field: new_code_ident(),
                         code_init: TokenStream::new(),
+                        suggestion_label: None,
                     }
                 } else if let Some(suggestion_kind) =
                     name.strip_prefix("multipart_suggestion").and_then(SuggestionKind::from_suffix)
@@ -700,6 +702,7 @@ impl SubdiagnosticVariant {
 
         let mut code = None;
         let mut suggestion_kind = None;
+        let mut suggestion_label = None;
 
         let mut first = true;
         let mut slug = None;
@@ -741,6 +744,9 @@ impl SubdiagnosticVariant {
             let input = nested.input;
 
             match (nested_name, &mut kind) {
+                ("label", SubdiagnosticKind::Suggestion { .. }) => {
+                    suggestion_label = Some(get_string!());
+                }
                 ("code", SubdiagnosticKind::Suggestion { code_field, .. }) => {
                     let code_init = build_suggestion_code(
                         code_field,
@@ -815,10 +821,15 @@ impl SubdiagnosticVariant {
                 ref code_field,
                 ref mut code_init,
                 suggestion_kind: ref mut kind_field,
+                suggestion_label: ref mut label_field,
                 ..
             } => {
                 if let Some(kind) = suggestion_kind.value() {
                     *kind_field = kind;
+                }
+
+                if let Some(label) = suggestion_label {
+                    *label_field = Some(label.value());
                 }
 
                 *code_init = if let Some(init) = code.value() {
