@@ -7,9 +7,9 @@ use crate::diagnostics::error::{span_err, DiagnosticDeriveError};
 use crate::diagnostics::utils::SetOnce;
 use proc_macro2::TokenStream;
 use quote::quote;
+//use std::fmt;
 use syn::spanned::Spanned;
 use synstructure::Structure;
-
 /// The central struct for constructing the `into_diagnostic` method from an annotated struct.
 pub(crate) struct DiagnosticDerive<'a> {
     structure: Structure<'a>,
@@ -27,16 +27,32 @@ impl<'a> DiagnosticDerive<'a> {
         }
     }
 
+    pub(crate) fn diag_new(
+        diag: syn::Ident,
+        handler: syn::Ident,
+        structure: Structure<'a>,
+    ) -> Self {
+        Self {
+            builder: DiagnosticDeriveBuilder {
+                diag,
+                kind: DiagnosticDeriveKind::DiagnosticNew { handler },
+            },
+            structure,
+        }
+    }
+
     pub(crate) fn into_tokens(self) -> TokenStream {
         let DiagnosticDerive { mut structure, mut builder } = self;
 
         let slugs = RefCell::new(Vec::new());
+        //eprintln!("here now ....");
         let implementation = builder.each_variant(&mut structure, |mut builder, variant| {
             let preamble = builder.preamble(variant);
             let body = builder.body(variant);
 
             let diag = &builder.parent.diag;
             let DiagnosticDeriveKind::Diagnostic { handler } = &builder.parent.kind else {
+                eprintln!("BUG: DiagnosticDeriveKind::Diagnostic expected");
                 unreachable!()
             };
             let init = match builder.slug.value_ref() {
@@ -77,7 +93,10 @@ impl<'a> DiagnosticDerive<'a> {
             }
         });
 
-        let DiagnosticDeriveKind::Diagnostic { handler } = &builder.kind else { unreachable!() };
+        let DiagnosticDeriveKind::Diagnostic { handler } = &builder.kind else {
+            eprintln!("here is a bug");
+            unreachable!("bug here...");
+        };
 
         let mut imp = structure.gen_impl(quote! {
             gen impl<'__diagnostic_handler_sess, G>
@@ -100,6 +119,61 @@ impl<'a> DiagnosticDerive<'a> {
             imp.extend(test);
         }
         imp
+    }
+
+    pub(crate) fn into_tokens_new(self) -> TokenStream {
+        let DiagnosticDerive { mut structure, mut builder } = self;
+
+        let implementation = builder.each_variant(&mut structure, |mut builder, variant| {
+            let diag = &builder.parent.diag;
+            let DiagnosticDeriveKind::DiagnosticNew { handler } = &builder.parent.kind else {
+                eprintln!("BUG: DiagnosticDeriveKind::Diagnostic expected");
+                unreachable!()
+            };
+
+            let preamble = builder.preamble_new(variant);
+
+            let body = builder.body(variant);
+            eprintln!("body: {}", body);
+
+            let attrs = preamble.unwrap();
+            let msg = attrs.first().unwrap();
+            quote! {
+                let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#msg));
+                let __code_40 = [
+                    {
+                        let res = std::fmt::format(format_args!(""));
+                        res
+                    },
+                ].into_iter();
+                #body
+                #diag
+            }
+        });
+
+        quote! {
+            #[allow(non_upper_case_globals)]
+            const _DERIVE_rustc_errors_IntoDiagnostic_diagnostic_handler_sess_G_FOR_CommaAfterBaseStructNew: () = {
+                impl<
+                    '__diagnostic_handler_sess,
+                    G,
+                > rustc_errors::IntoDiagnostic<'__diagnostic_handler_sess, G>
+                for CommaAfterBaseStructNew
+                where
+                    G: rustc_errors::EmissionGuarantee,
+                {
+                    #[track_caller]
+                    fn into_diagnostic(
+                        self,
+                        handler: &'__diagnostic_handler_sess rustc_errors::Handler,
+                    ) -> rustc_errors::DiagnosticBuilder<'__diagnostic_handler_sess, G> {
+                        use rustc_errors::IntoDiagnosticArg;
+                        #implementation
+
+                        }
+                }
+            };
+        }
     }
 }
 

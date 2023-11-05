@@ -626,6 +626,7 @@ impl SubdiagnosticVariant {
             "note" => SubdiagnosticKind::Note,
             "help" => SubdiagnosticKind::Help,
             "warning" => SubdiagnosticKind::Warn,
+            "diag_new" => return Ok(None),
             _ => {
                 // Recover old `#[(multipart_)suggestion_*]` syntaxes
                 // FIXME(#100717): remove

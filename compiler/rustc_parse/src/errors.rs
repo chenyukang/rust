@@ -11,6 +11,7 @@ use rustc_span::{Span, Symbol};
 
 use crate::fluent_generated as fluent;
 use crate::parser::{ForbiddenLetReason, TokenDescription};
+use rustc_macros::DiagnosticNew;
 
 #[derive(Diagnostic)]
 #[diag(parse_maybe_report_ambiguous_plus)]
@@ -534,7 +535,20 @@ pub(crate) struct GenFn {
 pub(crate) struct CommaAfterBaseStruct {
     #[primary_span]
     pub span: Span,
-    #[suggestion(style = "short", applicability = "machine-applicable", code = "")]
+    #[suggestion(style = "short", applicability = "machine-applicable", code = "test now")]
+    pub comma: Span,
+}
+
+#[derive(DiagnosticNew)]
+#[diag_new(
+    msg = "cannot use a comma after the base struct",
+    note = "the base struct must always be the last field",
+    suggestion = "remove this comma"
+)]
+pub(crate) struct CommaAfterBaseStructNew {
+    #[primary_span]
+    pub span: Span,
+    #[suggestion(style = "short", applicability = "machine-applicable", code = "test now")]
     pub comma: Span,
 }
 

@@ -20,8 +20,11 @@ use super::utils::SubdiagnosticVariant;
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) enum DiagnosticDeriveKind {
     Diagnostic { handler: syn::Ident },
+    DiagnosticNew { handler: syn::Ident },
     LintDiagnostic,
 }
+//use syn::parse_macro_input;
+use syn::LitStr;
 
 /// Tracks persistent information required for the entire type when building up individual calls to
 /// diagnostic methods for generated diagnostic derives - both `Diagnostic` for
@@ -133,6 +136,20 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         }
     }
 
+    pub fn preamble_new(
+        &mut self,
+        variant: &VariantInfo<'_>,
+    ) -> Result<Vec<LitStr>, DiagnosticDeriveError> {
+        let ast = variant.ast();
+        let attrs = &ast.attrs;
+        let preamble = attrs
+            .iter()
+            .map(|attr| self.generate_structure_code_for_attr_new(attr).unwrap())
+            .flatten()
+            .collect::<Vec<_>>();
+        return Ok(preamble);
+    }
+
     /// Generates calls to `span_label` and similar functions based on the attributes on fields or
     /// calls to `set_arg` when no attributes are present.
     pub fn body(&mut self, variant: &VariantInfo<'_>) -> TokenStream {
@@ -156,9 +173,9 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         let Some(subdiag) = SubdiagnosticVariant::from_attr(attr, self)? else {
             // Some attributes aren't errors - like documentation comments - but also aren't
             // subdiagnostics.
+            eprintln!("no subdiag");
             return Ok(None);
         };
-
         if let SubdiagnosticKind::MultipartSuggestion { .. } = subdiag.kind {
             throw_invalid_attr!(attr, |diag| diag
                 .help("consider creating a `Subdiagnostic` instead"));
@@ -174,6 +191,74 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         });
 
         Ok(Some((subdiag.kind, slug, subdiag.no_span)))
+    }
+
+    fn generate_structure_code_for_attr_new(
+        &mut self,
+        attr: &Attribute,
+    ) -> Result<Vec<LitStr>, DiagnosticDeriveError> {
+        let _diag = &self.parent.diag;
+
+        // Always allow documentation comments.
+        if is_doc_comment(attr) {
+            return Ok(vec![]);
+        }
+
+        eprintln!("attr: {:?}", attr);
+        let last = attr.path().segments.last();
+        eprintln!("here ............................");
+        if last.is_none() {
+            return Ok(vec![]);
+        }
+        let name = attr.path().segments.last().unwrap().ident.to_string();
+        let _name = name.as_str();
+
+        let meta = &attr.meta;
+        eprintln!("meta: {:?}", meta);
+        let mut label = None;
+        let mut msg = None;
+        let mut note = None;
+        let mut help = None;
+        let mut suggestion = None;
+        let mut res = vec![];
+        let _err = attr.parse_nested_meta(|meta| {
+            eprintln!("meta parsed: {:?}", meta.path);
+            if meta.path.is_ident("msg") {
+                let v = meta.value()?.parse::<syn::LitStr>()?;
+                msg = Some(v.clone());
+                res.push(v.clone());
+            } else if meta.path.is_ident("label") {
+                label = Some(meta.value()?.parse::<syn::LitStr>()?);
+            } else if meta.path.is_ident("note") {
+                note = Some(meta.value()?.parse::<syn::LitStr>()?);
+            } else if meta.path.is_ident("help") {
+                help = Some(meta.value()?.parse::<syn::LitStr>()?);
+            } else if meta.path.is_ident("suggestion") {
+                suggestion = Some(meta.value()?.parse::<syn::LitStr>()?);
+            } else {
+                let value = meta.value();
+                let value = value?.parse::<syn::LitStr>()?;
+                eprintln!("value: {:?}", value);
+            }
+            Ok(())
+        });
+
+        if msg.is_some() {
+            eprintln!("msg: {:?}", msg.unwrap());
+        }
+        if label.is_some() {
+            eprintln!("label: {:?}", label.unwrap());
+        }
+        if note.is_some() {
+            eprintln!("note: {:?}", note.unwrap());
+        }
+        if help.is_some() {
+            eprintln!("help: {:?}", help.unwrap());
+        }
+        if suggestion.is_some() {
+            eprintln!("suggestion: {:?}", suggestion.unwrap());
+        }
+        return Ok(res);
     }
 
     /// Establishes state in the `DiagnosticDeriveBuilder` resulting from the struct
@@ -260,11 +345,13 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
         let field = binding_info.ast();
         let mut field_binding = binding_info.binding.clone();
+        //eprintln!("field_binding: {:?}", field_binding);
         field_binding.set_span(field.ty.span());
 
         let ident = field.ident.as_ref().unwrap();
         let ident = format_ident!("{}", ident); // strip `r#` prefix, if present
 
+        //eprintln!("ident: {:?}", ident);
         quote! {
             #diag.set_arg(
                 stringify!(#ident),
@@ -338,6 +425,13 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                             #diag.set_span(#binding);
                         });
                     }
+                    DiagnosticDeriveKind::DiagnosticNew { .. } => {
+                        report_error_if_not_applied_to_span(attr, &info)?;
+
+                        return Ok(quote! {
+                            #diag.set_span(#binding);
+                        });
+                    }
                     DiagnosticDeriveKind::LintDiagnostic => {
                         throw_invalid_attr!(attr, |diag| {
                             diag.help("the `primary_span` field attribute is not valid for lint diagnostics")
@@ -377,6 +471,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
                 let handler = match &self.parent.kind {
                     DiagnosticDeriveKind::Diagnostic { handler } => handler,
+                    DiagnosticDeriveKind::DiagnosticNew { handler } => handler,
                     DiagnosticDeriveKind::LintDiagnostic => {
                         throw_invalid_attr!(attr, |diag| {
                             diag.help("eager subdiagnostics are not supported on lints")

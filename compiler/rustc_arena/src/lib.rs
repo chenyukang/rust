@@ -26,6 +26,7 @@
 #![deny(rustc::diagnostic_outside_of_impl)]
 #![allow(internal_features)]
 #![allow(clippy::mut_from_ref)] // Arena allocators are one of the places where this pattern is fine.
+#![feature(pointer_byte_offsets)]
 
 use smallvec::SmallVec;
 
