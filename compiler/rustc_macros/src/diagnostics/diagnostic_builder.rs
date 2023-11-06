@@ -241,7 +241,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
             let mut tokens = TokenStream::new();
             attr.parse_nested_meta(|nested| {
                 let path = &nested.path;
-
+                eprintln!("path now: {:?}", path);
                 if first && (nested.input.is_empty() || nested.input.peek(Token![,])) {
                     self.slug.set_once(path.clone(), path.span().unwrap());
                     first = false;

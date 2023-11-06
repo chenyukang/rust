@@ -87,6 +87,8 @@ impl<'a> DiagnosticDerive<'a> {
             };
 
             let formatting_init = &builder.formatting_init;
+            eprintln!("init: {}", init);
+            eprintln!("formatting_init: {}", formatting_init);
             quote! {
                 #init
                 #formatting_init
@@ -96,7 +98,7 @@ impl<'a> DiagnosticDerive<'a> {
             }
         });
 
-        eprintln!("implementation: {}", implementation);
+        //eprintln!("implementation: {}", implementation);
 
         let DiagnosticDeriveKind::Diagnostic { handler } = &builder.kind else {
             unreachable!();
@@ -138,7 +140,15 @@ impl<'a> DiagnosticDerive<'a> {
             let attrs: HashMap<String, LitStr> =
                 builder.preamble_new(variant).unwrap().into_iter().collect();
             let body = builder.body(variant);
-            let msg = attrs.get("diag").unwrap();
+            let Some(msg) = attrs.get("diag") else {
+                span_err(builder.span, "diagnostic message not specified")
+                    .help(
+                        "specify the slug as the first argument to the attribute, such as \
+                                `#[diag(\"the diagnostics message\")]`",
+                    )
+                    .emit();
+                return DiagnosticDeriveError::ErrorHandled.to_compile_error();
+            };
             let note = if let Some(note) = attrs.get("note") {
                 quote! {
                     #diag.note(#note);
@@ -147,43 +157,39 @@ impl<'a> DiagnosticDerive<'a> {
                 quote! {}
             };
 
+            let formatting_init = &builder.formatting_init;
+            eprintln!("formatting_init new: {}", formatting_init);
             quote! {
                 let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#msg));
                 #note
-                let __code_40 = [
-                    {
-                        let res = std::fmt::format(format_args!(""));
-                        res
-                    },
-                ].into_iter();
+                #formatting_init
                 #body
                 #diag
             }
         });
 
-        quote! {
-            #[allow(non_upper_case_globals)]
-            const _DERIVE_rustc_errors_IntoDiagnostic_diagnostic_handler_sess_G_FOR_CommaAfterBaseStructNew: () = {
-                impl<
-                    '__diagnostic_handler_sess,
-                    G,
-                > rustc_errors::IntoDiagnostic<'__diagnostic_handler_sess, G>
-                for CommaAfterBaseStructNew
-                where
-                    G: rustc_errors::EmissionGuarantee,
-                {
-                    #[track_caller]
-                    fn into_diagnostic(
-                        self,
-                        handler: &'__diagnostic_handler_sess rustc_errors::Handler,
-                    ) -> rustc_errors::DiagnosticBuilder<'__diagnostic_handler_sess, G> {
-                        use rustc_errors::IntoDiagnosticArg;
-                        #implementation
+        let DiagnosticDeriveKind::DiagnosticNew { handler } = &builder.kind else {
+            unreachable!();
+        };
 
-                        }
+        let imp = structure.gen_impl(quote! {
+            gen impl<'__diagnostic_handler_sess, G>
+                    rustc_errors::IntoDiagnostic<'__diagnostic_handler_sess, G>
+                    for @Self
+                where G: rustc_errors::EmissionGuarantee
+            {
+
+                #[track_caller]
+                fn into_diagnostic(
+                    self,
+                    #handler: &'__diagnostic_handler_sess rustc_errors::Handler
+                ) -> rustc_errors::DiagnosticBuilder<'__diagnostic_handler_sess, G> {
+                    use rustc_errors::IntoDiagnosticArg;
+                    #implementation
                 }
-            };
-        }
+            }
+        });
+        imp
     }
 }
 
