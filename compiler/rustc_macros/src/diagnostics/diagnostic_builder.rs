@@ -208,11 +208,12 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
             return Ok(vec![]);
         }
         let mut res = vec![];
-        let keys = vec!["diag", "note", "help"];
+        let keys = vec!["diag", "note", "help", "code_error"];
         for key in keys {
             if attr.path().is_ident(key) {
-                let meta = attr.parse_args::<syn::LitStr>()?;
-                res.push((key.to_string(), meta.clone()));
+                if let Ok(meta) = attr.parse_args::<syn::LitStr>() {
+                    res.push((key.to_string(), meta.clone()));
+                }
             }
         }
         return Ok(res);

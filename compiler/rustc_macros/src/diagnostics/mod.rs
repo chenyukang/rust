@@ -159,3 +159,7 @@ pub fn lint_diagnostic_derive(s: Structure<'_>) -> TokenStream {
 pub fn session_subdiagnostic_derive(s: Structure<'_>) -> TokenStream {
     SubdiagnosticDeriveBuilder::new().into_tokens(s)
 }
+
+pub fn session_subdiagnostic_derive_new(s: Structure<'_>) -> TokenStream {
+    SubdiagnosticDeriveBuilder::new().into_tokens(s)
+}

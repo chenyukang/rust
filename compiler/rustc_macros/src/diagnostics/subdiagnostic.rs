@@ -188,7 +188,7 @@ impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
         let mut kind_slugs = vec![];
 
         for attr in self.variant.ast().attrs {
-            let Some(SubdiagnosticVariant { kind, slug, no_span }) =
+            let Some(SubdiagnosticVariant { kind, slug, no_span, .. }) =
                 SubdiagnosticVariant::from_attr(attr, self)?
             else {
                 // Some attributes aren't errors - like documentation comments - but also aren't
@@ -196,19 +196,20 @@ impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
                 continue;
             };
 
-            let Some(slug) = slug else {
-                let name = attr.path().segments.last().unwrap().ident.to_string();
-                let name = name.as_str();
+            if let Some(slug) = slug {
+                kind_slugs.push((kind, slug, no_span));
+            }
+            //  else {
+            //     let name = attr.path().segments.last().unwrap().ident.to_string();
+            //     let name = name.as_str();
 
-                throw_span_err!(
-                    attr.span().unwrap(),
-                    format!(
-                        "diagnostic slug must be first argument of a `#[{name}(...)]` attribute"
-                    )
-                );
-            };
-
-            kind_slugs.push((kind, slug, no_span));
+            //     throw_span_err!(
+            //         attr.span().unwrap(),
+            //         format!(
+            //             "diagnostic slug must be first argument of a `#[{name}(...)]` attribute"
+            //         )
+            //     );
+            // };
         }
 
         Ok(kind_slugs)

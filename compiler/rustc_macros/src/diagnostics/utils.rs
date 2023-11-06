@@ -602,6 +602,7 @@ pub(super) struct SubdiagnosticVariant {
     pub(super) kind: SubdiagnosticKind,
     pub(super) slug: Option<Path>,
     pub(super) no_span: bool,
+    pub(super) message: Option<LitStr>,
 }
 
 impl SubdiagnosticVariant {
@@ -627,7 +628,6 @@ impl SubdiagnosticVariant {
             "note" => SubdiagnosticKind::Note,
             "help" => SubdiagnosticKind::Help,
             "warning" => SubdiagnosticKind::Warn,
-            "diag_new" => return Ok(None),
             _ => {
                 // Recover old `#[(multipart_)suggestion_*]` syntaxes
                 // FIXME(#100717): remove
@@ -670,10 +670,23 @@ impl SubdiagnosticVariant {
             }
         };
 
+        //let mut res = vec![];
+        //let keys = vec!["diag", "note", "help"];
+        if attr.path().is_ident("label") {
+            if let Ok(meta) = attr.parse_args::<syn::LitStr>() {
+                return Ok(Some(SubdiagnosticVariant {
+                    kind: SubdiagnosticKind::Label,
+                    slug: None,
+                    no_span: false,
+                    message: Some(meta),
+                }));
+            }
+        }
+
         let list = match &attr.meta {
             Meta::List(list) => {
                 // An attribute with properties, such as `#[suggestion(code = "...")]` or
-                // `#[error(some::slug)]`
+                // `#[error(some::slug)]` or `#[error("message")]`
                 list
             }
             Meta::Path(_) => {
@@ -688,7 +701,12 @@ impl SubdiagnosticVariant {
                     | SubdiagnosticKind::Help
                     | SubdiagnosticKind::Warn
                     | SubdiagnosticKind::MultipartSuggestion { .. } => {
-                        return Ok(Some(SubdiagnosticVariant { kind, slug: None, no_span: false }));
+                        return Ok(Some(SubdiagnosticVariant {
+                            kind,
+                            slug: None,
+                            no_span: false,
+                            message: None,
+                        }));
                     }
                     SubdiagnosticKind::Suggestion { .. } => {
                         throw_span_err!(span, "suggestion without `code = \"...\"`")
@@ -852,7 +870,7 @@ impl SubdiagnosticVariant {
             | SubdiagnosticKind::Warn => {}
         }
 
-        Ok(Some(SubdiagnosticVariant { kind, slug, no_span }))
+        Ok(Some(SubdiagnosticVariant { kind, slug, no_span, message: None }))
     }
 }
 

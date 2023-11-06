@@ -156,12 +156,20 @@ impl<'a> DiagnosticDerive<'a> {
             } else {
                 quote! {}
             };
+            let code_error = if let Some(code_error) = attrs.get("code_error") {
+                quote! {
+                    #diag.code(#code_error);
+                }
+            } else {
+                quote! {}
+            };
 
             let formatting_init = &builder.formatting_init;
             eprintln!("formatting_init new: {}", formatting_init);
             quote! {
                 let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#msg));
                 #note
+                #code_error
                 #formatting_init
                 #body
                 #diag
