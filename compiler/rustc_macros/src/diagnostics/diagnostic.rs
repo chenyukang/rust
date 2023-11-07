@@ -8,9 +8,7 @@ use crate::diagnostics::utils::SetOnce;
 use proc_macro2::TokenStream;
 use quote::quote;
 //use std::fmt;
-use std::collections::HashMap;
 use syn::spanned::Spanned;
-use syn::LitStr;
 use synstructure::Structure;
 
 /// The central struct for constructing the `into_diagnostic` method from an annotated struct.
@@ -137,41 +135,74 @@ impl<'a> DiagnosticDerive<'a> {
                 unreachable!()
             };
 
-            let attrs: HashMap<String, LitStr> =
-                builder.preamble_new(variant).unwrap().into_iter().collect();
+            let preamble = builder.preamble(variant);
+            let init = match (builder.slug.value_ref(), builder.text.value_ref()) {
+                (None, None) => {
+                        span_err(builder.span, "diagnostic slug not specified")
+                        .help(
+                            "specify the slug as the first argument to the `#[diag(...)]` \
+                            attribute, such as `#[diag(hir_analysis_example_error)]`",
+                        )
+                        .emit();
+                    return DiagnosticDeriveError::ErrorHandled.to_compile_error();
+                }
+                (Some(slug), None)
+                    if let Some(Mismatch { slug_name, crate_name, slug_prefix }) =
+                        Mismatch::check(slug) =>
+                {
+                    span_err(slug.span().unwrap(), "diagnostic slug and crate name do not match")
+                        .note(format!("slug is `{slug_name}` but the crate name is `{crate_name}`"))
+                        .help(format!("expected a slug starting with `{slug_prefix}_...`"))
+                        .emit();
+                    return DiagnosticDeriveError::ErrorHandled.to_compile_error();
+                }
+                (Some(slug), None) => {
+                    quote! {
+                        let mut #diag = #handler.struct_diagnostic(crate::fluent_generated::#slug);
+                    }
+                }
+                (None, Some(text)) => {
+                    quote! {
+                        let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#text));
+                    }
+                }
+                (Some(_slug), Some(_text)) => {
+                    unreachable!("BUG: slug and text specified");
+                }
+            };
+
             let body = builder.body(variant);
-            let Some(msg) = attrs.get("diag") else {
-                span_err(builder.span, "diagnostic message not specified")
-                    .help(
-                        "specify the slug as the first argument to the attribute, such as \
-                                `#[diag(\"the diagnostics message\")]`",
-                    )
-                    .emit();
-                return DiagnosticDeriveError::ErrorHandled.to_compile_error();
-            };
-            let note = if let Some(note) = attrs.get("note") {
-                quote! {
-                    #diag.note(#note);
-                }
-            } else {
-                quote! {}
-            };
-            let code_error = if let Some(code_error) = attrs.get("code_error") {
-                quote! {
-                    #diag.code(#code_error);
-                }
-            } else {
-                quote! {}
-            };
+            // let Some(msg) = attrs.get("diag") else {
+            //     span_err(builder.span, "diagnostic message not specified")
+            //         .help(
+            //             "specify the slug as the first argument to the attribute, such as \
+            //                     `#[diag(\"the diagnostics message\")]`",
+            //         )
+            //         .emit();
+            //     return DiagnosticDeriveError::ErrorHandled.to_compile_error();
+            // };
+            // let note = if let Some(note) = attrs.get("note") {
+            //     quote! {
+            //         #diag.note(#note);
+            //     }
+            // } else {
+            //     quote! {}
+            // };
+            // let code_error = if let Some(code_error) = attrs.get("code_error") {
+            //     quote! {
+            //         #diag.code(#code_error);
+            //     }
+            // } else {
+            //     quote! {}
+            // };
 
             let formatting_init = &builder.formatting_init;
             eprintln!("formatting_init new: {}", formatting_init);
             quote! {
-                let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#msg));
-                #note
-                #code_error
+                #init
                 #formatting_init
                 #body
+                #preamble
                 #diag
             }
         });
