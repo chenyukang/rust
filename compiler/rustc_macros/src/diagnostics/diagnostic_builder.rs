@@ -21,10 +21,8 @@ use synstructure::{BindingInfo, Structure, VariantInfo};
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) enum DiagnosticDeriveKind {
     Diagnostic { handler: syn::Ident },
-    DiagnosticNew { handler: syn::Ident },
     LintDiagnostic,
 }
-//use syn::parse_macro_input;
 use syn::LitStr;
 
 /// Tracks persistent information required for the entire type when building up individual calls to
@@ -292,7 +290,6 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
         let ident = field.ident.as_ref().unwrap();
         let ident = format_ident!("{}", ident); // strip `r#` prefix, if present
-        eprintln!("ident: {:?} => field_binding: {:?}", ident, field_binding);
         self.bindings.insert(ident.to_string(), field_binding.to_string());
         quote! {
             #diag.set_arg(
@@ -367,13 +364,6 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                             #diag.set_span(#binding);
                         });
                     }
-                    DiagnosticDeriveKind::DiagnosticNew { .. } => {
-                        report_error_if_not_applied_to_span(attr, &info)?;
-
-                        return Ok(quote! {
-                            #diag.set_span(#binding);
-                        });
-                    }
                     DiagnosticDeriveKind::LintDiagnostic => {
                         throw_invalid_attr!(attr, |diag| {
                             diag.help("the `primary_span` field attribute is not valid for lint diagnostics")
@@ -413,7 +403,6 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
                 let handler = match &self.parent.kind {
                     DiagnosticDeriveKind::Diagnostic { handler } => handler,
-                    DiagnosticDeriveKind::DiagnosticNew { handler } => handler,
                     DiagnosticDeriveKind::LintDiagnostic => {
                         throw_invalid_attr!(attr, |diag| {
                             diag.help("eager subdiagnostics are not supported on lints")
@@ -455,7 +444,6 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                 applicability: static_applicability,
                 code_field,
                 code_init,
-                suggestion_label,
             } => {
                 if let FieldInnerTy::Vec(_) = info.ty {
                     throw_invalid_attr!(attr, |diag| {
@@ -477,19 +465,13 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                     .unwrap_or_else(|| quote! { rustc_errors::Applicability::Unspecified });
                 let style = suggestion_kind.to_suggestion_style();
 
-                let suggestion_label = if let Some(label) = suggestion_label {
+                let suggestion_label = if let Some(text) = self.get_attr("suggestion") {
                     quote! {
-                        #label
+                        #text
                     }
                 } else {
-                    if let Some(text) = self.get_attr("suggestion") {
-                        quote! {
-                            #text
-                        }
-                    } else {
-                        quote! {
-                            crate::fluent_generated::#slug
-                        }
+                    quote! {
+                        crate::fluent_generated::#slug
                     }
                 };
 
@@ -540,7 +522,6 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
     fn add_subdiagnostic(&self, kind: &Ident, fluent_attr_identifier: Path) -> TokenStream {
         let diag = &self.parent.diag;
         if let Some(text) = self.get_attr(kind.to_string().as_str()) {
-            eprintln!("out: {}", text);
             quote! {
                 #diag.#kind(#text);
             }

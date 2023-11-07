@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use crate::fluent_generated as fluent;
+use crate::parser::{ForbiddenLetReason, TokenDescription};
 use rustc_ast::token::Token;
 use rustc_ast::{Path, Visibility};
 use rustc_errors::{AddToDiagnostic, Applicability, EmissionGuarantee, IntoDiagnostic};
@@ -9,12 +11,8 @@ use rustc_span::edition::{Edition, LATEST_STABLE_EDITION};
 use rustc_span::symbol::Ident;
 use rustc_span::{Span, Symbol};
 
-use crate::fluent_generated as fluent;
-use crate::parser::{ForbiddenLetReason, TokenDescription};
-use rustc_macros::DiagnosticNew;
-
 #[derive(Diagnostic)]
-#[diag(parse_maybe_report_ambiguous_plus)]
+#[diag(text = "ambiguous `+` in a type", suggestion = "use parentheses to disambiguate")]
 pub(crate) struct AmbiguousPlus {
     pub sum_ty: String,
     #[primary_span]
@@ -23,7 +21,7 @@ pub(crate) struct AmbiguousPlus {
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_maybe_recover_from_bad_type_plus, code = "E0178")]
+#[diag(text = "expected a path on the left-hand side of `+`, not `{$ty}`", code = "E0178")]
 pub(crate) struct BadTypePlus {
     pub ty: String,
     #[primary_span]
@@ -35,7 +33,7 @@ pub(crate) struct BadTypePlus {
 #[derive(Subdiagnostic)]
 pub(crate) enum BadTypePlusSub {
     #[suggestion(
-        parse_add_paren,
+        label = "try adding parentheses",
         code = "{sum_with_parens}",
         applicability = "machine-applicable"
     )]
@@ -44,12 +42,12 @@ pub(crate) enum BadTypePlusSub {
         #[primary_span]
         span: Span,
     },
-    #[label(parse_forgot_paren)]
+    #[label("perhaps you forgot parentheses?")]
     ForgotParen {
         #[primary_span]
         span: Span,
     },
-    #[label(parse_expect_path)]
+    #[label("expected a path")]
     ExpectPath {
         #[primary_span]
         span: Span,
@@ -75,7 +73,11 @@ pub(crate) struct WrapType {
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_incorrect_semicolon)]
+#[diag(
+    text = "expected item, found `;`",
+    suggestion = "remove this semicolon",
+    help = "{$name} declarations are not followed by a semicolon"
+)]
 pub(crate) struct IncorrectSemicolon<'a> {
     #[primary_span]
     #[suggestion(style = "short", code = "", applicability = "machine-applicable")]
@@ -535,22 +537,7 @@ pub(crate) struct GenFn {
 pub(crate) struct CommaAfterBaseStruct {
     #[primary_span]
     pub span: Span,
-    #[suggestion(style = "short", applicability = "machine-applicable", code = "test now")]
-    pub comma: Span,
-}
-
-#[derive(DiagnosticNew)]
-#[diag("cannot use a comma after the base struct")]
-#[note("the base struct must always be the last field")]
-pub(crate) struct CommaAfterBaseStructNew {
-    #[primary_span]
-    pub span: Span,
-    #[suggestion(
-        style = "short",
-        applicability = "machine-applicable",
-        code = "",
-        label = "remove this comma"
-    )]
+    #[suggestion(style = "short", applicability = "machine-applicable", code = "")]
     pub comma: Span,
 }
 

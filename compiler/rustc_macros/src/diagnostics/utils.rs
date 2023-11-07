@@ -623,7 +623,6 @@ pub(super) enum SubdiagnosticKind {
         /// Initialization logic for `code_field`'s variable, e.g.
         /// `let __formatted_code = /* whatever */;`
         code_init: TokenStream,
-        suggestion_label: Option<String>,
     },
     /// `#[multipart_suggestion{,_short,_hidden,_verbose}]`
     MultipartSuggestion {
@@ -636,6 +635,9 @@ pub(super) struct SubdiagnosticVariant {
     pub(super) kind: SubdiagnosticKind,
     pub(super) slug: Option<Path>,
     pub(super) no_span: bool,
+    /// A subdiagnostic can have a text field, e.g. `#[help("some text")]`.
+    /// if `slug` is None, this field need to be set.
+    pub(super) text: Option<LitStr>,
 }
 
 impl SubdiagnosticVariant {
@@ -652,7 +654,6 @@ impl SubdiagnosticVariant {
         }
 
         let span = attr.span().unwrap();
-
         let name = attr.path().segments.last().unwrap().ident.to_string();
         let name = name.as_str();
 
@@ -680,7 +681,6 @@ impl SubdiagnosticVariant {
                         applicability: None,
                         code_field: new_code_ident(),
                         code_init: TokenStream::new(),
-                        suggestion_label: None,
                     }
                 } else if let Some(suggestion_kind) =
                     name.strip_prefix("multipart_suggestion").and_then(SuggestionKind::from_suffix)
@@ -703,15 +703,18 @@ impl SubdiagnosticVariant {
             }
         };
 
-        //let mut res = vec![];
-        //let keys = vec!["diag", "note", "help"];
-        if attr.path().is_ident("label") {
-            if let Ok(_meta) = attr.parse_args::<syn::LitStr>() {
-                return Ok(Some(SubdiagnosticVariant {
-                    kind: SubdiagnosticKind::Label,
-                    slug: None,
-                    no_span: false,
-                }));
+        // new format without slug: #[label("this is the text")]
+        let keys = vec!["diag", "note", "help", "label"];
+        for key in keys {
+            if attr.path().is_ident(key) {
+                if let Ok(text) = attr.parse_args::<syn::LitStr>() {
+                    return Ok(Some(SubdiagnosticVariant {
+                        kind,
+                        slug: None,
+                        no_span: false,
+                        text: Some(text),
+                    }));
+                }
             }
         }
 
@@ -733,7 +736,12 @@ impl SubdiagnosticVariant {
                     | SubdiagnosticKind::Help
                     | SubdiagnosticKind::Warn
                     | SubdiagnosticKind::MultipartSuggestion { .. } => {
-                        return Ok(Some(SubdiagnosticVariant { kind, slug: None, no_span: false }));
+                        return Ok(Some(SubdiagnosticVariant {
+                            kind,
+                            slug: None,
+                            no_span: false,
+                            text: None,
+                        }));
                     }
                     SubdiagnosticKind::Suggestion { .. } => {
                         throw_span_err!(span, "suggestion without `code = \"...\"`")
@@ -866,15 +874,10 @@ impl SubdiagnosticVariant {
                 ref code_field,
                 ref mut code_init,
                 suggestion_kind: ref mut kind_field,
-                suggestion_label: ref mut label_field,
                 ..
             } => {
                 if let Some(kind) = suggestion_kind.value() {
                     *kind_field = kind;
-                }
-
-                if let Some(label) = suggestion_label {
-                    *label_field = Some(label.value());
                 }
 
                 *code_init = if let Some(init) = code.value() {
@@ -897,7 +900,7 @@ impl SubdiagnosticVariant {
             | SubdiagnosticKind::Warn => {}
         }
 
-        Ok(Some(SubdiagnosticVariant { kind, slug, no_span }))
+        Ok(Some(SubdiagnosticVariant { kind, slug, no_span, text: suggestion_label }))
     }
 }
 

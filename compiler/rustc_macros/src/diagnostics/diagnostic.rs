@@ -29,109 +29,12 @@ impl<'a> DiagnosticDerive<'a> {
         }
     }
 
-    pub(crate) fn diag_new(
-        diag: syn::Ident,
-        handler: syn::Ident,
-        structure: Structure<'a>,
-    ) -> Self {
-        Self {
-            builder: DiagnosticDeriveBuilder {
-                diag,
-                kind: DiagnosticDeriveKind::DiagnosticNew { handler },
-            },
-            structure,
-        }
-    }
-
     pub(crate) fn into_tokens(self) -> TokenStream {
         let DiagnosticDerive { mut structure, mut builder } = self;
 
-        let slugs = RefCell::new(Vec::new());
-        //eprintln!("here now ....");
         let implementation = builder.each_variant(&mut structure, |mut builder, variant| {
-            let preamble = builder.preamble(variant);
-            let body = builder.body(variant);
-
             let diag = &builder.parent.diag;
             let DiagnosticDeriveKind::Diagnostic { handler } = &builder.parent.kind else {
-                eprintln!("BUG: DiagnosticDeriveKind::Diagnostic expected");
-                unreachable!()
-            };
-            let init = match builder.slug.value_ref() {
-                None => {
-                    span_err(builder.span, "diagnostic slug not specified")
-                        .help(
-                            "specify the slug as the first argument to the `#[diag(...)]` \
-                            attribute, such as `#[diag(hir_analysis_example_error)]`",
-                        )
-                        .emit();
-                    return DiagnosticDeriveError::ErrorHandled.to_compile_error();
-                }
-                Some(slug)
-                    if let Some(Mismatch { slug_name, crate_name, slug_prefix }) =
-                        Mismatch::check(slug) =>
-                {
-                    span_err(slug.span().unwrap(), "diagnostic slug and crate name do not match")
-                        .note(format!("slug is `{slug_name}` but the crate name is `{crate_name}`"))
-                        .help(format!("expected a slug starting with `{slug_prefix}_...`"))
-                        .emit();
-                    return DiagnosticDeriveError::ErrorHandled.to_compile_error();
-                }
-                Some(slug) => {
-                    slugs.borrow_mut().push(slug.clone());
-                    quote! {
-                        let mut #diag = #handler.struct_diagnostic(crate::fluent_generated::#slug);
-                    }
-                }
-            };
-
-            let formatting_init = &builder.formatting_init;
-            eprintln!("init: {}", init);
-            eprintln!("formatting_init: {}", formatting_init);
-            quote! {
-                #init
-                #formatting_init
-                #preamble
-                #body
-                #diag
-            }
-        });
-
-        //eprintln!("implementation: {}", implementation);
-
-        let DiagnosticDeriveKind::Diagnostic { handler } = &builder.kind else {
-            unreachable!();
-        };
-
-        let mut imp = structure.gen_impl(quote! {
-            gen impl<'__diagnostic_handler_sess, G>
-                    rustc_errors::IntoDiagnostic<'__diagnostic_handler_sess, G>
-                    for @Self
-                where G: rustc_errors::EmissionGuarantee
-            {
-
-                #[track_caller]
-                fn into_diagnostic(
-                    self,
-                    #handler: &'__diagnostic_handler_sess rustc_errors::Handler
-                ) -> rustc_errors::DiagnosticBuilder<'__diagnostic_handler_sess, G> {
-                    use rustc_errors::IntoDiagnosticArg;
-                    #implementation
-                }
-            }
-        });
-        for test in slugs.borrow().iter().map(|s| generate_test(s, &structure)) {
-            imp.extend(test);
-        }
-        imp
-    }
-
-    pub(crate) fn into_tokens_new(self) -> TokenStream {
-        let DiagnosticDerive { mut structure, mut builder } = self;
-
-        let implementation = builder.each_variant(&mut structure, |mut builder, variant| {
-            let diag = &builder.parent.diag;
-            let DiagnosticDeriveKind::DiagnosticNew { handler } = &builder.parent.kind else {
                 eprintln!("BUG: DiagnosticDeriveKind::Diagnostic expected");
                 unreachable!()
             };
@@ -175,7 +78,6 @@ impl<'a> DiagnosticDerive<'a> {
             };
 
             let formatting_init = &builder.formatting_init;
-            eprintln!("formatting_init new: {}", formatting_init);
             quote! {
                 #init
                 #formatting_init
@@ -185,7 +87,7 @@ impl<'a> DiagnosticDerive<'a> {
             }
         });
 
-        let DiagnosticDeriveKind::DiagnosticNew { handler } = &builder.kind else {
+        let DiagnosticDeriveKind::Diagnostic { handler } = &builder.kind else {
             unreachable!();
         };
 
