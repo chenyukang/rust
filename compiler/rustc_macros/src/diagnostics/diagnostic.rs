@@ -4,6 +4,7 @@ use std::cell::RefCell;
 
 use crate::diagnostics::diagnostic_builder::{DiagnosticDeriveBuilder, DiagnosticDeriveKind};
 use crate::diagnostics::error::{span_err, DiagnosticDeriveError};
+use crate::diagnostics::utils::format_for_variables;
 use crate::diagnostics::utils::SetOnce;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -135,6 +136,7 @@ impl<'a> DiagnosticDerive<'a> {
                 unreachable!()
             };
 
+            let body = builder.body(variant);
             let preamble = builder.preamble(variant);
             let init = match (builder.slug.value_ref(), builder.text.value_ref()) {
                 (None, None) => {
@@ -162,6 +164,7 @@ impl<'a> DiagnosticDerive<'a> {
                     }
                 }
                 (None, Some(text)) => {
+                    let text = format_for_variables(&text.value(), &builder.bindings);
                     quote! {
                         let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#text));
                     }
@@ -171,7 +174,6 @@ impl<'a> DiagnosticDerive<'a> {
                 }
             };
 
-            let body = builder.body(variant);
             // let Some(msg) = attrs.get("diag") else {
             //     span_err(builder.span, "diagnostic message not specified")
             //         .help(

@@ -1,11 +1,10 @@
 #![deny(unused_must_use)]
 
-use std::collections::HashMap;
-
 use super::utils::SubdiagnosticVariant;
 use crate::diagnostics::error::{
     span_err, throw_invalid_attr, throw_span_err, DiagnosticDeriveError,
 };
+use crate::diagnostics::utils::format_for_variables;
 use crate::diagnostics::utils::{
     build_field_mapping, is_doc_comment, report_error_if_not_applied_to_span, report_type_error,
     should_generate_set_arg, type_is_bool, type_is_unit, type_matches_path, FieldInfo,
@@ -13,6 +12,7 @@ use crate::diagnostics::utils::{
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned};
+use std::collections::HashMap;
 use syn::Token;
 use syn::{parse_quote, spanned::Spanned, Attribute, Meta, Path, Type};
 use synstructure::{BindingInfo, Structure, VariantInfo};
@@ -67,6 +67,9 @@ pub(crate) struct DiagnosticDeriveVariantBuilder<'parent> {
 
     /// Attributes on the variant.
     pub attrs: HashMap<String, LitStr>,
+
+    /// Bindings
+    pub bindings: HashMap<String, String>,
 }
 
 impl<'a> HasFieldMap for DiagnosticDeriveVariantBuilder<'a> {
@@ -119,6 +122,7 @@ impl DiagnosticDeriveBuilder {
                 code: None,
                 text: None,
                 attrs: HashMap::new(),
+                bindings: HashMap::new(),
             };
             f(builder, variant)
         });
@@ -288,6 +292,8 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
         let ident = field.ident.as_ref().unwrap();
         let ident = format_ident!("{}", ident); // strip `r#` prefix, if present
+        eprintln!("ident: {:?} => field_binding: {:?}", ident, field_binding);
+        self.bindings.insert(ident.to_string(), field_binding.to_string());
         quote! {
             #diag.set_arg(
                 stringify!(#ident),
@@ -476,10 +482,9 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                         #label
                     }
                 } else {
-                    if let Some(text) = self.attrs.get("suggestion") {
-                        let value = text.value();
+                    if let Some(text) = self.get_attr("suggestion") {
                         quote! {
-                            #value
+                            #text
                         }
                     } else {
                         quote! {
@@ -513,12 +518,11 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
     ) -> TokenStream {
         let diag = &self.parent.diag;
         let fn_name = format_ident!("span_{}", kind);
-        if let Some(text) = self.attrs.get(kind.to_string().as_str()) {
-            let value = text.value();
+        if let Some(text) = self.get_attr(kind.to_string().as_str()) {
             quote! {
                 #diag.#fn_name(
                     #field_binding,
-                    #value
+                    #text
                 );
             }
         } else {
@@ -531,14 +535,14 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         }
     }
 
-    /// Adds a subdiagnostic by generating a `diag.span_$kind` call with the current slug
+    /// Adds a subdiagnostic by generating a `diag.$kind` call with the current slug
     /// and `fluent_attr_identifier`.
     fn add_subdiagnostic(&self, kind: &Ident, fluent_attr_identifier: Path) -> TokenStream {
         let diag = &self.parent.diag;
-        if let Some(text) = self.attrs.get(kind.to_string().as_str()) {
-            let value = text.value();
+        if let Some(text) = self.get_attr(kind.to_string().as_str()) {
+            eprintln!("out: {}", text);
             quote! {
-                #diag.#kind(#value);
+                #diag.#kind(#text);
             }
         } else {
             quote! {
@@ -601,6 +605,42 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                      `(Span, Applicability)`",
                 )
             }),
+        }
+    }
+
+    fn get_attr(&self, key: &str) -> Option<TokenStream> {
+        if let Some(val) = self.attrs.get(key) {
+            let text = format_for_variables(&val.value(), &self.bindings);
+            Some(quote! {
+                #text
+            })
+            // let re = Regex::new(r"\{\$(.*?)\}").unwrap();
+            // let value = val.value();
+            // let vars: Vec<String> =
+            //     re.captures_iter(&value).map(|cap| cap[1].to_string()).collect();
+            // if vars.len() > 0 {
+            //     let mut result = value.clone();
+            //     for var in vars.iter() {
+            //         let old = format!("{{${}}}", var);
+            //         let new = format!("{{{}}}", var);
+            //         result = result.replace(&old, &new);
+            //     }
+            //     let padding = vars
+            //         .iter()
+            //         .map(|v| format!("{} = self.{}", v, v))
+            //         .collect::<Vec<_>>()
+            //         .join(", ");
+            //     let e: syn::Expr = syn::parse_str(&padding).expect("Unable to parse");
+            //     Some(quote! {
+            //         format!(#result, #e)
+            //     })
+            // } else {
+            //     Some(quote! {
+            //         #value
+            //     })
+            // }
+        } else {
+            None
         }
     }
 }
