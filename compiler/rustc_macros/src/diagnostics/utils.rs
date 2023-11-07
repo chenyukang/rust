@@ -595,6 +595,7 @@ pub(super) enum SubdiagnosticKind {
     MultipartSuggestion {
         suggestion_kind: SuggestionKind,
         applicability: SpannedOption<Applicability>,
+        suggestion_label: Option<String>,
     },
 }
 
@@ -663,6 +664,7 @@ impl SubdiagnosticVariant {
                     SubdiagnosticKind::MultipartSuggestion {
                         suggestion_kind: SuggestionKind::Normal,
                         applicability: None,
+                        suggestion_label: None,
                     }
                 } else {
                     throw_invalid_attr!(attr);
@@ -674,6 +676,7 @@ impl SubdiagnosticVariant {
         //let keys = vec!["diag", "note", "help"];
         if attr.path().is_ident("label") {
             if let Ok(meta) = attr.parse_args::<syn::LitStr>() {
+                //eprintln!("now we have a label: {:?}", meta);
                 return Ok(Some(SubdiagnosticVariant {
                     kind: SubdiagnosticKind::Label,
                     slug: None,
@@ -737,6 +740,7 @@ impl SubdiagnosticVariant {
                 }
 
                 first = false;
+                //eprintln!("attr.path() here= {:?}", attr.path());
                 return Ok(());
             }
 
@@ -744,7 +748,7 @@ impl SubdiagnosticVariant {
 
             let nested_name = nested.path.segments.last().unwrap().ident.to_string();
             let nested_name = nested_name.as_str();
-
+            //eprintln!("nested_name= {:?}", nested_name);
             let path_span = nested.path.span().unwrap();
             let val_span = nested.input.span().unwrap();
 
@@ -762,7 +766,7 @@ impl SubdiagnosticVariant {
             let input = nested.input;
 
             match (nested_name, &mut kind) {
-                ("label", SubdiagnosticKind::Suggestion { .. }) => {
+                ("label", SubdiagnosticKind::Suggestion { .. } | SubdiagnosticKind::MultipartSuggestion { .. }) => {
                     suggestion_label = Some(get_string!());
                 }
                 ("code", SubdiagnosticKind::Suggestion { code_field, .. }) => {
@@ -858,10 +862,15 @@ impl SubdiagnosticVariant {
                 };
             }
             SubdiagnosticKind::MultipartSuggestion {
-                suggestion_kind: ref mut kind_field, ..
+                suggestion_kind: ref mut kind_field,
+                suggestion_label: ref mut label_field,
+                ..
             } => {
                 if let Some(kind) = suggestion_kind.value() {
                     *kind_field = kind;
+                }
+                if let Some(label) = suggestion_label {
+                    *label_field = Some(label.value());
                 }
             }
             SubdiagnosticKind::Label

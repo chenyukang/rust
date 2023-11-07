@@ -1,5 +1,6 @@
 #![deny(unused_must_use)]
 
+use super::utils::SubdiagnosticVariant;
 use crate::diagnostics::error::{
     invalid_attr, span_err, throw_invalid_attr, throw_span_err, DiagnosticDeriveError,
 };
@@ -11,10 +12,9 @@ use crate::diagnostics::utils::{
 };
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
+use syn::LitStr;
 use syn::{spanned::Spanned, Attribute, Meta, MetaList, Path};
 use synstructure::{BindingInfo, Structure, VariantInfo};
-
-use super::utils::SubdiagnosticVariant;
 
 /// The central struct for constructing the `add_to_diagnostic` method from an annotated struct.
 pub(crate) struct SubdiagnosticDeriveBuilder {
@@ -184,11 +184,12 @@ impl<'a> FromIterator<&'a SubdiagnosticKind> for KindsStatistics {
 impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
     fn identify_kind(
         &mut self,
-    ) -> Result<Vec<(SubdiagnosticKind, Path, bool)>, DiagnosticDeriveError> {
+    ) -> Result<Vec<(SubdiagnosticKind, Option<Path>, bool, Option<LitStr>)>, DiagnosticDeriveError>
+    {
         let mut kind_slugs = vec![];
 
         for attr in self.variant.ast().attrs {
-            let Some(SubdiagnosticVariant { kind, slug, no_span, .. }) =
+            let Some(SubdiagnosticVariant { kind, slug, no_span, message }) =
                 SubdiagnosticVariant::from_attr(attr, self)?
             else {
                 // Some attributes aren't errors - like documentation comments - but also aren't
@@ -196,9 +197,9 @@ impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
                 continue;
             };
 
-            if let Some(slug) = slug {
-                kind_slugs.push((kind, slug, no_span));
-            }
+            //if let Some(slug) = slug {
+            kind_slugs.push((kind, slug, no_span, message));
+            //}
             //  else {
             //     let name = attr.path().segments.last().unwrap().ident.to_string();
             //     let name = name.as_str();
@@ -495,7 +496,7 @@ impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
         };
 
         let kind_stats: KindsStatistics =
-            kind_slugs.iter().map(|(kind, _slug, _no_span)| kind).collect();
+            kind_slugs.iter().map(|(kind, _slug, _no_span, _msg)| kind).collect();
 
         let init = if kind_stats.has_multipart_suggestion {
             quote! { let mut suggestions = Vec::new(); }
@@ -516,11 +517,31 @@ impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
         let diag = &self.parent.diag;
         let f = &self.parent.f;
         let mut calls = TokenStream::new();
-        for (kind, slug, no_span) in kind_slugs {
+        for (kind, slug, no_span, msg) in kind_slugs {
+            // FIXME(yukang): cleanup this temprary hack
             let message = format_ident!("__message");
-            calls.extend(
-                quote! { let #message = #f(#diag, crate::fluent_generated::#slug.into()); },
-            );
+            if let Some(slug) = slug {
+                calls.extend(
+                    quote! { let #message = #f(#diag, crate::fluent_generated::#slug.into()); },
+                );
+            } else {
+                let mut _gen_msg: Option<String> = None;
+                if let Some(m) = msg {
+                    _gen_msg = Some(m.value());
+                }
+                if let SubdiagnosticKind::Suggestion { suggestion_label: Some(ref m), .. } = kind {
+                    _gen_msg = Some(m.to_string());
+                }
+                if let SubdiagnosticKind::MultipartSuggestion {
+                    suggestion_label: Some(ref m),
+                    ..
+                } = kind
+                {
+                    _gen_msg = Some(m.to_string());
+                }
+                //eprintln!("gen_msg: {:?}", gen_msg);
+                calls.extend(quote! { let #message = #f(#diag, #_gen_msg.into()); });
+            }
 
             let name = format_ident!(
                 "{}{}",
@@ -551,7 +572,7 @@ impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
                         quote! { unreachable!(); }
                     }
                 }
-                SubdiagnosticKind::MultipartSuggestion { suggestion_kind, applicability } => {
+                SubdiagnosticKind::MultipartSuggestion { suggestion_kind, applicability , ..} => {
                     let applicability = applicability
                         .value()
                         .map(|a| quote! { #a })

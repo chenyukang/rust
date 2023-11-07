@@ -11,7 +11,6 @@ use crate::diagnostics::utils::{
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned};
-use syn::punctuated::Punctuated;
 use syn::Token;
 use syn::{parse_quote, spanned::Spanned, Attribute, Meta, Path, Type};
 use synstructure::{BindingInfo, Structure, VariantInfo};
@@ -208,7 +207,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
             return Ok(vec![]);
         }
         let mut res = vec![];
-        let keys = vec!["diag", "note", "help", "code_error"];
+        let keys = vec!["diag", "note", "help", "code_error", "suggestion"];
         for key in keys {
             if attr.path().is_ident(key) {
                 if let Ok(meta) = attr.parse_args::<syn::LitStr>() {
@@ -242,7 +241,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
             let mut tokens = TokenStream::new();
             attr.parse_nested_meta(|nested| {
                 let path = &nested.path;
-                eprintln!("path now: {:?}", path);
+                //eprintln!("path now: {:?}", path);
                 if first && (nested.input.is_empty() || nested.input.peek(Token![,])) {
                     self.slug.set_once(path.clone(), path.span().unwrap());
                     first = false;

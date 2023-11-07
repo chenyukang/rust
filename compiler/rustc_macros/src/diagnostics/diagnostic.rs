@@ -89,6 +89,8 @@ impl<'a> DiagnosticDerive<'a> {
             let formatting_init = &builder.formatting_init;
             eprintln!("init: {}", init);
             eprintln!("formatting_init: {}", formatting_init);
+            eprintln!("preamble: {}", preamble);
+            eprintln!("body: {}", body);
             quote! {
                 #init
                 #formatting_init
@@ -138,7 +140,8 @@ impl<'a> DiagnosticDerive<'a> {
             };
 
             let attrs: HashMap<String, LitStr> =
-                builder.preamble_new(variant).unwrap().into_iter().collect();
+                builder.preamble_new(variant).expect("attrs error").into_iter().collect();
+            eprintln!("attrs: {:?}", attrs);
             let body = builder.body(variant);
             let Some(msg) = attrs.get("diag") else {
                 span_err(builder.span, "diagnostic message not specified")
@@ -158,20 +161,35 @@ impl<'a> DiagnosticDerive<'a> {
             };
             let code_error = if let Some(code_error) = attrs.get("code_error") {
                 quote! {
-                    #diag.code(#code_error);
+                    #diag.code(rustc_errors::DiagnosticId::Error(#code_error.to_string()));
+                }
+            } else {
+                quote! {}
+            };
+
+            let help = if let Some(_help) = attrs.get("help") {
+                let help_str = quote! {
+                    format!(
+                        "{name} declarations are not followed by a semicolon",
+                        name = self.name
+                    )
+                };
+                quote! {
+                    #diag.help(#help_str);
                 }
             } else {
                 quote! {}
             };
 
             let formatting_init = &builder.formatting_init;
-            eprintln!("formatting_init new: {}", formatting_init);
+            //eprintln!("formatting_init new: {}", formatting_init);
             quote! {
                 let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#msg));
                 #note
                 #code_error
                 #formatting_init
                 #body
+                #help
                 #diag
             }
         });
