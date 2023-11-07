@@ -609,38 +609,11 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
     }
 
     fn get_attr(&self, key: &str) -> Option<TokenStream> {
-        if let Some(val) = self.attrs.get(key) {
+        self.attrs.get(key).map(|val| {
             let text = format_for_variables(&val.value(), &self.bindings);
-            Some(quote! {
+            quote! {
                 #text
-            })
-            // let re = Regex::new(r"\{\$(.*?)\}").unwrap();
-            // let value = val.value();
-            // let vars: Vec<String> =
-            //     re.captures_iter(&value).map(|cap| cap[1].to_string()).collect();
-            // if vars.len() > 0 {
-            //     let mut result = value.clone();
-            //     for var in vars.iter() {
-            //         let old = format!("{{${}}}", var);
-            //         let new = format!("{{{}}}", var);
-            //         result = result.replace(&old, &new);
-            //     }
-            //     let padding = vars
-            //         .iter()
-            //         .map(|v| format!("{} = self.{}", v, v))
-            //         .collect::<Vec<_>>()
-            //         .join(", ");
-            //     let e: syn::Expr = syn::parse_str(&padding).expect("Unable to parse");
-            //     Some(quote! {
-            //         format!(#result, #e)
-            //     })
-            // } else {
-            //     Some(quote! {
-            //         #value
-            //     })
-            // }
-        } else {
-            None
-        }
+            }
+        })
     }
 }
