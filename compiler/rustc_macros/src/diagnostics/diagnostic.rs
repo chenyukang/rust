@@ -174,30 +174,6 @@ impl<'a> DiagnosticDerive<'a> {
                 }
             };
 
-            // let Some(msg) = attrs.get("diag") else {
-            //     span_err(builder.span, "diagnostic message not specified")
-            //         .help(
-            //             "specify the slug as the first argument to the attribute, such as \
-            //                     `#[diag(\"the diagnostics message\")]`",
-            //         )
-            //         .emit();
-            //     return DiagnosticDeriveError::ErrorHandled.to_compile_error();
-            // };
-            // let note = if let Some(note) = attrs.get("note") {
-            //     quote! {
-            //         #diag.note(#note);
-            //     }
-            // } else {
-            //     quote! {}
-            // };
-            // let code_error = if let Some(code_error) = attrs.get("code_error") {
-            //     quote! {
-            //         #diag.code(#code_error);
-            //     }
-            // } else {
-            //     quote! {}
-            // };
-
             let formatting_init = &builder.formatting_init;
             eprintln!("formatting_init new: {}", formatting_init);
             quote! {
