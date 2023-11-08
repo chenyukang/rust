@@ -12,11 +12,11 @@ use rustc_span::symbol::Ident;
 use rustc_span::{Span, Symbol};
 
 #[derive(Diagnostic)]
-#[diag(text = "ambiguous `+` in a type", suggestion = "use parentheses to disambiguate")]
+#[diag(text = "ambiguous `+` in a type")]
 pub(crate) struct AmbiguousPlus {
     pub sum_ty: String,
     #[primary_span]
-    #[suggestion(code = "({sum_ty})")]
+    #[suggestion(label = "use parentheses to disambiguate", code = "({sum_ty})")]
     pub span: Span,
 }
 
@@ -55,7 +55,7 @@ pub(crate) enum BadTypePlusSub {
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_maybe_recover_from_bad_qpath_stage_2)]
+#[diag(text = "missing angle brackets in associated item path")]
 pub(crate) struct BadQPathStage2 {
     #[primary_span]
     pub span: Span,
@@ -64,7 +64,10 @@ pub(crate) struct BadQPathStage2 {
 }
 
 #[derive(Subdiagnostic)]
-#[multipart_suggestion(parse_suggestion, applicability = "machine-applicable")]
+#[multipart_suggestion(
+    label = "types that don't start with an identifier need to be surrounded with angle brackets in qualified paths",
+    applicability = "machine-applicable"
+)]
 pub(crate) struct WrapType {
     #[suggestion_part(code = "<")]
     pub lo: Span,
@@ -75,48 +78,79 @@ pub(crate) struct WrapType {
 #[derive(Diagnostic)]
 #[diag(
     text = "expected item, found `;`",
-    suggestion = "remove this semicolon",
     help = "{$name} declarations are not followed by a semicolon"
 )]
 pub(crate) struct IncorrectSemicolon<'a> {
     #[primary_span]
-    #[suggestion(style = "short", code = "", applicability = "machine-applicable")]
+    #[suggestion(
+        label = "remove this semicolon",
+        style = "short",
+        code = "",
+        applicability = "machine-applicable"
+    )]
     pub span: Span,
     #[help]
     pub opt_help: Option<()>,
     pub name: &'a str,
 }
 
-#[derive(Diagnostic)]
-#[diag(parse_incorrect_use_of_await)]
-pub(crate) struct IncorrectUseOfAwait {
-    #[primary_span]
-    #[suggestion(parse_parentheses_suggestion, code = "", applicability = "machine-applicable")]
-    pub span: Span,
-}
+// #[derive(Diagnostic)]
+// #[diag(parse_incorrect_use_of_await)]
+// pub(crate) struct IncorrectUseOfAwait {
+//     #[primary_span]
+//     #[suggestion(parse_parentheses_suggestion, code = "", applicability = "machine-applicable")]
+//     pub span: Span,
+// }
+
+// #[derive(Diagnostic)]
+// #[diag(parse_incorrect_use_of_await)]
+// pub(crate) struct IncorrectAwait {
+//     #[primary_span]
+//     pub span: Span,
+//     #[suggestion(parse_postfix_suggestion, code = "{expr}.await{question_mark}")]
+//     pub sugg_span: (Span, Applicability),
+//     pub expr: String,
+//     pub question_mark: &'static str,
+// }
 
 #[derive(Diagnostic)]
-#[diag(parse_incorrect_use_of_await)]
+#[diag(text = "incorrect use of `await`")]
 pub(crate) struct IncorrectAwait {
     #[primary_span]
     pub span: Span,
-    #[suggestion(parse_postfix_suggestion, code = "{expr}.await{question_mark}")]
+    #[suggestion(label = "`await` is a postfix operation", code = "{expr}.await{question_mark}")]
     pub sugg_span: (Span, Applicability),
     pub expr: String,
     pub question_mark: &'static str,
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_in_in_typo)]
+#[diag(text = "incorrect use of `await`")]
+pub(crate) struct IncorrectUseOfAwait {
+    #[primary_span]
+    #[suggestion(
+        label = "`await` is not a method call, remove the parentheses",
+        code = "",
+        applicability = "machine-applicable"
+    )]
+    pub span: Span,
+}
+
+#[derive(Diagnostic)]
+#[diag(text = "expected iterable, found keyword `in`")]
 pub(crate) struct InInTypo {
     #[primary_span]
     pub span: Span,
-    #[suggestion(code = "", applicability = "machine-applicable")]
+    #[suggestion(
+        label = "remove the duplicated `in`",
+        code = "",
+        applicability = "machine-applicable"
+    )]
     pub sugg_span: Span,
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_invalid_variable_declaration)]
+#[diag(text = "invalid variable declaration")]
 pub(crate) struct InvalidVariableDeclaration {
     #[primary_span]
     pub span: Span,
@@ -126,17 +160,29 @@ pub(crate) struct InvalidVariableDeclaration {
 
 #[derive(Subdiagnostic)]
 pub(crate) enum InvalidVariableDeclarationSub {
-    #[suggestion(parse_switch_mut_let_order, applicability = "maybe-incorrect", code = "let mut")]
+    #[suggestion(
+        label = "switch the order of `mut` and `let`",
+        applicability = "maybe-incorrect",
+        code = "let mut"
+    )]
     SwitchMutLetOrder(#[primary_span] Span),
     #[suggestion(
-        parse_missing_let_before_mut,
+        label = "missing keyword",
         applicability = "machine-applicable",
         code = "let mut"
     )]
     MissingLet(#[primary_span] Span),
-    #[suggestion(parse_use_let_not_auto, applicability = "machine-applicable", code = "let")]
+    #[suggestion(
+        label = "write `let` instead of `auto` to introduce a new variable",
+        applicability = "machine-applicable",
+        code = "let"
+    )]
     UseLetNotAuto(#[primary_span] Span),
-    #[suggestion(parse_use_let_not_var, applicability = "machine-applicable", code = "let")]
+    #[suggestion(
+        label = "write `let` instead of `var` to introduce a new variable",
+        applicability = "machine-applicable",
+        code = "let"
+    )]
     UseLetNotVar(#[primary_span] Span),
 }
 

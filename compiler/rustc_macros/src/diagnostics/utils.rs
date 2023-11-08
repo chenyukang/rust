@@ -797,7 +797,7 @@ impl SubdiagnosticVariant {
             let input = nested.input;
 
             match (nested_name, &mut kind) {
-                ("label", SubdiagnosticKind::Suggestion { .. }) => {
+                ("label", SubdiagnosticKind::Suggestion { .. } | SubdiagnosticKind::MultipartSuggestion { ..}) => {
                     suggestion_label = Some(get_string!());
                 }
                 ("code", SubdiagnosticKind::Suggestion { code_field, .. }) => {

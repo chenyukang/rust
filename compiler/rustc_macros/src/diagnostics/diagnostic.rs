@@ -39,14 +39,13 @@ impl<'a> DiagnosticDerive<'a> {
                 unreachable!()
             };
 
-            let body = builder.body(variant);
             let preamble = builder.preamble(variant);
             let init = match (builder.slug.value_ref(), builder.text.value_ref()) {
                 (None, None) => {
-                        span_err(builder.span, "diagnostic slug not specified")
+                        span_err(builder.span, "diagnostic slug or text label is not specified")
                         .help(
                             "specify the slug as the first argument to the `#[diag(...)]` \
-                            attribute, such as `#[diag(hir_analysis_example_error)]`",
+                            attribute, such as `#[diag(hir_analysis_example_error)]`, or use text format #[diag(text = \"this is the words\")]",
                         )
                         .emit();
                     return DiagnosticDeriveError::ErrorHandled.to_compile_error();
@@ -76,6 +75,7 @@ impl<'a> DiagnosticDerive<'a> {
                     unreachable!("BUG: slug and text specified");
                 }
             };
+            let body = builder.body(variant);
 
             let formatting_init = &builder.formatting_init;
             quote! {
