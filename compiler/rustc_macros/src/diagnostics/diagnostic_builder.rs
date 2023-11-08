@@ -295,7 +295,6 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
         let ident = field.ident.as_ref().unwrap();
         let ident = format_ident!("{}", ident); // strip `r#` prefix, if present
-        self.bindings.insert(ident.to_string(), field_binding.to_string());
         quote! {
             #diag.set_arg(
                 stringify!(#ident),

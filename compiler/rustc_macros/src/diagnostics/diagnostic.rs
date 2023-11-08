@@ -40,6 +40,8 @@ impl<'a> DiagnosticDerive<'a> {
             };
 
             let preamble = builder.preamble(variant);
+            let body = builder.body(variant);
+
             let init = match (builder.slug.value_ref(), builder.text.value_ref()) {
                 (None, None) => {
                         span_err(builder.span, "diagnostic slug or text label is not specified")
@@ -75,14 +77,13 @@ impl<'a> DiagnosticDerive<'a> {
                     unreachable!("BUG: slug and text specified");
                 }
             };
-            let body = builder.body(variant);
 
             let formatting_init = &builder.formatting_init;
             quote! {
                 #init
                 #formatting_init
-                #body
                 #preamble
+                #body
                 #diag
             }
         });
