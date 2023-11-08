@@ -196,7 +196,10 @@ pub(crate) enum InvalidComparisonOperatorSub {
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_invalid_logical_operator)]
+#[diag(
+    text = "`{$incorrect}` is not a logical operator",
+    note = "unlike in e.g., Python and PHP, `&&` and `||` are used for logical operators"
+)]
 #[note]
 pub(crate) struct InvalidLogicalOperator {
     #[primary_span]
@@ -209,14 +212,14 @@ pub(crate) struct InvalidLogicalOperator {
 #[derive(Subdiagnostic)]
 pub(crate) enum InvalidLogicalOperatorSub {
     #[suggestion(
-        parse_use_amp_amp_for_conjunction,
+        label = "use `&&` to perform logical conjunction",
         style = "short",
         applicability = "machine-applicable",
         code = "&&"
     )]
     Conjunction(#[primary_span] Span),
     #[suggestion(
-        parse_use_pipe_pipe_for_disjunction,
+        label = "use `||` to perform logical disjunction",
         style = "short",
         applicability = "machine-applicable",
         code = "||"

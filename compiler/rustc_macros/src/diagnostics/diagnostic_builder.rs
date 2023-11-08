@@ -246,7 +246,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                     });
                 } else {
                     let mut founded = false;
-                    let keys = vec!["note", "help", "warn"];
+                    let keys = vec!["note", "help", "warning"];
                     for key in keys {
                         if path.is_ident(key) {
                             if let Ok(value) = nested.parse::<syn::LitStr>() {

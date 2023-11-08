@@ -703,7 +703,7 @@ impl SubdiagnosticVariant {
         };
 
         // new format without slug: #[label("this is the text")]
-        let keys = vec!["diag", "note", "help", "label"];
+        let keys = vec!["note", "help", "label", "warning"];
         for key in keys {
             if attr.path().is_ident(key) {
                 if let Ok(text) = attr.parse_args::<syn::LitStr>() {
