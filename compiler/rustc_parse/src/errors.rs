@@ -94,25 +94,6 @@ pub(crate) struct IncorrectSemicolon<'a> {
     pub name: &'a str,
 }
 
-// #[derive(Diagnostic)]
-// #[diag(parse_incorrect_use_of_await)]
-// pub(crate) struct IncorrectUseOfAwait {
-//     #[primary_span]
-//     #[suggestion(parse_parentheses_suggestion, code = "", applicability = "machine-applicable")]
-//     pub span: Span,
-// }
-
-// #[derive(Diagnostic)]
-// #[diag(parse_incorrect_use_of_await)]
-// pub(crate) struct IncorrectAwait {
-//     #[primary_span]
-//     pub span: Span,
-//     #[suggestion(parse_postfix_suggestion, code = "{expr}.await{question_mark}")]
-//     pub sugg_span: (Span, Applicability),
-//     pub expr: String,
-//     pub question_mark: &'static str,
-// }
-
 #[derive(Diagnostic)]
 #[diag(text = "incorrect use of `await`")]
 pub(crate) struct IncorrectAwait {
