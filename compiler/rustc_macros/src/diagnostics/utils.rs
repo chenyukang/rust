@@ -132,7 +132,7 @@ pub(crate) fn format_for_variables(input: &str, map: &HashMap<String, String>) -
             let new = format!("{{{}}}", var);
             result = result.replace(&old, &new);
         }
-        let padding = vars
+        let padding: Vec<syn::Expr> = vars
             .iter()
             .map(|v| {
                 let t = if let Some(bind) = map.get(v) {
@@ -140,13 +140,12 @@ pub(crate) fn format_for_variables(input: &str, map: &HashMap<String, String>) -
                 } else {
                     format!("self.{}", v)
                 };
-                format!("{} = {}", v, t)
+                let r = format!("{} = {}", v, t);
+                syn::parse_str(&r).expect("Unable to parse for variables")
             })
-            .collect::<Vec<_>>()
-            .join(", ");
-        let e: syn::Expr = syn::parse_str(&padding).expect("Unable to parse");
+            .collect::<Vec<_>>();
         quote! {
-            format!(#result, #e)
+            format!(#result, #(#padding),*)
         }
     } else {
         quote! {
