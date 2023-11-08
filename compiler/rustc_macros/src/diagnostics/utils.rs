@@ -122,7 +122,8 @@ pub(crate) fn report_error_if_not_applied_to_span(
     Ok(())
 }
 
-pub(crate) fn format_for_variables(input: &str, map: &HashMap<String, String>) -> TokenStream {
+// FIXME(yukang) should use  `build_format` instead?
+pub(crate) fn format_for_variables(input: &str, map: &HashMap<String, TokenStream>) -> TokenStream {
     let re = Regex::new(r"\{\$(.*?)\}").unwrap();
     let vars: Vec<String> = re.captures_iter(input).map(|cap| cap[1].to_string()).collect();
     if vars.len() > 0 {
@@ -132,16 +133,15 @@ pub(crate) fn format_for_variables(input: &str, map: &HashMap<String, String>) -
             let new = format!("{{{}}}", var);
             result = result.replace(&old, &new);
         }
-        let padding: Vec<syn::Expr> = vars
+        let padding: Vec<TokenStream> = vars
             .iter()
             .map(|v| {
-                let t = if let Some(bind) = map.get(v) {
-                    bind.to_string()
-                } else {
-                    format!("self.{}", v)
-                };
-                let r = format!("{} = {}", v, t);
-                syn::parse_str(&r).expect("Unable to parse for variables")
+                let t =
+                    if let Some(bind) = map.get(v) { bind.to_owned() } else { quote!("self.{#v}") };
+                let field_ident = format_ident!("{}", v);
+                quote! {
+                    #field_ident = #t
+                }
             })
             .collect::<Vec<_>>();
         quote! {

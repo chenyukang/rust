@@ -11,7 +11,7 @@ use crate::diagnostics::utils::{
     FieldInnerTy, FieldMap, HasFieldMap, SetOnce, SpannedOption, SubdiagnosticKind,
 };
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, quote_spanned};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::HashMap;
 use syn::Token;
 use syn::{parse_quote, spanned::Spanned, Attribute, Meta, Path, Type};
@@ -66,8 +66,8 @@ pub(crate) struct DiagnosticDeriveVariantBuilder<'parent> {
     /// Attributes on the variant.
     pub attrs: HashMap<String, LitStr>,
 
-    /// Bindings
-    pub bindings: HashMap<String, String>,
+    /// fields for bidnings in the variant.
+    pub fields: FieldMap,
 }
 
 impl<'a> HasFieldMap for DiagnosticDeriveVariantBuilder<'a> {
@@ -120,7 +120,7 @@ impl DiagnosticDeriveBuilder {
                 code: None,
                 text: None,
                 attrs: HashMap::new(),
-                bindings: HashMap::new(),
+                fields: HashMap::new(),
             };
             f(builder, variant)
         });
@@ -246,7 +246,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                     });
                 } else {
                     let mut founded = false;
-                    let keys = vec!["note", "help", "warning"];
+                    let keys = vec!["note", "help", "warning", "suggestion"];
                     for key in keys {
                         if path.is_ident(key) {
                             if let Ok(value) = nested.parse::<syn::LitStr>() {
@@ -310,7 +310,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
         let ident = field.ident.as_ref().unwrap();
         let ident = format_ident!("{}", ident); // strip `r#` prefix, if present
-        self.bindings.insert(ident.to_string(), field_binding.to_string());
+        self.fields.insert(ident.to_string(), field_binding.into_token_stream());
     }
 
     fn generate_field_attrs_code(&mut self, binding_info: &BindingInfo<'_>) -> TokenStream {
@@ -480,7 +480,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                 let style = suggestion_kind.to_suggestion_style();
 
                 let suggestion_label = if let Some(text) = text {
-                    let text = format_for_variables(&text, &self.bindings);
+                    let text = format_for_variables(&text, &self.fields);
                     quote! {
                         #text
                     }
@@ -517,7 +517,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         let diag = &self.parent.diag;
         let fn_name = format_ident!("span_{}", kind);
         if let Some(text) = text {
-            let text = format_for_variables(&text, &self.bindings);
+            let text = format_for_variables(&text, &self.fields);
             return quote! {
                 #diag.#fn_name(
                     #field_binding,
@@ -556,7 +556,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         //     fluent_attr_identifier, text
         // );
         if let Some(text) = text {
-            let text = format_for_variables(&text, &self.bindings);
+            let text = format_for_variables(&text, &self.fields);
             return quote! {
                 #diag.#kind(#text);
             };
@@ -631,7 +631,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
     fn get_attr(&self, key: &str) -> Option<TokenStream> {
         self.attrs.get(key).map(|val| {
-            let text = format_for_variables(&val.value(), &self.bindings);
+            let text = format_for_variables(&val.value(), &self.fields);
             quote! {
                 #text
             }

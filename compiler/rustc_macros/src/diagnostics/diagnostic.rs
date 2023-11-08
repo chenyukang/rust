@@ -68,7 +68,7 @@ impl<'a> DiagnosticDerive<'a> {
                     }
                 }
                 (None, Some(text)) => {
-                    let text = format_for_variables(&text.value(), &builder.bindings);
+                    let text = format_for_variables(&text.value(), &builder.fields);
                     quote! {
                         let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#text));
                     }

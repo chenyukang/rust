@@ -15,7 +15,7 @@ use syn::LitStr;
 use syn::{spanned::Spanned, Attribute, Meta, MetaList, Path};
 use synstructure::{BindingInfo, Structure, VariantInfo};
 
-use super::utils::SubdiagnosticVariant;
+use super::utils::{format_for_variables, SubdiagnosticVariant};
 
 /// The central struct for constructing the `add_to_diagnostic` method from an annotated struct.
 pub(crate) struct SubdiagnosticDeriveBuilder {
@@ -528,7 +528,8 @@ impl<'parent, 'a> SubdiagnosticDeriveVariantBuilder<'parent, 'a> {
                 );
             } else {
                 let text = text.expect("text must be present if slug is not");
-                calls.extend(quote! { let #message = #f(#diag, #text.into()); });
+                let formatted = format_for_variables(&text.value(), &self.fields);
+                calls.extend(quote! { let #message = #f(#diag, #formatted.into()); });
             }
 
             let name = format_ident!(
