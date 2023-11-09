@@ -236,7 +236,7 @@ pub(crate) struct TildeAsUnaryOperator(
 );
 
 #[derive(Diagnostic)]
-#[diag(parse_unexpected_token_after_not)]
+#[diag(text = "unexpected {$negated_desc} after identifier")]
 pub(crate) struct NotAsNegationOperator {
     #[primary_span]
     pub negated: Span,
@@ -248,7 +248,7 @@ pub(crate) struct NotAsNegationOperator {
 #[derive(Subdiagnostic)]
 pub enum NotAsNegationOperatorSub {
     #[suggestion(
-        parse_unexpected_token_after_not_default,
+        label = "use `!` to perform logical negation or bitwise not",
         style = "short",
         applicability = "machine-applicable",
         code = "!"
@@ -256,7 +256,7 @@ pub enum NotAsNegationOperatorSub {
     SuggestNotDefault(#[primary_span] Span),
 
     #[suggestion(
-        parse_unexpected_token_after_not_bitwise,
+        label = "use `!` to perform bitwise not",
         style = "short",
         applicability = "machine-applicable",
         code = "!"
@@ -264,7 +264,7 @@ pub enum NotAsNegationOperatorSub {
     SuggestNotBitwise(#[primary_span] Span),
 
     #[suggestion(
-        parse_unexpected_token_after_not_logical,
+        label = "use `!` to perform logical negation",
         style = "short",
         applicability = "machine-applicable",
         code = "!"
@@ -292,7 +292,7 @@ pub(crate) struct LifetimeInBorrowExpression {
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_field_expression_with_generic)]
+#[diag(text = "field expressions cannot have generic arguments")]
 pub(crate) struct FieldExpressionWithGeneric(#[primary_span] pub Span);
 
 #[derive(Diagnostic)]
@@ -1176,10 +1176,20 @@ pub(crate) struct StructLiteralNeedingParensSugg {
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_unmatched_angle_brackets)]
+#[diag(text = "{$num_extra_brackets ->
+    [one] unmatched angle bracket
+   *[other] unmatched angle brackets
+}")]
 pub(crate) struct UnmatchedAngleBrackets {
     #[primary_span]
-    #[suggestion(code = "", applicability = "machine-applicable")]
+    #[suggestion(
+        label = "{$num_extra_brackets ->
+        [one] remove extra angle bracket
+       *[other] remove extra angle brackets
+    }",
+        code = "",
+        applicability = "machine-applicable"
+    )]
     pub span: Span,
     pub num_extra_brackets: usize,
 }
@@ -1542,28 +1552,43 @@ pub(crate) struct DefaultNotFollowedByItem {
 
 #[derive(Diagnostic)]
 pub(crate) enum MissingKeywordForItemDefinition {
-    #[diag(parse_missing_struct_for_struct_definition)]
+    #[diag(text = "missing `struct` for struct definition")]
     Struct {
         #[primary_span]
-        #[suggestion(style = "short", applicability = "maybe-incorrect", code = " struct ")]
+        #[suggestion(
+            label = "add `struct` here to parse `{$ident}` as a public struct",
+            style = "short",
+            applicability = "maybe-incorrect",
+            code = " struct "
+        )]
         span: Span,
         ident: Ident,
     },
-    #[diag(parse_missing_fn_for_function_definition)]
+    #[diag(text = "missing `fn` for function definition")]
     Function {
         #[primary_span]
-        #[suggestion(style = "short", applicability = "maybe-incorrect", code = " fn ")]
+        #[suggestion(
+            label = "add `fn` here to parse `{$ident}` as a public function",
+            style = "short",
+            applicability = "maybe-incorrect",
+            code = " fn "
+        )]
         span: Span,
         ident: Ident,
     },
-    #[diag(parse_missing_fn_for_method_definition)]
+    #[diag(text = "missing `fn` for method definition")]
     Method {
         #[primary_span]
-        #[suggestion(style = "short", applicability = "maybe-incorrect", code = " fn ")]
+        #[suggestion(
+            label = "add `fn` here to parse `{$ident}` as a public method",
+            style = "short",
+            applicability = "maybe-incorrect",
+            code = " fn "
+        )]
         span: Span,
         ident: Ident,
     },
-    #[diag(parse_ambiguous_missing_keyword_for_item_definition)]
+    #[diag(text = "missing `fn` or `struct` for function or struct definition")]
     Ambiguous {
         #[primary_span]
         span: Span,
@@ -1574,13 +1599,19 @@ pub(crate) enum MissingKeywordForItemDefinition {
 
 #[derive(Subdiagnostic)]
 pub(crate) enum AmbiguousMissingKwForItemSub {
-    #[suggestion(parse_suggestion, applicability = "maybe-incorrect", code = "{snippet}!")]
+    #[suggestion(
+        label = "if you meant to call a macro, try",
+        applicability = "maybe-incorrect",
+        code = "{snippet}!"
+    )]
     SuggestMacro {
         #[primary_span]
         span: Span,
         snippet: String,
     },
-    #[help(parse_help)]
+    #[help(
+        "if you meant to call a macro, remove the `pub` and add a trailing `!` after the identifier"
+    )]
     HelpMacro,
 }
 
@@ -2689,10 +2720,20 @@ pub(crate) struct BoxNotPat {
 }
 
 #[derive(Diagnostic)]
-#[diag(parse_unmatched_angle)]
+#[diag(text = "unmatched angle {$plural ->
+    [true] brackets
+    *[false] bracket
+    }")]
 pub(crate) struct UnmatchedAngle {
     #[primary_span]
-    #[suggestion(code = "", applicability = "machine-applicable")]
+    #[suggestion(
+        label = "remove extra angle {$plural ->
+            [true] brackets
+            *[false] bracket
+            }",
+        code = "",
+        applicability = "machine-applicable"
+    )]
     pub span: Span,
     pub plural: bool,
 }

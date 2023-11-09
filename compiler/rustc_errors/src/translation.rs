@@ -1,11 +1,14 @@
 use crate::error::{TranslateError, TranslateErrorKind};
+use crate::fluent_bundle::FluentResource;
 use crate::snippet::Style;
 use crate::{DiagnosticArg, DiagnosticMessage, FluentBundle};
+use fluent::FluentBundle as RawFluentBundle;
 use rustc_data_structures::sync::Lrc;
 use rustc_error_messages::FluentArgs;
 use std::borrow::Cow;
 use std::env;
 use std::error::Report;
+use unic_langid::langid;
 
 /// Convert diagnostic arguments (a rustc internal type that exists to implement
 /// `Encodable`/`Decodable`) into `FluentArgs` which is necessary to perform translation.
@@ -62,7 +65,22 @@ pub trait Translate {
         trace!(?message, ?args);
         let (identifier, attr) = match message {
             DiagnosticMessage::Str(msg) | DiagnosticMessage::Eager(msg) => {
-                return Ok(Cow::Borrowed(msg));
+                if args.iter().next().is_none() {
+                    return Ok(Cow::Borrowed(msg));
+                } else {
+                    // FIXME(yukang) A hacky for raw fluent content
+                    let fluent_text = format!("dummy = {}", msg);
+                    let resource = FluentResource::try_new(fluent_text).unwrap();
+                    let langid_en = langid!("en-US");
+                    let mut bundle = RawFluentBundle::new(vec![langid_en]);
+                    bundle.add_resource(resource).unwrap();
+                    let mut errors = vec![];
+                    let pattern = bundle.get_message("dummy").unwrap().value().unwrap();
+                    let res = bundle.format_pattern(&pattern, Some(args), &mut errors);
+                    return Ok(Cow::Owned(
+                        res.to_string().replace("\u{2068}", "").replace("\u{2069}", ""),
+                    ));
+                }
             }
             DiagnosticMessage::FluentIdentifier(identifier, attr) => (identifier, attr),
         };
