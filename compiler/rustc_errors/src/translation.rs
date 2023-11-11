@@ -65,21 +65,28 @@ pub trait Translate {
         trace!(?message, ?args);
         let (identifier, attr) = match message {
             DiagnosticMessage::Str(msg) | DiagnosticMessage::Eager(msg) => {
-                if args.iter().next().is_none() {
+                if args.iter().next().is_none() || !msg.contains("$") {
                     return Ok(Cow::Borrowed(msg));
                 } else {
                     // FIXME(yukang) A hacky for raw fluent content
                     let fluent_text = format!("dummy = {}", msg);
-                    let resource = FluentResource::try_new(fluent_text).unwrap();
-                    let langid_en = langid!("en-US");
-                    let mut bundle = RawFluentBundle::new(vec![langid_en]);
-                    bundle.add_resource(resource).unwrap();
-                    let mut errors = vec![];
-                    let pattern = bundle.get_message("dummy").unwrap().value().unwrap();
-                    let res = bundle.format_pattern(&pattern, Some(args), &mut errors);
-                    return Ok(Cow::Owned(
-                        res.to_string().replace("\u{2068}", "").replace("\u{2069}", ""),
-                    ));
+                    if let Ok(resource) = FluentResource::try_new(fluent_text) {
+                        let langid_en = langid!("en-US");
+                        let mut bundle = RawFluentBundle::new(vec![langid_en]);
+                        bundle.add_resource(resource).unwrap();
+                        let mut errors = vec![];
+                        let pattern = bundle.get_message("dummy").unwrap().value().unwrap();
+                        let res = bundle.format_pattern(&pattern, Some(args), &mut errors);
+                        //eprintln!("translated: {:?}", msg);
+                        //eprintln!("args: {:?}", args);
+                        //eprintln!("res: {:?}", res);
+                        return Ok(Cow::Owned(
+                            res.to_string().replace("\u{2068}", "").replace("\u{2069}", ""),
+                        ));
+                    } else {
+                        //eprintln!("translate error: {}, args: {:?}", msg, args);
+                        return Ok(Cow::Borrowed(msg));
+                    }
                 }
             }
             DiagnosticMessage::FluentIdentifier(identifier, attr) => (identifier, attr),
