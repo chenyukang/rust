@@ -4,7 +4,7 @@ use crate::diagnostics::error::{
 use proc_macro::Span;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
-use regex::Regex;
+//regex::Regex;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
 use std::fmt;
@@ -123,36 +123,36 @@ pub(crate) fn report_error_if_not_applied_to_span(
 }
 
 // FIXME(yukang) should use  `build_format` instead?
-pub(crate) fn format_for_variables(input: &str, map: &HashMap<String, TokenStream>) -> TokenStream {
-    let re = Regex::new(r"\{\$(.*?)\}").unwrap();
-    let vars: Vec<String> = re.captures_iter(input).map(|cap| cap[1].to_string()).collect();
-    if vars.len() > 0 {
-        let mut result = input.to_string();
-        for var in vars.iter() {
-            let old = format!("{{${}}}", var);
-            let new = format!("{{{}}}", var);
-            result = result.replace(&old, &new);
-        }
-        let padding: Vec<TokenStream> = vars
-            .iter()
-            .map(|v| {
-                let t =
-                    if let Some(bind) = map.get(v) { bind.to_owned() } else { quote!("self.{#v}") };
-                let field_ident = format_ident!("{}", v);
-                quote! {
-                    #field_ident = #t
-                }
-            })
-            .collect::<Vec<_>>();
-        quote! {
-            format!(#result, #(#padding),*)
-        }
-    } else {
-        quote! {
-            #input
-        }
-    }
-}
+// pub(crate) fn format_for_variables(input: &str, map: &HashMap<String, TokenStream>) -> TokenStream {
+//     let re = Regex::new(r"\{\$(.*?)\}").unwrap();
+//     let vars: Vec<String> = re.captures_iter(input).map(|cap| cap[1].to_string()).collect();
+//     if vars.len() > 0 {
+//         let mut result = input.to_string();
+//         for var in vars.iter() {
+//             let old = format!("{{${}}}", var);
+//             let new = format!("{{{}}}", var);
+//             result = result.replace(&old, &new);
+//         }
+//         let padding: Vec<TokenStream> = vars
+//             .iter()
+//             .map(|v| {
+//                 let t =
+//                     if let Some(bind) = map.get(v) { bind.to_owned() } else { quote!("self.{#v}") };
+//                 let field_ident = format_ident!("{}", v);
+//                 quote! {
+//                     #field_ident = #t
+//                 }
+//             })
+//             .collect::<Vec<_>>();
+//         quote! {
+//             format!(#result, #(#padding),*)
+//         }
+//     } else {
+//         quote! {
+//             #input
+//         }
+//     }
+// }
 
 /// Inner type of a field and type of wrapper.
 #[derive(Copy, Clone)]

@@ -4,7 +4,7 @@ use std::cell::RefCell;
 
 use crate::diagnostics::diagnostic_builder::{DiagnosticDeriveBuilder, DiagnosticDeriveKind};
 use crate::diagnostics::error::{span_err, DiagnosticDeriveError};
-use crate::diagnostics::utils::format_for_variables;
+//use crate::diagnostics::utils::format_for_variables;
 use crate::diagnostics::utils::SetOnce;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -68,9 +68,8 @@ impl<'a> DiagnosticDerive<'a> {
                     }
                 }
                 (None, Some(text)) => {
-                    let text = format_for_variables(&text.value(), &builder.fields);
                     quote! {
-                        let mut #diag = #handler.struct_diagnostic(crate::DiagnosticMessage::from(#text));
+                        let mut #diag = #handler.struct_diagnostic(DiagnosticMessage::Str(#text.into()));
                     }
                 }
                 (Some(_slug), Some(_text)) => {

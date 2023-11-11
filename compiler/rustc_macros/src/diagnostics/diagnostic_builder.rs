@@ -4,7 +4,7 @@ use super::utils::SubdiagnosticVariant;
 use crate::diagnostics::error::{
     span_err, throw_invalid_attr, throw_span_err, DiagnosticDeriveError,
 };
-use crate::diagnostics::utils::format_for_variables;
+//use crate::diagnostics::utils::format_for_variables;
 use crate::diagnostics::utils::{
     build_field_mapping, is_doc_comment, report_error_if_not_applied_to_span, report_type_error,
     should_generate_set_arg, type_is_bool, type_is_unit, type_matches_path, FieldInfo,
@@ -480,7 +480,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                 let style = suggestion_kind.to_suggestion_style();
 
                 let suggestion_label = if let Some(text) = text {
-                    let text = format_for_variables(&text, &self.fields);
+                    //let text = format_for_variables(&text, &self.fields);
                     quote! {
                         #text
                     }
@@ -517,7 +517,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         let diag = &self.parent.diag;
         let fn_name = format_ident!("span_{}", kind);
         if let Some(text) = text {
-            let text = format_for_variables(&text, &self.fields);
+            //let text = format_for_variables(&text, &self.fields);
             return quote! {
                 #diag.#fn_name(
                     #field_binding,
@@ -556,7 +556,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         //     fluent_attr_identifier, text
         // );
         if let Some(text) = text {
-            let text = format_for_variables(&text, &self.fields);
+            //let text = format_for_variables(&text, &self.fields);
             return quote! {
                 #diag.#kind(#text);
             };
@@ -631,7 +631,8 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
 
     fn get_attr(&self, key: &str) -> Option<TokenStream> {
         self.attrs.get(key).map(|val| {
-            let text = format_for_variables(&val.value(), &self.fields);
+            //let text = format_for_variables(&val.value(), &self.fields);
+            let text = &val.value();
             quote! {
                 #text
             }
