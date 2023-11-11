@@ -1647,11 +1647,11 @@ pub(crate) struct UnexpectedIfWithIf(
 );
 
 #[derive(Diagnostic)]
-#[diag(parse_maybe_fn_typo_with_impl)]
+#[diag(label = "you might have meant to write `impl` instead of `fn`")]
 pub(crate) struct FnTypoWithImpl {
     #[primary_span]
     #[suggestion(
-        label = "remove the `if`",
+        label = "replace `fn` with `impl` here",
         applicability = "maybe-incorrect",
         code = "impl",
         style = "verbose"
