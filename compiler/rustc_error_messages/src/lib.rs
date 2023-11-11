@@ -1,4 +1,4 @@
-#![cfg_attr(not(bootstrap), doc(rust_logo))]
+//#![cfg_attr(not(bootstrap), doc(rust_logo))]
 #![cfg_attr(not(bootstrap), feature(rustdoc_internals))]
 #![feature(let_chains)]
 #![feature(lazy_cell)]

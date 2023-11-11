@@ -787,6 +787,7 @@ impl<'a> Parser<'a> {
                                     r#type: path,
                                     args: args_span,
                                     suggestion,
+                                    action: "comparing".to_string(),
                                 })
                             }
                             token::BinOp(token::Shl) => {
@@ -795,6 +796,7 @@ impl<'a> Parser<'a> {
                                     r#type: path,
                                     args: args_span,
                                     suggestion,
+                                    action: "shifting".to_string(),
                                 })
                             }
                             _ => {

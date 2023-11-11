@@ -235,7 +235,7 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
                     return Ok(());
                 };
 
-                if path.is_ident("text") {
+                if path.is_ident("text") || path.is_ident("label") {
                     let value = nested.parse::<syn::LitStr>()?;
                     self.text.set_once(value, path.span().unwrap());
                 } else if path.is_ident("code") {

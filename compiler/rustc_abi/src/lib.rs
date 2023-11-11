@@ -1,6 +1,6 @@
 #![cfg_attr(feature = "nightly", feature(step_trait))]
 #![cfg_attr(feature = "nightly", allow(internal_features))]
-#![cfg_attr(all(not(bootstrap), feature = "nightly"), doc(rust_logo))]
+//#![cfg_attr(all(not(bootstrap), feature = "nightly"))]
 #![cfg_attr(all(not(bootstrap), feature = "nightly"), feature(rustdoc_internals))]
 
 use std::fmt;

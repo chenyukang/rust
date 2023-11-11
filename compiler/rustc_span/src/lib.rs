@@ -17,7 +17,7 @@
 
 // tidy-alphabetical-start
 #![allow(internal_features)]
-#![cfg_attr(not(bootstrap), doc(rust_logo))]
+//#![cfg_attr(not(bootstrap), doc(rust_logo))]
 #![cfg_attr(not(bootstrap), feature(rustdoc_internals))]
 #![deny(rustc::diagnostic_outside_of_impl)]
 #![deny(rustc::untranslatable_diagnostic)]
