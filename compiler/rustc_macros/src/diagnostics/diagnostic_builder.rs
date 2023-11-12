@@ -10,9 +10,10 @@ use crate::diagnostics::utils::{
     should_generate_set_arg, type_is_bool, type_is_unit, type_matches_path, FieldInfo,
     FieldInnerTy, FieldMap, HasFieldMap, SetOnce, SpannedOption, SubdiagnosticKind,
 };
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::HashMap;
+use syn::MetaList;
 use syn::Token;
 use syn::{parse_quote, spanned::Spanned, Attribute, Meta, Path, Type};
 use synstructure::{BindingInfo, Structure, VariantInfo};
@@ -56,8 +57,8 @@ pub(crate) struct DiagnosticDeriveVariantBuilder<'parent> {
     /// has the actual diagnostic message.
     pub slug: SpannedOption<Path>,
 
-    /// Text is a the text embedded in the struct attribute and corresponds to the diagnostic
-    pub text: SpannedOption<LitStr>,
+    /// Label is a the text embedded in the struct attribute and corresponds to the diagnostic
+    pub label: SpannedOption<LitStr>,
 
     /// Error codes are a optional part of the struct attribute - this is only set to detect
     /// multiple specifications.
@@ -118,7 +119,7 @@ impl DiagnosticDeriveBuilder {
                 formatting_init: TokenStream::new(),
                 slug: None,
                 code: None,
-                text: None,
+                label: None,
                 attrs: HashMap::new(),
                 fields: HashMap::new(),
             };
@@ -212,59 +213,71 @@ impl<'a> DiagnosticDeriveVariantBuilder<'a> {
         let name = attr.path().segments.last().unwrap().ident.to_string();
         let name = name.as_str();
 
-        let mut first = true;
-
+        let mut set_label = false;
         if name == "diag" {
             let mut tokens = TokenStream::new();
-            attr.parse_nested_meta(|nested| {
-                let path = &nested.path;
-                if first && (nested.input.is_empty() || nested.input.peek(Token![,])) {
-                    self.slug.set_once(path.clone(), path.span().unwrap());
-                    first = false;
-                    return Ok(());
+            match &attr.meta {
+                Meta::List(MetaList { path, tokens, .. }) => {
+                    let first = tokens.clone().into_iter().next();
+                    if let Some(TokenTree::Literal(litstr)) = first.clone() {
+                        let litstr = LitStr::new(&litstr.to_string(), litstr.span());
+                        self.label.set_once(litstr, path.span().unwrap());
+                        set_label = true;
+                    }
                 }
+                _ => {}
+            }
+            if !set_label {
+                let mut first = true;
+                attr.parse_nested_meta(|nested| {
+                    let path = &nested.path;
+                    if first && (nested.input.is_empty() || nested.input.peek(Token![,])) {
+                        self.slug.set_once(path.clone(), path.span().unwrap());
+                        first = false;
+                        return Ok(());
+                    }
 
-                first = false;
+                    first = false;
+                    let Ok(nested) = nested.value() else {
+                        span_err(
+                            nested.input.span().unwrap(),
+                            "diagnostic slug must be the first argument",
+                        )
+                        .emit();
+                        return Ok(());
+                    };
 
-                let Ok(nested) = nested.value() else {
-                    span_err(
-                        nested.input.span().unwrap(),
-                        "diagnostic slug must be the first argument",
-                    )
-                    .emit();
-                    return Ok(());
-                };
-
-                if path.is_ident("text") || path.is_ident("label") {
-                    let value = nested.parse::<syn::LitStr>()?;
-                    self.text.set_once(value, path.span().unwrap());
-                } else if path.is_ident("code") {
-                    self.code.set_once((), path.span().unwrap());
-                    let code = nested.parse::<syn::LitStr>()?;
-                    tokens.extend(quote! {
-                        #diag.code(rustc_errors::DiagnosticId::Error(#code.to_string()));
-                    });
-                } else {
-                    let mut founded = false;
-                    let keys = vec!["note", "help", "warning", "suggestion"];
-                    for key in keys {
-                        if path.is_ident(key) {
-                            if let Ok(value) = nested.parse::<syn::LitStr>() {
-                                self.attrs.insert(key.to_string(), value.clone());
-                                founded = true;
+                    if path.is_ident("text") || path.is_ident("label") {
+                        let value = nested.parse::<syn::LitStr>()?;
+                        self.label.set_once(value, path.span().unwrap());
+                    } else if path.is_ident("code") {
+                        self.code.set_once((), path.span().unwrap());
+                        let code = nested.parse::<syn::LitStr>()?;
+                        tokens.extend(quote! {
+                            #diag.code(rustc_errors::DiagnosticId::Error(#code.to_string()));
+                        });
+                    } else {
+                        let mut founded = false;
+                        let keys = vec!["note", "help", "warning", "suggestion"];
+                        for key in keys {
+                            if path.is_ident(key) {
+                                if let Ok(value) = nested.parse::<syn::LitStr>() {
+                                    self.attrs.insert(key.to_string(), value.clone());
+                                    founded = true;
+                                }
                             }
                         }
+                        if !founded {
+                            span_err(path.span().unwrap(), "unknown argument")
+                                .note("only the `code` parameter is valid after the slug")
+                                .emit();
+                            // consume the buffer so we don't have syntax errors from syn
+                            let _ = nested.parse::<TokenStream>();
+                        }
                     }
-                    if !founded {
-                        span_err(path.span().unwrap(), "unknown argument")
-                            .note("only the `code` parameter is valid after the slug")
-                            .emit();
-                        // consume the buffer so we don't have syntax errors from syn
-                        let _ = nested.parse::<TokenStream>();
-                    }
-                }
-                Ok(())
-            })?;
+                    Ok(())
+                })?;
+            }
             return Ok(tokens);
         }
 
