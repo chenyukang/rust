@@ -65,7 +65,7 @@ pub trait Translate {
         trace!(?message, ?args);
         let (identifier, attr) = match message {
             DiagnosticMessage::Str(msg) | DiagnosticMessage::Eager(msg) => {
-                if args.iter().next().is_none() || !msg.contains("$") {
+                if args.iter().next().is_none() || (!msg.contains("$") && !msg.contains("`{")) {
                     return Ok(Cow::Borrowed(msg));
                 } else {
                     // FIXME(yukang) A hacky for raw fluent content

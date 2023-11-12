@@ -30,6 +30,11 @@ pub(crate) fn new_code_ident() -> syn::Ident {
     })
 }
 
+pub(crate) fn convert_to_litstr(lit: &proc_macro2::Literal) -> LitStr {
+    let lit_content = format!("{}", lit);
+    LitStr::new(&lit_content[1..lit_content.len() - 1], lit.span())
+}
+
 /// Checks whether the type name of `ty` matches `name`.
 ///
 /// Given some struct at `a::b::c::Foo`, this will return true for `c::Foo`, `b::c::Foo`, or
