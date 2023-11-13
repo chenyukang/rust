@@ -30,6 +30,7 @@ impl<'a> DiagnosticDerive<'a> {
     pub(crate) fn into_tokens(self) -> TokenStream {
         let DiagnosticDerive { mut structure, mut builder } = self;
 
+        let slugs = RefCell::new(Vec::new());
         let implementation = builder.each_variant(&mut structure, |mut builder, variant| {
             let diag = &builder.parent.diag;
             let DiagnosticDeriveKind::Diagnostic { handler } = &builder.parent.kind else {
@@ -61,17 +62,18 @@ impl<'a> DiagnosticDerive<'a> {
                     return DiagnosticDeriveError::ErrorHandled.to_compile_error();
                 }
                 (Some(slug), None) => {
+                    slugs.borrow_mut().push(slug.clone());
                     quote! {
                         let mut #diag = #handler.struct_diagnostic(crate::fluent_generated::#slug);
                     }
                 }
-                (None, Some(text)) => {
+                (None, Some(raw_label)) => {
                     quote! {
-                        let mut #diag = #handler.struct_diagnostic(DiagnosticMessage::Str(#text.into()));
+                        let mut #diag = #handler.struct_diagnostic(DiagnosticMessage::Str(#raw_label.into()));
                     }
                 }
-                (Some(_slug), Some(_text)) => {
-                    unreachable!("BUG: slug and text specified");
+                (Some(_slug), Some(_raw_label)) => {
+                    unreachable!("BUG: slug and raw label specified");
                 }
             };
 
@@ -89,7 +91,7 @@ impl<'a> DiagnosticDerive<'a> {
             unreachable!();
         };
 
-        let imp = structure.gen_impl(quote! {
+        let mut imp = structure.gen_impl(quote! {
             gen impl<'__diagnostic_handler_sess, G>
                     rustc_errors::IntoDiagnostic<'__diagnostic_handler_sess, G>
                     for @Self
@@ -106,6 +108,10 @@ impl<'a> DiagnosticDerive<'a> {
                 }
             }
         });
+
+        for test in slugs.borrow().iter().map(|s| generate_test(s, &structure)) {
+            imp.extend(test);
+        }
         imp
     }
 }
