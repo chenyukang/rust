@@ -19,7 +19,6 @@ use crate::errors::{
     UnexpectedConstParamDeclarationSugg, UnmatchedAngleBrackets, UseEqInstead, WrapType,
 };
 
-use crate::fluent_generated as fluent;
 use crate::parser;
 use rustc_ast as ast;
 use rustc_ast::ptr::P;
@@ -1102,7 +1101,7 @@ impl<'a> Parser<'a> {
                     if self.eat(&token::Gt) {
                         e.span_suggestion_verbose(
                             binop.span.shrink_to_lo(),
-                            fluent::parse_sugg_turbofish_syntax,
+                            "use `::<...>` instead of `<...>` to specify lifetime, type, or const arguments",
                             "::",
                             Applicability::MaybeIncorrect,
                         )
@@ -2743,7 +2742,7 @@ impl<'a> Parser<'a> {
         let mut err = self.struct_span_err(comma_span, "unexpected `,` in pattern");
         if let Ok(seq_snippet) = self.span_to_snippet(seq_span) {
             if is_mac_invoc {
-                err.note(fluent::parse_macro_expands_to_match_arm);
+                err.note("macros cannot expand to match arms");
             } else {
                 err.multipart_suggestion(
                     format!(

@@ -11,7 +11,6 @@ use rustc_span::edition::{Edition, LATEST_STABLE_EDITION};
 use rustc_span::symbol::Ident;
 use rustc_span::{Span, Symbol};
 
-use crate::fluent_generated as fluent;
 use crate::parser::{ForbiddenLetReason, TokenDescription};
 
 #[derive(Diagnostic)]
@@ -1206,16 +1205,18 @@ impl<'a, G: EmissionGuarantee> IntoDiagnostic<'a, G> for ExpectedIdentifier {
 
         let mut diag = handler.struct_diagnostic(match token_descr {
             Some(TokenDescription::ReservedIdentifier) => {
-                fluent::parse_expected_identifier_found_reserved_identifier_str
+                "expected identifier, found reserved identifier `{$token}`"
             }
-            Some(TokenDescription::Keyword) => fluent::parse_expected_identifier_found_keyword_str,
+            Some(TokenDescription::Keyword) => "expected identifier, found keyword `{$token}`",
             Some(TokenDescription::ReservedKeyword) => {
-                fluent::parse_expected_identifier_found_reserved_keyword_str
+                "expected identifier, found reserved keyword `{$token}`"
             }
+
             Some(TokenDescription::DocComment) => {
-                fluent::parse_expected_identifier_found_doc_comment_str
+                "expected identifier, found doc comment `{$token}`"
             }
-            None => fluent::parse_expected_identifier_found_str,
+
+            None => "expected identifier, found `{$token}`",
         });
         diag.set_span(self.span);
         diag.set_arg("token", self.token);
@@ -1262,28 +1263,21 @@ impl<'a, G: EmissionGuarantee> IntoDiagnostic<'a, G> for ExpectedSemi {
         let token_descr = TokenDescription::from_token(&self.token);
 
         let mut diag = handler.struct_diagnostic(match token_descr {
-            Some(TokenDescription::ReservedIdentifier) => DiagnosticMessage::Str(Cow::from(
-                "expected `;`, found reserved identifier `{$token}`",
-            )),
-            Some(TokenDescription::Keyword) => {
-                DiagnosticMessage::Str(Cow::from("expected `;`, found keyword `{$token}`"))
+            Some(TokenDescription::ReservedIdentifier) => {
+                "expected `;`, found reserved identifier `{$token}`"
             }
+            Some(TokenDescription::Keyword) => "expected `;`, found keyword `{$token}`",
             Some(TokenDescription::ReservedKeyword) => {
-                DiagnosticMessage::Str(Cow::from("expected `;`, found reserved keyword `{$token}`"))
+                "expected `;`, found reserved keyword `{$token}`"
             }
-            Some(TokenDescription::DocComment) => {
-                DiagnosticMessage::Str(Cow::from("expected `;`, found doc comment `{$token}`"))
-            }
-            None => DiagnosticMessage::Str(Cow::from("expected `;`, found `{$token}`")),
+            Some(TokenDescription::DocComment) => "expected `;`, found doc comment `{$token}`",
+            None => "expected `;`, found `{$token}`",
         });
         diag.set_span(self.span);
         diag.set_arg("token", self.token);
 
         if let Some(unexpected_token_label) = self.unexpected_token_label {
-            diag.span_label(
-                unexpected_token_label,
-                DiagnosticMessage::Str(Cow::from("unexpected token")),
-            );
+            diag.span_label(unexpected_token_label, "unexpected token");
         }
 
         self.sugg.add_to_diagnostic(&mut diag);
