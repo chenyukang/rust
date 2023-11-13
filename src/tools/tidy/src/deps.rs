@@ -234,6 +234,7 @@ const PERMITTED_RUSTC_DEPENDENCIES: &[&str] = &[
     "fastrand",
     "field-offset",
     "flate2",
+    "fluent", // FIXME (yukang)
     "fluent-bundle",
     "fluent-langneg",
     "fluent-syntax",
