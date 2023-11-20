@@ -1528,7 +1528,10 @@ pub(crate) struct ParenthesesInMatchPat {
 }
 
 #[derive(Subdiagnostic)]
-#[multipart_suggestion(label = "remove parentheses surrounding the pattern", applicability = "machine-applicable")]
+#[multipart_suggestion(
+    label = "remove parentheses surrounding the pattern",
+    applicability = "machine-applicable"
+)]
 pub(crate) struct ParenthesesInMatchPatSugg {
     #[suggestion_part(code = "")]
     pub left: Span,
@@ -3472,7 +3475,10 @@ pub(crate) struct TransposeDynOrImpl<'a> {
 }
 
 #[derive(Subdiagnostic)]
-#[multipart_suggestion(label = "move `{$kw}` before the `for<...>`", applicability = "machine-applicable")]
+#[multipart_suggestion(
+    label = "move `{$kw}` before the `for<...>`",
+    applicability = "machine-applicable"
+)]
 pub(crate) struct TransposeDynOrImplSugg<'a> {
     #[suggestion_part(code = "")]
     pub removal_span: Span,
