@@ -25,5 +25,6 @@ pub use StabilityLevel::*;
 pub use rustc_ast::attr::*;
 
 pub(crate) use rustc_session::HashStableContext;
+pub use session_diagnostics::{InvalidAttrAtCrateLevel, ItemFollowingInnerAttr};
 
 rustc_fluent_macro::fluent_messages! { "../messages.ftl" }

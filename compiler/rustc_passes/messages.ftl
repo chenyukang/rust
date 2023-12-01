@@ -389,13 +389,6 @@ passes_inline_not_fn_or_closure =
 passes_inner_crate_level_attr =
     crate-level attribute should be in the root module
 
-passes_invalid_attr_at_crate_level =
-    `{$name}` attribute cannot be used at crate level
-    .suggestion = perhaps you meant to use an outer attribute
-
-passes_invalid_attr_at_crate_level_item =
-    the inner attribute doesn't annotate this {$kind}
-
 passes_invalid_macro_export_arguments = `{$name}` isn't a valid `#[macro_export]` argument
 
 passes_invalid_macro_export_arguments_too_many_items = `#[macro_export]` can only take 1 or 0 arguments

@@ -787,3 +787,16 @@ pub(crate) struct IsNotDirectlyImportable {
     pub(crate) span: Span,
     pub(crate) target: Ident,
 }
+
+#[derive(Subdiagnostic)]
+#[suggestion(
+    resolve_suggestion,
+    code = "",
+    applicability = "machine-applicable",
+    style = "verbose"
+)]
+pub(crate) struct InvalidAttrSugg {
+    #[primary_span]
+    pub(crate) span: Span,
+    pub(crate) name: Symbol,
+}

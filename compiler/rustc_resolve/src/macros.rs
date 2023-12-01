@@ -10,7 +10,9 @@ use crate::{BuiltinMacroState, Determinacy, MacroData};
 use crate::{DeriveData, Finalize, ParentScope, ResolutionError, Resolver, ScopeSet};
 use crate::{ModuleKind, ModuleOrUniformRoot, NameBinding, PathResult, Segment, ToNameBinding};
 use rustc_ast::expand::StrippedCfgItem;
-use rustc_ast::{self as ast, attr, Crate, Inline, ItemKind, ModKind, NodeId};
+use rustc_ast::{
+    self as ast, attr, AttrStyle, Attribute, Crate, Inline, ItemKind, ModKind, NodeId,
+};
 use rustc_ast_pretty::pprust;
 use rustc_attr::StabilityLevel;
 use rustc_data_structures::intern::Interned;
@@ -35,7 +37,7 @@ use rustc_span::edition::Edition;
 use rustc_span::hygiene::{self, ExpnData, ExpnKind, LocalExpnId};
 use rustc_span::hygiene::{AstPass, MacroKind};
 use rustc_span::symbol::{kw, sym, Ident, Symbol};
-use rustc_span::{Span, DUMMY_SP};
+use rustc_span::{BytePos, Span, DUMMY_SP};
 use std::cell::Cell;
 use std::mem;
 
@@ -689,6 +691,32 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
         res.map(|res| (self.get_macro(res).map(|macro_data| macro_data.ext.clone()), res))
     }
 
+    fn report_invalid_crate_level_attr(&mut self, attrs: &[Attribute], name: Symbol) -> bool {
+        for attr in attrs.iter().filter(|attr| attr.style == AttrStyle::Inner) {
+            if attr.has_name(name) {
+                let tcx = self.tcx;
+                tcx.dcx().emit_err(rustc_attr::InvalidAttrAtCrateLevel {
+                    span: attr.span,
+                    sugg_span: tcx
+                        .sess
+                        .source_map()
+                        .span_to_snippet(attr.span)
+                        .ok()
+                        .filter(|src| src.starts_with("#!["))
+                        .map(|_| {
+                            attr.span
+                                .with_lo(attr.span.lo() + BytePos(1))
+                                .with_hi(attr.span.lo() + BytePos(2))
+                        }),
+                    name,
+                    item: None,
+                });
+                return true;
+            }
+        }
+        false
+    }
+
     pub(crate) fn finalize_macro_resolutions(&mut self, krate: &Crate) {
         let check_consistency = |this: &mut Self,
                                  path: &[Segment],
@@ -708,15 +736,29 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                 // expanded into a dummy fragment for recovery during expansion.
                 // Now, post-expansion, the resolution may succeed, but we can't change the
                 // past and need to report an error.
-                // However, non-speculative `resolve_path` can successfully return private items
+                // Special cases:
+                // 1. non-speculative `resolve_path` can successfully return private items
                 // even if speculative `resolve_path` returned nothing previously, so we skip this
                 // less informative error if the privacy error is reported elsewhere.
+                // 2. issue #118455, unresolved top level attribute error didn't imported prelude and
+                // already have emitted an error, report builtin macro and attributes error by the way,
+                // so `check_invalid_crate_level_attr` in can ignore them.
+
                 if this.privacy_errors.is_empty() {
-                    this.dcx().emit_err(CannotDetermineMacroResolution {
-                        span,
-                        kind: kind.descr(),
-                        path: Segment::names_to_string(path),
-                    });
+                    if this.is_builtin_macro(res)
+                        || this.builtin_attrs_bindings.values().any(|b| b.res() == res)
+                    {
+                        if !this.report_invalid_crate_level_attr(&krate.attrs, path[0].ident.name) {
+                            return;
+                        }
+                        if this.tcx.dcx().has_errors().is_none() {
+                            this.dcx().emit_err(CannotDetermineMacroResolution {
+                                span,
+                                kind: kind.descr(),
+                                path: Segment::names_to_string(path),
+                            });
+                        }
+                    }
                 }
             }
         };

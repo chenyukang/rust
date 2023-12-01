@@ -2503,12 +2503,8 @@ fn is_c_like_enum(item: &Item<'_>) -> bool {
     }
 }
 
-// FIXME: Fix "Cannot determine resolution" error and remove built-in macros
-// from this check.
+// Built-in macros will be checked in resolve.
 fn check_invalid_crate_level_attr(tcx: TyCtxt<'_>, attrs: &[Attribute]) {
-    // Check for builtin attributes at the crate level
-    // which were unsuccessfully resolved due to cannot determine
-    // resolution for the attribute macro error.
     const ATTRS_TO_CHECK: &[Symbol] = &[
         sym::macro_export,
         sym::repr,
@@ -2517,11 +2513,6 @@ fn check_invalid_crate_level_attr(tcx: TyCtxt<'_>, attrs: &[Attribute]) {
         sym::start,
         sym::rustc_main,
         sym::unix_sigpipe,
-        sym::derive,
-        sym::test,
-        sym::test_case,
-        sym::global_allocator,
-        sym::bench,
     ];
 
     for attr in attrs {
@@ -2535,11 +2526,11 @@ fn check_invalid_crate_level_attr(tcx: TyCtxt<'_>, attrs: &[Attribute]) {
                         .items()
                         .map(|id| tcx.hir().item(id))
                         .find(|item| !item.span.is_dummy()) // Skip prelude `use`s
-                        .map(|item| errors::ItemFollowingInnerAttr {
+                        .map(|item| rustc_attr::ItemFollowingInnerAttr {
                             span: item.ident.span,
                             kind: item.kind.descr(),
                         });
-                    tcx.dcx().emit_err(errors::InvalidAttrAtCrateLevel {
+                    tcx.dcx().emit_err(rustc_attr::InvalidAttrAtCrateLevel {
                         span: attr.span,
                         sugg_span: tcx
                             .sess

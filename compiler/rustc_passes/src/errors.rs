@@ -856,44 +856,6 @@ pub struct UnknownLangItem {
     pub name: Symbol,
 }
 
-pub struct InvalidAttrAtCrateLevel {
-    pub span: Span,
-    pub sugg_span: Option<Span>,
-    pub name: Symbol,
-    pub item: Option<ItemFollowingInnerAttr>,
-}
-
-#[derive(Clone, Copy)]
-pub struct ItemFollowingInnerAttr {
-    pub span: Span,
-    pub kind: &'static str,
-}
-
-impl<G: EmissionGuarantee> IntoDiagnostic<'_, G> for InvalidAttrAtCrateLevel {
-    #[track_caller]
-    fn into_diagnostic(self, dcx: &'_ DiagCtxt, level: Level) -> DiagnosticBuilder<'_, G> {
-        let mut diag =
-            DiagnosticBuilder::new(dcx, level, fluent::passes_invalid_attr_at_crate_level);
-        diag.span(self.span);
-        diag.arg("name", self.name);
-        // Only emit an error with a suggestion if we can create a string out
-        // of the attribute span
-        if let Some(span) = self.sugg_span {
-            diag.span_suggestion_verbose(
-                span,
-                fluent::passes_suggestion,
-                String::new(),
-                Applicability::MachineApplicable,
-            );
-        }
-        if let Some(item) = self.item {
-            diag.arg("kind", item.kind);
-            diag.span_label(item.span, fluent::passes_invalid_attr_at_crate_level_item);
-        }
-        diag
-    }
-}
-
 #[derive(Diagnostic)]
 #[diag(passes_duplicate_diagnostic_item_in_crate)]
 pub struct DuplicateDiagnosticItemInCrate {
