@@ -216,12 +216,18 @@ fn missing_items_err(
     let (mut missing_trait_item, mut missing_trait_item_none, mut missing_trait_item_label) =
         (Vec::new(), Vec::new(), Vec::new());
 
+    let module_did = tcx.parent_module_from_def_id(impl_def_id);
+    let path = tcx.def_path(module_did.into());
+    let module_def_path = path.to_string_no_crate_verbose().trim_start_matches(&[':']).to_string();
+
     for &trait_item in missing_items {
         let snippet = suggestion_signature(
             tcx,
             trait_item,
             tcx.impl_trait_ref(impl_def_id).unwrap().instantiate_identity(),
+            &module_def_path,
         );
+
         let code = format!("{padding}{snippet}\n{padding}");
         if let Some(span) = tcx.hir().span_if_local(trait_item.def_id) {
             missing_trait_item_label
@@ -385,12 +391,25 @@ fn fn_sig_suggestion<'tcx>(
     ident: Ident,
     predicates: impl IntoIterator<Item = (ty::Clause<'tcx>, Span)>,
     assoc: ty::AssocItem,
+    module_def_path: &str,
 ) -> String {
     let args = sig
         .inputs()
         .iter()
         .enumerate()
         .map(|(i, ty)| {
+            let ty_str = format!("{:?}", ty);
+            let ty_str = if ty_str.contains("::") {
+                ty_str
+                    .strip_prefix(module_def_path)
+                    .unwrap_or(&ty_str)
+                    .trim_start_matches(&[':'])
+                    .to_string()
+            } else {
+                let module_def_count = module_def_path.split("::").count();
+                let prefix = (0..module_def_count).map(|_| "super").collect::<Vec<_>>().join("::");
+                format!("{}::{}", prefix, ty_str)
+            };
             Some(match ty.kind() {
                 ty::Param(_) if assoc.fn_has_self_parameter && i == 0 => "self".to_string(),
                 ty::Ref(reg, ref_ty, mutability) if i == 0 => {
@@ -405,17 +424,17 @@ fn fn_sig_suggestion<'tcx>(
                                 format!("&{}{}self", reg, mutability.prefix_str())
                             }
 
-                            _ => format!("self: {ty}"),
+                            _ => format!("self: {ty_str}"),
                         }
                     } else {
-                        format!("_: {ty}")
+                        format!("_: {ty_str}")
                     }
                 }
                 _ => {
                     if assoc.fn_has_self_parameter && i == 0 {
-                        format!("self: {ty}")
+                        format!("self: {ty_str}")
                     } else {
-                        format!("_: {ty}")
+                        format!("_: {ty_str}")
                     }
                 }
             })
@@ -481,6 +500,7 @@ fn suggestion_signature<'tcx>(
     tcx: TyCtxt<'tcx>,
     assoc: ty::AssocItem,
     impl_trait_ref: ty::TraitRef<'tcx>,
+    module_def_path: &str,
 ) -> String {
     let args = ty::GenericArgs::identity_for_item(tcx, assoc.def_id).rebase_onto(
         tcx,
@@ -498,6 +518,7 @@ fn suggestion_signature<'tcx>(
             assoc.ident(tcx),
             tcx.predicates_of(assoc.def_id).instantiate_own(tcx, args),
             assoc,
+            module_def_path,
         ),
         ty::AssocKind::Type => {
             let (generics, where_clauses) = bounds_from_generic_predicates(

@@ -7,13 +7,13 @@ trait T {
 
 mod foo {
     use super::T;
-    impl T for () {    fn bar(&self, _: &usize, _: &usize) -> usize { todo!() }
-        unsafe fn foo(_: &usize, _: &usize) -> usize { todo!() }
+    impl T for () {    fn bar(&self, _: &ReLateParam(DefId(0:5 ~ missing_trait_item[a60e]::T::bar), BrNamed(DefId(0:14 ~ missing_trait_item[a60e]::T::bar::'_#1), '_)) usize, _: &ReLateParam(DefId(0:5 ~ missing_trait_item[a60e]::T::bar), BrNamed(DefId(0:15 ~ missing_trait_item[a60e]::T::bar::'_#2), '_)) usize) -> usize { todo!() }
+        unsafe fn foo(_: &ReLateParam(DefId(0:4 ~ missing_trait_item[a60e]::T::foo), BrNamed(DefId(0:11 ~ missing_trait_item[a60e]::T::foo::'_), '_)) usize, _: &ReLateParam(DefId(0:4 ~ missing_trait_item[a60e]::T::foo), BrNamed(DefId(0:12 ~ missing_trait_item[a60e]::T::foo::'_#1), '_)) usize) -> usize { todo!() }
     } //~ ERROR not all trait items
 
     impl T for usize { //~ ERROR not all trait items
-        fn bar(&self, _: &usize, _: &usize) -> usize { todo!() }
-        unsafe fn foo(_: &usize, _: &usize) -> usize { todo!() }
+        fn bar(&self, _: &ReLateParam(DefId(0:5 ~ missing_trait_item[a60e]::T::bar), BrNamed(DefId(0:14 ~ missing_trait_item[a60e]::T::bar::'_#1), '_)) usize, _: &ReLateParam(DefId(0:5 ~ missing_trait_item[a60e]::T::bar), BrNamed(DefId(0:15 ~ missing_trait_item[a60e]::T::bar::'_#2), '_)) usize) -> usize { todo!() }
+        unsafe fn foo(_: &ReLateParam(DefId(0:4 ~ missing_trait_item[a60e]::T::foo), BrNamed(DefId(0:11 ~ missing_trait_item[a60e]::T::foo::'_), '_)) usize, _: &ReLateParam(DefId(0:4 ~ missing_trait_item[a60e]::T::foo), BrNamed(DefId(0:12 ~ missing_trait_item[a60e]::T::foo::'_#1), '_)) usize) -> usize { todo!() }
     }
 }
 

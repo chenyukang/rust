@@ -5,8 +5,8 @@ LL | impl TraitA<()> for S {
    | ^^^^^^^^^^^^^^^^^^^^^ missing `Type`, `bar`, `baz`, `A` in implementation
    |
    = help: implement the missing item: `type Type = /* Type */;`
-   = help: implement the missing item: `fn bar<T>(_: T) -> Self { todo!() }`
-   = help: implement the missing item: `fn baz<T>(_: T) -> Self where T: TraitB, <T as TraitB>::Item: Copy { todo!() }`
+   = help: implement the missing item: `fn bar<T>(_: super::T/#2) -> Self { todo!() }`
+   = help: implement the missing item: `fn baz<T>(_: super::T/#2) -> Self where T: TraitB, <T as TraitB>::Item: Copy { todo!() }`
    = help: implement the missing item: `const A: usize = 42;`
 
 error: aborting due to 1 previous error

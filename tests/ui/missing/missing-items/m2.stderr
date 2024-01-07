@@ -6,11 +6,11 @@ LL | impl m1::X for X {
    |
    = help: implement the missing item: `const CONSTANT: u32 = 42;`
    = help: implement the missing item: `type Type = /* Type */;`
-   = help: implement the missing item: `fn method(&self, _: String) -> <Self as m1::X>::Type { todo!() }`
-   = help: implement the missing item: `fn method2(self: Box<Self>, _: String) -> <Self as m1::X>::Type { todo!() }`
-   = help: implement the missing item: `fn method3(_: &Self, _: String) -> <Self as m1::X>::Type { todo!() }`
-   = help: implement the missing item: `fn method4(&self, _: &Self) -> <Self as m1::X>::Type { todo!() }`
-   = help: implement the missing item: `fn method5(self: &Box<Self>) -> <Self as m1::X>::Type { todo!() }`
+   = help: implement the missing item: `fn method(&self, _: std::string::String) -> <Self as m1::X>::Type { todo!() }`
+   = help: implement the missing item: `fn method2(self: std::boxed::Box<Self/#0, std::alloc::Global>, _: std::string::String) -> <Self as m1::X>::Type { todo!() }`
+   = help: implement the missing item: `fn method3(_: &ReLateParam(DefId(20:8 ~ m1[4293]::X::method3), BrNamed(DefId(20:12 ~ m1[4293]::X::method3::'_), '_)) Self/#0, _: std::string::String) -> <Self as m1::X>::Type { todo!() }`
+   = help: implement the missing item: `fn method4(&self, _: &ReLateParam(DefId(20:9 ~ m1[4293]::X::method4), BrNamed(DefId(20:14 ~ m1[4293]::X::method4::'_#1), '_)) Self/#0) -> <Self as m1::X>::Type { todo!() }`
+   = help: implement the missing item: `fn method5(self: &ReLateParam(DefId(20:10 ~ m1[4293]::X::method5), BrNamed(DefId(20:15 ~ m1[4293]::X::method5::'_), '_)) std::boxed::Box<Self/#0, std::alloc::Global>) -> <Self as m1::X>::Type { todo!() }`
 
 error: aborting due to 1 previous error
 

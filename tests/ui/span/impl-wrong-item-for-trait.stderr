@@ -58,7 +58,7 @@ error[E0046]: not all trait items implemented, missing: `fmt`
 LL | impl Debug for FooTypeForMethod {}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing `fmt` in implementation
    |
-   = help: implement the missing item: `fn fmt(&self, _: &mut Formatter<'_>) -> Result<(), std::fmt::Error> { todo!() }`
+   = help: implement the missing item: `fn fmt(&self, _: &ReLateParam(DefId(2:9953 ~ core[1c17]::fmt::Debug::fmt), BrNamed(DefId(2:58889 ~ core[1c17]::fmt::Debug::fmt::'_#1), '_)) mut std::fmt::Formatter<ReLateParam(DefId(2:9953 ~ core[1c17]::fmt::Debug::fmt), BrNamed(DefId(2:58890 ~ core[1c17]::fmt::Debug::fmt::'_#2), '_))>) -> Result<(), std::fmt::Error> { todo!() }`
 
 error: aborting due to 7 previous errors
 

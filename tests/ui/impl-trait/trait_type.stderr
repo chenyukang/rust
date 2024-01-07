@@ -32,7 +32,7 @@ error[E0046]: not all trait items implemented, missing: `fmt`
 LL | impl std::fmt::Display for MyType4 {}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing `fmt` in implementation
    |
-   = help: implement the missing item: `fn fmt(&self, _: &mut Formatter<'_>) -> Result<(), std::fmt::Error> { todo!() }`
+   = help: implement the missing item: `fn fmt(&self, _: &ReLateParam(DefId(2:9958 ~ core[1c17]::fmt::Display::fmt), BrNamed(DefId(2:58892 ~ core[1c17]::fmt::Display::fmt::'_#1), '_)) mut std::fmt::Formatter<ReLateParam(DefId(2:9958 ~ core[1c17]::fmt::Display::fmt), BrNamed(DefId(2:58893 ~ core[1c17]::fmt::Display::fmt::'_#2), '_))>) -> Result<(), std::fmt::Error> { todo!() }`
 
 error: aborting due to 4 previous errors
 
