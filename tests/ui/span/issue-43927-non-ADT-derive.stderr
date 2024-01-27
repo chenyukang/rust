@@ -1,11 +1,3 @@
-error: cannot determine resolution for the attribute macro `derive`
-  --> $DIR/issue-43927-non-ADT-derive.rs:1:4
-   |
-LL | #![derive(Debug, PartialEq, Eq)] // should be an outer attribute!
-   |    ^^^^^^
-   |
-   = note: import resolution is stuck, try simplifying macro imports
-
 error: `derive` attribute cannot be used at crate level
   --> $DIR/issue-43927-non-ADT-derive.rs:1:1
    |
@@ -20,6 +12,14 @@ help: perhaps you meant to use an outer attribute
 LL - #![derive(Debug, PartialEq, Eq)] // should be an outer attribute!
 LL + #[derive(Debug, PartialEq, Eq)] // should be an outer attribute!
    |
+
+error: cannot determine resolution for the attribute macro `derive`
+  --> $DIR/issue-43927-non-ADT-derive.rs:1:4
+   |
+LL | #![derive(Debug, PartialEq, Eq)] // should be an outer attribute!
+   |    ^^^^^^
+   |
+   = note: import resolution is stuck, try simplifying macro imports
 
 error: aborting due to 2 previous errors
 

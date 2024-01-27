@@ -1,9 +1,9 @@
 //! A bunch of methods and structures more or less related to resolving macros and
 //! interface provided by `Resolver` to macro expander.
 
+use crate::errors::CannotDetermineMacroResolution;
 use crate::errors::{
-    self, AddAsNonDerive, CannotDetermineMacroResolution, CannotFindIdentInThisScope,
-    MacroExpectedFound, RemoveSurroundingDerive,
+    self, AddAsNonDerive, CannotFindIdentInThisScope, MacroExpectedFound, RemoveSurroundingDerive,
 };
 use crate::Namespace::*;
 use crate::{BuiltinMacroState, Determinacy, MacroData};
@@ -15,6 +15,7 @@ use rustc_ast_pretty::pprust;
 use rustc_attr::StabilityLevel;
 use rustc_data_structures::intern::Interned;
 use rustc_data_structures::sync::Lrc;
+use rustc_errors::StashKey::MacroResolutionError;
 use rustc_errors::{struct_span_code_err, Applicability};
 use rustc_expand::base::{Annotatable, DeriveResolutions, Indeterminate, ResolverExpand};
 use rustc_expand::base::{SyntaxExtension, SyntaxExtensionKind};
@@ -703,21 +704,21 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                     // situations should be reported as errors, so this is a bug.
                     this.dcx().span_delayed_bug(span, "inconsistent resolution for a macro");
                 }
-            } else {
+            } else if this.tcx.dcx().has_errors().is_none() && this.privacy_errors.is_empty() {
                 // It's possible that the macro was unresolved (indeterminate) and silently
                 // expanded into a dummy fragment for recovery during expansion.
                 // Now, post-expansion, the resolution may succeed, but we can't change the
                 // past and need to report an error.
                 // However, non-speculative `resolve_path` can successfully return private items
                 // even if speculative `resolve_path` returned nothing previously, so we skip this
-                // less informative error if the privacy error is reported elsewhere.
-                if this.privacy_errors.is_empty() {
-                    this.dcx().emit_err(CannotDetermineMacroResolution {
-                        span,
-                        kind: kind.descr(),
-                        path: Segment::names_to_string(path),
-                    });
-                }
+                // less informative error if no other error is reported elsewhere.
+
+                let err = this.dcx().create_err(CannotDetermineMacroResolution {
+                    span,
+                    kind: kind.descr(),
+                    path: Segment::names_to_string(path),
+                });
+                err.stash(span, MacroResolutionError);
             }
         };
 
