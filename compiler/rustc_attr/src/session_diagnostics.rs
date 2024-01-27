@@ -408,8 +408,8 @@ impl<G: EmissionGuarantee> IntoDiagnostic<'_, G> for InvalidAttrAtCrateLevel {
     #[track_caller]
     fn into_diagnostic(self, dcx: &'_ DiagCtxt, level: Level) -> DiagnosticBuilder<'_, G> {
         let mut diag = DiagnosticBuilder::new(dcx, level, fluent::attr_invalid_attr_at_crate_level);
-        diag.set_span(self.span);
-        diag.set_arg("name", self.name);
+        diag.span(self.span);
+        diag.arg("name", self.name);
         // Only emit an error with a suggestion if we can create a string out
         // of the attribute span
         if let Some(span) = self.sugg_span {
@@ -421,7 +421,7 @@ impl<G: EmissionGuarantee> IntoDiagnostic<'_, G> for InvalidAttrAtCrateLevel {
             );
         }
         if let Some(item) = self.item {
-            diag.set_arg("kind", item.kind);
+            diag.arg("kind", item.kind);
             diag.span_label(item.span, fluent::attr_invalid_attr_at_crate_level_item);
         }
         diag

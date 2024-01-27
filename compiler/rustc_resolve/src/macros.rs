@@ -748,16 +748,16 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
                     if this.is_builtin_macro(res)
                         || this.builtin_attrs_bindings.values().any(|b| b.res() == res)
                     {
-                        if !this.report_invalid_crate_level_attr(&krate.attrs, path[0].ident.name) {
+                        if this.report_invalid_crate_level_attr(&krate.attrs, path[0].ident.name) {
                             return;
                         }
-                        if this.tcx.dcx().has_errors().is_none() {
-                            this.dcx().emit_err(CannotDetermineMacroResolution {
-                                span,
-                                kind: kind.descr(),
-                                path: Segment::names_to_string(path),
-                            });
-                        }
+                    }
+                    if this.tcx.dcx().has_errors().is_none() {
+                        this.dcx().emit_err(CannotDetermineMacroResolution {
+                            span,
+                            kind: kind.descr(),
+                            path: Segment::names_to_string(path),
+                        });
                     }
                 }
             }
