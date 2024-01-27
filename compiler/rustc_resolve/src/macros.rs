@@ -10,9 +10,7 @@ use crate::{BuiltinMacroState, Determinacy, MacroData};
 use crate::{DeriveData, Finalize, ParentScope, ResolutionError, Resolver, ScopeSet};
 use crate::{ModuleKind, ModuleOrUniformRoot, NameBinding, PathResult, Segment, ToNameBinding};
 use rustc_ast::expand::StrippedCfgItem;
-use rustc_ast::{
-    self as ast, attr, AttrStyle, Attribute, Crate, Inline, ItemKind, ModKind, NodeId,
-};
+use rustc_ast::{self as ast, attr, Attribute, Crate, Inline, ItemKind, ModKind, NodeId};
 use rustc_ast_pretty::pprust;
 use rustc_attr::StabilityLevel;
 use rustc_data_structures::intern::Interned;
@@ -692,7 +690,7 @@ impl<'a, 'tcx> Resolver<'a, 'tcx> {
     }
 
     fn report_invalid_crate_level_attr(&mut self, attrs: &[Attribute], name: Symbol) -> bool {
-        for attr in attrs.iter().filter(|attr| attr.style == AttrStyle::Inner) {
+        for attr in attrs {
             if attr.has_name(name) {
                 let tcx = self.tcx;
                 tcx.dcx().emit_err(rustc_attr::InvalidAttrAtCrateLevel {

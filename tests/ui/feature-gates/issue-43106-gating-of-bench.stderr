@@ -1,14 +1,10 @@
-error: `bench` attribute cannot be used at crate level
-  --> $DIR/issue-43106-gating-of-bench.rs:6:1
+error: cannot determine resolution for the attribute macro `bench`
+  --> $DIR/issue-43106-gating-of-bench.rs:6:4
    |
 LL | #![bench = "4100"]
-   | ^^^^^^^^^^^^^^^^^^
+   |    ^^^^^
    |
-help: perhaps you meant to use an outer attribute
-   |
-LL - #![bench = "4100"]
-LL + #[bench = "4100"]
-   |
+   = note: import resolution is stuck, try simplifying macro imports
 
 error: aborting due to 1 previous error
 
