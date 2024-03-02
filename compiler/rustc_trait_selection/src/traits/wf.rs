@@ -2,12 +2,13 @@ use crate::infer::InferCtxt;
 use crate::traits;
 use rustc_hir as hir;
 use rustc_hir::lang_items::LangItem;
-use rustc_middle::ty::{self, Ty, TyCtxt, TypeVisitableExt};
+use rustc_middle::ty::{self, Ty, TyCtxt, TypeVisitable, TypeVisitableExt};
 use rustc_middle::ty::{GenericArg, GenericArgKind, GenericArgsRef};
 use rustc_span::def_id::{DefId, LocalDefId, CRATE_DEF_ID};
 use rustc_span::{Span, DUMMY_SP};
 
 use std::iter;
+use std::ops::ControlFlow;
 /// Returns the set of obligations needed to make `arg` well-formed.
 /// If `arg` contains unresolved inference variables, this may include
 /// further WF obligations. However, if `arg` IS an unresolved
@@ -507,12 +508,70 @@ impl<'a, 'tcx> WfPredicates<'a, 'tcx> {
         }
     }
 
+    #[instrument(level = "debug", skip(self))]
+    fn compute_v2(&mut self, arg: GenericArg<'tcx>) {
+        struct ArgVisitor<'a, 'tcx>
+        where
+            'a: 'tcx,
+        {
+            depth: usize,
+            wf: &'tcx mut WfPredicates<'a, 'tcx>,
+        }
+        impl<'tcx, 'a: 'tcx> ty::visit::TypeVisitor<TyCtxt<'tcx>> for ArgVisitor<'a, 'tcx> {
+            type BreakTy = ();
+
+            fn visit_const(
+                &mut self,
+                c: <TyCtxt<'tcx> as ty::Interner>::Const,
+            ) -> std::ops::ControlFlow<Self::BreakTy> {
+                match c.kind() {
+                    ty::ConstKind::Unevaluated(_uv) => {
+                        return ControlFlow::Break(());
+                    }
+                    _ => {
+                        todo!()
+                    }
+                }
+            }
+
+            fn visit_ty(
+                &mut self,
+                t: <TyCtxt<'tcx> as ty::Interner>::Ty,
+            ) -> std::ops::ControlFlow<Self::BreakTy> {
+                match *t.kind() {
+                    ty::Bool
+                    | ty::Char
+                    | ty::Int(..)
+                    | ty::Uint(..)
+                    | ty::Float(..)
+                    | ty::Error(_)
+                    | ty::Str
+                    | ty::CoroutineWitness(..)
+                    | ty::Never
+                    | ty::Param(_)
+                    | ty::Bound(..)
+                    | ty::Placeholder(..)
+                    | ty::Foreign(..) => {
+                        // WfScalar, WfParameter, etc
+                        return ControlFlow::Break(());
+                    }
+                    _ => ControlFlow::Break(()),
+                }
+            }
+        }
+        let _param_env = self.param_env;
+        let _odepth = self.recursion_depth;
+        let mut visitor = ArgVisitor { depth: self.recursion_depth, wf: self };
+        arg.visit_with(&mut visitor).break_value();
+    }
+
     /// Pushes all the predicates needed to validate that `ty` is WF into `out`.
     #[instrument(level = "debug", skip(self))]
     fn compute(&mut self, arg: GenericArg<'tcx>) {
         let mut walker = arg.walk();
         let param_env = self.param_env;
         let depth = self.recursion_depth;
+
         while let Some(arg) = walker.next() {
             debug!(?arg, ?self.out);
             let ty = match arg.unpack() {
