@@ -19,10 +19,6 @@ help: consider using a semicolon here
    |
 LL |   f(|x| match x { tmp => { g(tmp); } });
    |                                  +
-help: consider using a semicolon here
-   |
-LL |   f(|x| match x { tmp => { g(tmp) } };);
-   |                                      +
 
 error[E0308]: mismatched types
   --> $DIR/issue-81943.rs:10:38
@@ -41,10 +37,6 @@ help: consider using a semicolon here
    |
 LL |     ($e:expr) => { match $e { x => { g(x); } } }
    |                                          +
-help: consider using a semicolon here
-   |
-LL |     ($e:expr) => { match $e { x => { g(x) } }; }
-   |                                              +
 
 error: aborting due to 3 previous errors
 

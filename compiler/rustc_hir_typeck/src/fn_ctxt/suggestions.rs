@@ -737,7 +737,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         expression: &'tcx hir::Expr<'tcx>,
         expected: Ty<'tcx>,
         needs_block: bool,
-    ) {
+    ) -> bool {
         if expected.is_unit() {
             // `BlockTailExpression` only relevant if the tail expr would be
             // useful on its own.
@@ -764,17 +764,19 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                             Applicability::MachineApplicable,
                         );
                     } else {
-                        err.span_suggestion(
+                        err.span_suggestion_verbose(
                             expression.span.shrink_to_hi(),
                             "consider using a semicolon here",
                             ";",
                             Applicability::MachineApplicable,
                         );
                     }
+                    return true;
                 }
                 _ => (),
             }
         }
+        false
     }
 
     /// A possible error is to forget to add a return type that is needed:

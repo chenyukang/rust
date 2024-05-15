@@ -1963,7 +1963,7 @@ impl<'tcx, 'exprs, E: AsCoercionSite> CoerceMany<'tcx, 'exprs, E> {
         // label pointing out the cause for the type coercion will be wrong
         // as prior return coercions would not be relevant (#57664).
         let fn_decl = if let (Some(expr), Some(blk_id)) = (expression, blk_id) {
-            fcx.suggest_missing_semicolon(&mut err, expr, expected, false);
+            let suggested_for_expr = fcx.suggest_missing_semicolon(&mut err, expr, expected, false);
             let pointing_at_return_type =
                 fcx.suggest_mismatched_types_on_tail(&mut err, expr, expected, found, blk_id);
             if let (Some(cond_expr), true, false) = (
@@ -1984,7 +1984,7 @@ impl<'tcx, 'exprs, E: AsCoercionSite> CoerceMany<'tcx, 'exprs, E> {
                     )
             {
                 err.span_label(cond_expr.span, "expected this to be `()`");
-                if expr.can_have_side_effects() {
+                if expr.can_have_side_effects() && !suggested_for_expr {
                     fcx.suggest_semicolon_at_end(cond_expr.span, &mut err);
                 }
             }
