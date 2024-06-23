@@ -2,10 +2,7 @@ error[E0121]: the placeholder `_` is not allowed within types on item signatures
   --> $DIR/issue-118048.rs:7:6
    |
 LL | foo!(_);
-   |      ^
-   |      |
-   |      not allowed in type signatures
-   |      not allowed in type signatures
+   |      ^ not allowed in type signatures
    |
 help: use type parameters instead
    |

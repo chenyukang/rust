@@ -285,6 +285,7 @@ pub trait Emitter: Translate {
         } else {
             // do nothing
         }
+        primary_span.dedup();
     }
 
     fn fix_multispans_in_extern_macros_and_render_macro_backtrace(

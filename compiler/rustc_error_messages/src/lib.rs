@@ -443,6 +443,10 @@ impl MultiSpan {
         self.span_labels.push((span, label.into()));
     }
 
+    pub fn dedup(&mut self) {
+        self.span_labels.dedup_by(|a, b| a.0.source_equal(b.0) && a.1 == b.1);
+    }
+
     /// Selects the first primary span (if any).
     pub fn primary_span(&self) -> Option<Span> {
         self.primary_spans.first().cloned()
