@@ -3,7 +3,7 @@ Version 1.79.0 (2024-06-13)
 
 <a id="1.79.0-Language"></a>
 
-Languagex
+Language
 --------
 - [Stabilize inline `const {}` expressions.](https://github.com/rust-lang/rust/pull/104087/)
 - [Prevent opaque types being instantiated twice with different regions within the same function.](https://github.com/rust-lang/rust/pull/116935/)
