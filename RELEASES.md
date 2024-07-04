@@ -3,7 +3,7 @@ Version 1.79.0 (2024-06-13)
 
 <a id="1.79.0-Language"></a>
 
-Language
+Languagex
 --------
 - [Stabilize inline `const {}` expressions.](https://github.com/rust-lang/rust/pull/104087/)
 - [Prevent opaque types being instantiated twice with different regions within the same function.](https://github.com/rust-lang/rust/pull/116935/)
@@ -1131,7 +1131,7 @@ Compiler
 - [Detect uninhabited types early in const eval](https://github.com/rust-lang/rust/pull/109435/)
 - [Switch to LLD as default linker for {arm,thumb}v4t-none-eabi](https://github.com/rust-lang/rust/pull/109721/)
 - [Add tier 3 target `loongarch64-unknown-linux-gnu`](https://github.com/rust-lang/rust/pull/96971)
-- [Add tier 3 target for `i586-pc-nto-qnx700` (QNX Neutrino RTOS, version 7.0)](https://github.com/rust-lang/rust/pull/109173/), 
+- [Add tier 3 target for `i586-pc-nto-qnx700` (QNX Neutrino RTOS, version 7.0)](https://github.com/rust-lang/rust/pull/109173/),
 - [Insert alignment checks for pointer dereferences as debug assertions](https://github.com/rust-lang/rust/pull/98112)
   This catches undefined behavior at runtime, and may cause existing code to fail.
 
@@ -1338,7 +1338,7 @@ Compatibility Notes
   If `tools = [...]` is set in config.toml, we will respect a missing rustdoc in that list. By
   default rustdoc remains included. To retain the prior behavior explicitly add `"rustdoc"` to the
   list.
-  
+
 <a id="1.69.0-Internal-Changes"></a>
 
 Internal Changes
@@ -1382,7 +1382,7 @@ Language
 --------
 
 - [Stabilize default_alloc_error_handler](https://github.com/rust-lang/rust/pull/102318/)
-  This allows usage of `alloc` on stable without requiring the 
+  This allows usage of `alloc` on stable without requiring the
   definition of a handler for allocation failure. Defining custom handlers is still unstable.
 - [Stabilize `efiapi` calling convention.](https://github.com/rust-lang/rust/pull/105795/)
 - [Remove implicit promotion for types with drop glue](https://github.com/rust-lang/rust/pull/105085/)
