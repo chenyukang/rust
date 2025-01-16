@@ -150,6 +150,12 @@ pub fn check_crate(tcx: TyCtxt<'_>) {
         let _ = tcx.ensure().crate_inherent_impls_overlap_check(());
     });
 
+    // // this ensures that later parts of type checking can assume that items
+    // // have valid types and not error
+    // tcx.sess.time("type_collecting", || {
+    //     tcx.hir().for_each_module(|module| tcx.ensure().collect_mod_item_types(module))
+    // });
+
     if tcx.features().rustc_attrs() {
         tcx.sess.time("outlives_dumping", || outlives::dump::inferred_outlives(tcx));
         tcx.sess.time("variance_dumping", || variance::dump::variances(tcx));

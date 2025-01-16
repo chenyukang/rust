@@ -1637,7 +1637,9 @@ fn check_type_alias_type_params_are_used<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalD
     let ty = tcx.type_of(def_id).instantiate_identity();
     if ty.references_error() {
         // If there is already another error, do not emit an error for not using a type parameter.
-        assert!(tcx.dcx().has_errors().is_some());
+        eprintln!("assume ther is an error");
+        //assert!(tcx.dcx().has_errors().is_some());
+        tcx.dcx().span_delayed_bug(tcx.def_span(def_id), "expect reference error");
         return;
     }
 

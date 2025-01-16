@@ -377,6 +377,10 @@ fn bad_placeholder<'cx, 'tcx>(
     let kind = if kind.ends_with('s') { format!("{kind}es") } else { format!("{kind}s") };
 
     spans.sort();
+    // if set panic environment variable, then panic
+    if let Ok(_panic) = std::env::var("RUST_PANIC") {
+        panic!("panic on selection error");
+    }
     cx.dcx().create_err(errors::PlaceholderNotAllowedItemSignatures { spans, kind })
 }
 
