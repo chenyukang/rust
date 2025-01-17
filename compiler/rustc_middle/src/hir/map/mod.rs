@@ -165,6 +165,22 @@ impl<'tcx> TyCtxt<'tcx> {
     pub fn parent_hir_node(self, hir_id: HirId) -> Node<'tcx> {
         self.hir_node(self.parent_hir_id(hir_id))
     }
+
+    pub fn get_closure_node(self, hir_id: HirId) -> Option<Node<'tcx>> {
+        let mut hir_id = hir_id;
+        loop {
+            match self.hir_node(hir_id) {
+                Node::Item(_) | Node::ForeignItem(_) | Node::TraitItem(_) | Node::ImplItem(_) => {
+                    return None;
+                }
+                Node::Expr(Expr { kind: ExprKind::Closure(..), .. }) => {
+                    return Some(self.hir_node(hir_id));
+                }
+                _ => {}
+            }
+            hir_id = self.parent_hir_id(hir_id);
+        }
+    }
 }
 
 impl<'hir> Map<'hir> {

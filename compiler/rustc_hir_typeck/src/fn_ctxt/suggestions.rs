@@ -5,12 +5,12 @@ use hir::def_id::LocalDefId;
 use rustc_ast::util::parser::ExprPrecedence;
 use rustc_data_structures::packed::Pu128;
 use rustc_errors::{Applicability, Diag, MultiSpan};
-use rustc_hir as hir;
 use rustc_hir::def::{CtorKind, CtorOf, DefKind, Res};
 use rustc_hir::lang_items::LangItem;
 use rustc_hir::{
-    Arm, CoroutineDesugaring, CoroutineKind, CoroutineSource, Expr, ExprKind, GenericBound, HirId,
-    Node, Path, QPath, Stmt, StmtKind, TyKind, WherePredicateKind, expr_needs_parens,
+    self as hir, Arm, BodyId, CoroutineDesugaring, CoroutineKind, CoroutineSource, Expr, ExprKind,
+    GenericBound, HirId, Node, Path, QPath, Stmt, StmtKind, TyKind, WherePredicateKind,
+    expr_needs_parens,
 };
 use rustc_hir_analysis::collect::suggest_impl_trait;
 use rustc_hir_analysis::hir_ty_lowering::HirTyLowerer;
@@ -790,6 +790,65 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 }
                 ExprKind::Path(..) | ExprKind::Lit(_)
                     if parent_is_closure && !in_external_macro(self.tcx.sess, expression.span) =>
+                {
+                    err.span_suggestion_verbose(
+                        expression.span.shrink_to_lo(),
+                        "consider ignoring the value",
+                        "_ = ",
+                        Applicability::MachineApplicable,
+                    );
+                }
+                _ => (),
+            }
+        }
+    }
+
+    pub(crate) fn suggest_missing_semicolon_for_closure(
+        &self,
+        err: &mut Diag<'_>,
+        expression: &'tcx hir::Expr<'tcx>,
+        expected: Ty<'tcx>,
+        body: BodyId,
+    ) {
+        let body = self.tcx.hir().body(body);
+        eprintln!("suggest_missing_semicolon_for_closure: \nbody = {:#?}", body);
+        let needs_block = !matches!(body.value.kind, hir::ExprKind::Block(..));
+        if expected.is_unit() {
+            // `BlockTailExpression` only relevant if the tail expr would be
+            // useful on its own.
+            match expression.kind {
+                ExprKind::Call(..)
+                | ExprKind::MethodCall(..)
+                | ExprKind::Loop(..)
+                | ExprKind::If(..)
+                | ExprKind::Match(..)
+                | ExprKind::Block(..)
+                    if expression.can_have_side_effects()
+                        // If the expression is from an external macro, then do not suggest
+                        // adding a semicolon, because there's nowhere to put it.
+                        // See issue #81943.
+                        && !in_external_macro(self.tcx.sess, expression.span) =>
+                {
+                    if needs_block {
+                        err.multipart_suggestion(
+                            "consider using a semicolon here",
+                            vec![
+                                (expression.span.shrink_to_lo(), "{ ".to_owned()),
+                                (expression.span.shrink_to_hi(), "; }".to_owned()),
+                            ],
+                            Applicability::MachineApplicable,
+                        );
+                    } else {
+                        err.span_suggestion(
+                            expression.span.shrink_to_hi(),
+                            "consider using a semicolon here",
+                            ";",
+                            Applicability::MachineApplicable,
+                        );
+                    }
+                }
+                ExprKind::Path(..) | ExprKind::Lit(_)
+                    if !in_external_macro(self.tcx.sess, expression.span) =>
                 {
                     err.span_suggestion_verbose(
                         expression.span.shrink_to_lo(),

@@ -1889,16 +1889,14 @@ impl<'tcx, 'exprs, E: AsCoercionSite> CoerceMany<'tcx, 'exprs, E> {
             fcx.err_ctxt().report_mismatched_types(cause, fcx.param_env, expected, found, ty_err);
 
         let due_to_block = matches!(fcx.tcx.hir_node(block_or_return_id), hir::Node::Block(..));
-        let parent = fcx.tcx.parent_hir_node(block_or_return_id);
+        //let parent = fcx.tcx.parent_hir_node(block_or_return_id);
         if let Some(expr) = expression
-            && let hir::Node::Expr(hir::Expr {
+            && let Some(hir::Node::Expr(hir::Expr {
                 kind: hir::ExprKind::Closure(&hir::Closure { body, .. }),
                 ..
-            }) = parent
+            })) = fcx.tcx.get_closure_node(block_or_return_id)
         {
-            let needs_block =
-                !matches!(fcx.tcx.hir().body(body).value.kind, hir::ExprKind::Block(..));
-            fcx.suggest_missing_semicolon(&mut err, expr, expected, needs_block, true);
+            fcx.suggest_missing_semicolon_for_closure(&mut err, expr, expected, body);
         }
         // Verify that this is a tail expression of a function, otherwise the
         // label pointing out the cause for the type coercion will be wrong
