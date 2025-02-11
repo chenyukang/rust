@@ -4,12 +4,6 @@ error[E0637]: `'_` cannot be used here
 LL | struct ConstChunksExact<'a, T: '_, const assert: usize> {}
    |                                ^^ `'_` is a reserved lifetime name
 
-error[E0308]: mismatched types
-  --> $DIR/normalizing_with_unconstrained_impl_params.rs:13:83
-   |
-LL | impl<'a, T: std::fmt::Debug, const N: usize> Iterator for ConstChunksExact<'a, T, {}> {
-   |                                                                                   ^^ expected `usize`, found `()`
-
 error[E0046]: not all trait items implemented, missing: `Item`
   --> $DIR/normalizing_with_unconstrained_impl_params.rs:4:1
    |
@@ -53,6 +47,12 @@ LL |     fn next(&mut self) -> Option<Self::Item> {}
    |
    = note:   expected enum `Option<_>`
            found unit type `()`
+
+error[E0308]: mismatched types
+  --> $DIR/normalizing_with_unconstrained_impl_params.rs:13:83
+   |
+LL | impl<'a, T: std::fmt::Debug, const N: usize> Iterator for ConstChunksExact<'a, T, {}> {
+   |                                                                                   ^^ expected `usize`, found `()`
 
 error: aborting due to 7 previous errors
 

@@ -19,6 +19,10 @@ note: tuple struct defined here
    |
 LL | struct ArrayHolder<const X: usize>([u32; X]);
    |        ^^^^^^^^^^^
+help: call `Into::into` on this expression to convert `[u32; Self::SIZE]` into `[u32; X]`
+   |
+LL |         ArrayHolder([0; Self::SIZE].into())
+   |                                    +++++++
 
 error[E0284]: type annotations needed for `ArrayHolder<_>`
   --> $DIR/issue-62504.rs:26:9

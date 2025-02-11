@@ -16,11 +16,23 @@ error[E0511]: invalid monomorphization of `simd_extract` intrinsic: expected ret
 LL |         simd_extract::<_, f32>(x, 0);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:62:43
+   |
+LL |         simd_shuffle::<i32, _, i32>(0, 0, IDX2);
+   |                                           ^^^^
+
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected SIMD input type, found non-SIMD `i32`
   --> $DIR/generic-elements.rs:62:9
    |
 LL |         simd_shuffle::<i32, _, i32>(0, 0, IDX2);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:65:43
+   |
+LL |         simd_shuffle::<i32, _, i32>(0, 0, IDX4);
+   |                                           ^^^^
 
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected SIMD input type, found non-SIMD `i32`
   --> $DIR/generic-elements.rs:65:9
@@ -28,11 +40,23 @@ error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected SIM
 LL |         simd_shuffle::<i32, _, i32>(0, 0, IDX4);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:68:43
+   |
+LL |         simd_shuffle::<i32, _, i32>(0, 0, IDX8);
+   |                                           ^^^^
+
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected SIMD input type, found non-SIMD `i32`
   --> $DIR/generic-elements.rs:68:9
    |
 LL |         simd_shuffle::<i32, _, i32>(0, 0, IDX8);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:71:43
+   |
+LL |         simd_shuffle::<_, _, f32x2>(x, x, IDX2);
+   |                                           ^^^^
 
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected return element type `i32` (element of input `i32x4`), found `f32x2` with element type `f32`
   --> $DIR/generic-elements.rs:71:9
@@ -40,11 +64,23 @@ error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected ret
 LL |         simd_shuffle::<_, _, f32x2>(x, x, IDX2);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:73:43
+   |
+LL |         simd_shuffle::<_, _, f32x4>(x, x, IDX4);
+   |                                           ^^^^
+
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected return element type `i32` (element of input `i32x4`), found `f32x4` with element type `f32`
   --> $DIR/generic-elements.rs:73:9
    |
 LL |         simd_shuffle::<_, _, f32x4>(x, x, IDX4);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:75:43
+   |
+LL |         simd_shuffle::<_, _, f32x8>(x, x, IDX8);
+   |                                           ^^^^
 
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected return element type `i32` (element of input `i32x4`), found `f32x8` with element type `f32`
   --> $DIR/generic-elements.rs:75:9
@@ -52,17 +88,35 @@ error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected ret
 LL |         simd_shuffle::<_, _, f32x8>(x, x, IDX8);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:78:43
+   |
+LL |         simd_shuffle::<_, _, i32x8>(x, x, IDX2);
+   |                                           ^^^^
+
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected return type of length 2, found `i32x8` with length 8
   --> $DIR/generic-elements.rs:78:9
    |
 LL |         simd_shuffle::<_, _, i32x8>(x, x, IDX2);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:80:43
+   |
+LL |         simd_shuffle::<_, _, i32x8>(x, x, IDX4);
+   |                                           ^^^^
+
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected return type of length 4, found `i32x8` with length 8
   --> $DIR/generic-elements.rs:80:9
    |
 LL |         simd_shuffle::<_, _, i32x8>(x, x, IDX4);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: could not evaluate shuffle_indices at compile time
+  --> $DIR/generic-elements.rs:82:43
+   |
+LL |         simd_shuffle::<_, _, i32x2>(x, x, IDX8);
+   |                                           ^^^^
 
 error[E0511]: invalid monomorphization of `simd_shuffle` intrinsic: expected return type of length 8, found `i32x2` with length 2
   --> $DIR/generic-elements.rs:82:9
@@ -124,6 +178,6 @@ error[E0511]: invalid monomorphization of `simd_shuffle_generic` intrinsic: expe
 LL |         simd_shuffle_generic::<_, i32x2, I8>(x, x);
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-error: aborting due to 21 previous errors
+error: aborting due to 30 previous errors
 
 For more information about this error, try `rustc --explain E0511`.

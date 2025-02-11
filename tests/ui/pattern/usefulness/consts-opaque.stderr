@@ -9,83 +9,6 @@ LL |         QUUX => {}
    |
    = note: see https://github.com/rust-lang/rust/issues/70861 for details
 
-error: function pointers and raw pointers not derived from integers in patterns behave unpredictably and should not be relied upon
-  --> $DIR/consts-opaque.rs:97:9
-   |
-LL |     const QUUX: Quux = quux;
-   |     ---------------- constant defined here
-...
-LL |         QUUX => {}
-   |         ^^^^ can't be used in patterns
-   |
-   = note: see https://github.com/rust-lang/rust/issues/70861 for details
-
-error: function pointers and raw pointers not derived from integers in patterns behave unpredictably and should not be relied upon
-  --> $DIR/consts-opaque.rs:106:9
-   |
-LL |     const WRAPQUUX: Wrap<Quux> = Wrap(quux);
-   |     -------------------------- constant defined here
-...
-LL |         WRAPQUUX => {}
-   |         ^^^^^^^^ can't be used in patterns
-   |
-   = note: see https://github.com/rust-lang/rust/issues/70861 for details
-
-error: function pointers and raw pointers not derived from integers in patterns behave unpredictably and should not be relied upon
-  --> $DIR/consts-opaque.rs:107:9
-   |
-LL |     const WRAPQUUX: Wrap<Quux> = Wrap(quux);
-   |     -------------------------- constant defined here
-...
-LL |         WRAPQUUX => {}
-   |         ^^^^^^^^ can't be used in patterns
-   |
-   = note: see https://github.com/rust-lang/rust/issues/70861 for details
-
-error: function pointers and raw pointers not derived from integers in patterns behave unpredictably and should not be relied upon
-  --> $DIR/consts-opaque.rs:113:9
-   |
-LL |     const WRAPQUUX: Wrap<Quux> = Wrap(quux);
-   |     -------------------------- constant defined here
-...
-LL |         WRAPQUUX => {}
-   |         ^^^^^^^^ can't be used in patterns
-   |
-   = note: see https://github.com/rust-lang/rust/issues/70861 for details
-
-error: function pointers and raw pointers not derived from integers in patterns behave unpredictably and should not be relied upon
-  --> $DIR/consts-opaque.rs:121:9
-   |
-LL |     const WRAPQUUX: Wrap<Quux> = Wrap(quux);
-   |     -------------------------- constant defined here
-...
-LL |         WRAPQUUX => {}
-   |         ^^^^^^^^ can't be used in patterns
-   |
-   = note: see https://github.com/rust-lang/rust/issues/70861 for details
-
-error: function pointers and raw pointers not derived from integers in patterns behave unpredictably and should not be relied upon
-  --> $DIR/consts-opaque.rs:132:9
-   |
-LL |     const WHOKNOWSQUUX: WhoKnows<Quux> = WhoKnows::Yay(quux);
-   |     ---------------------------------- constant defined here
-...
-LL |         WHOKNOWSQUUX => {}
-   |         ^^^^^^^^^^^^ can't be used in patterns
-   |
-   = note: see https://github.com/rust-lang/rust/issues/70861 for details
-
-error: function pointers and raw pointers not derived from integers in patterns behave unpredictably and should not be relied upon
-  --> $DIR/consts-opaque.rs:134:9
-   |
-LL |     const WHOKNOWSQUUX: WhoKnows<Quux> = WhoKnows::Yay(quux);
-   |     ---------------------------------- constant defined here
-...
-LL |         WHOKNOWSQUUX => {}
-   |         ^^^^^^^^^^^^ can't be used in patterns
-   |
-   = note: see https://github.com/rust-lang/rust/issues/70861 for details
-
 error: unreachable pattern
   --> $DIR/consts-opaque.rs:48:9
    |
@@ -175,5 +98,5 @@ LL |         Baz::Baz2 => {}
 LL |         _ => {} // should not be emitting unreachable warning
    |         ^ collectively making this unreachable
 
-error: aborting due to 17 previous errors
+error: aborting due to 10 previous errors
 

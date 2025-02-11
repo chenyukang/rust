@@ -36,25 +36,6 @@ LL |     fn bget(&self, index: [usize; DIM]) -> Option<Self::Element> {
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    = note: see https://rustc-dev-guide.rust-lang.org/overview.html#queries and https://rustc-dev-guide.rust-lang.org/query.html for more information
 
-error[E0308]: method not compatible with trait
-  --> $DIR/issue-83765.rs:82:5
-   |
-LL |     fn size(&self) -> [usize; DIM] {
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Self::DIM`, found `DIM`
-   |
-   = note: expected constant `Self::DIM`
-              found constant `DIM`
+error: aborting due to 2 previous errors
 
-error[E0308]: method not compatible with trait
-  --> $DIR/issue-83765.rs:92:5
-   |
-LL |     fn bget(&self, index: [usize; DIM]) -> Option<Self::Element> {
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Self::DIM`, found `DIM`
-   |
-   = note: expected constant `Self::DIM`
-              found constant `DIM`
-
-error: aborting due to 4 previous errors
-
-Some errors have detailed explanations: E0308, E0391.
-For more information about an error, try `rustc --explain E0308`.
+For more information about this error, try `rustc --explain E0391`.

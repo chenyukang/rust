@@ -10,17 +10,11 @@ error: literal out of range for `u8`
 LL |         1..=256 => {}
    |             ^^^ this value does not fit into the type `u8` whose range is `0..=255`
 
-error[E0030]: lower range bound must be less than or equal to upper
-  --> $DIR/validate-range-endpoints.rs:18:9
-   |
-LL |         1..=TOO_BIG => {}
-   |         ^^^^^^^^^^^ lower bound larger than upper bound
-
-error[E0030]: lower range bound must be less than or equal to upper
-  --> $DIR/validate-range-endpoints.rs:20:9
+error: could not evaluate constant pattern
+  --> $DIR/validate-range-endpoints.rs:20:13
    |
 LL |         1..=const { 256 } => {}
-   |         ^^^^^^^^^^^^^^^^^ lower bound larger than upper bound
+   |             ^^^^^^^^^^^^^ could not evaluate constant
 
 error: literal out of range for `u64`
   --> $DIR/validate-range-endpoints.rs:26:32
@@ -78,7 +72,6 @@ LL ~         -10000.. => {},
 LL +         i8::MIN..=-17_i8 => todo!()
    |
 
-error: aborting due to 11 previous errors
+error: aborting due to 10 previous errors
 
-Some errors have detailed explanations: E0004, E0030.
-For more information about an error, try `rustc --explain E0004`.
+For more information about this error, try `rustc --explain E0004`.

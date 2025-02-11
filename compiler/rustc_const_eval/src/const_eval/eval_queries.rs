@@ -359,6 +359,9 @@ fn eval_in_interpreter<'tcx, R: InterpretationResult<'tcx>>(
     cid: GlobalId<'tcx>,
     typing_env: ty::TypingEnv<'tcx>,
 ) -> Result<R, ErrorHandled> {
+    if let Some(err) = tcx.dcx().has_errors() {
+        return Err(ErrorHandled::Reported(ReportedErrorInfo::non_const_eval_error(err), DUMMY_SP));
+    }
     let def = cid.instance.def.def_id();
     let is_static = tcx.is_static(def);
 

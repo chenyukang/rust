@@ -12,6 +12,12 @@ LL | pub struct Bar<T: ?Sized>(T);
    |            ^^^
    = note: the return type of a function must have a statically known size
 
+error[E0423]: expected function, tuple struct or tuple variant, found trait `Foo`
+  --> $DIR/issue-58022.rs:15:9
+   |
+LL |         Foo(Box::new(*slice))
+   |         ^^^ not a function, tuple struct or tuple variant
+
 error[E0790]: cannot refer to the associated constant on trait without specifying the corresponding `impl` type
   --> $DIR/issue-58022.rs:4:25
    |
@@ -20,12 +26,6 @@ LL |     const SIZE: usize;
 LL |
 LL |     fn new(slice: &[u8; Foo::SIZE]) -> Self;
    |                         ^^^^^^^^^ cannot refer to the associated constant of trait
-
-error[E0423]: expected function, tuple struct or tuple variant, found trait `Foo`
-  --> $DIR/issue-58022.rs:15:9
-   |
-LL |         Foo(Box::new(*slice))
-   |         ^^^ not a function, tuple struct or tuple variant
 
 error: aborting due to 3 previous errors
 

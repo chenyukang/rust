@@ -72,20 +72,6 @@ help: add `#![feature(adt_const_params)]` to the crate attributes to enable more
 LL + #![feature(adt_const_params)]
    |
 
-error: maximum number of nodes exceeded in constant v20::v17::<v10, v2>::{constant#0}
-  --> $DIR/unevaluated-const-ice-119731.rs:28:37
-   |
-LL |     impl<const v10: usize> v17<v10, v2> {
-   |                                     ^^
-
-error: maximum number of nodes exceeded in constant v20::v17::<v10, v2>::{constant#0}
-  --> $DIR/unevaluated-const-ice-119731.rs:28:37
-   |
-LL |     impl<const v10: usize> v17<v10, v2> {
-   |                                     ^^
-   |
-   = note: duplicate diagnostic emitted due to `-Z deduplicate-diagnostics=no`
-
 error[E0592]: duplicate definitions with name `v21`
   --> $DIR/unevaluated-const-ice-119731.rs:23:9
    |
@@ -95,7 +81,7 @@ LL |         pub const fn v21() -> v18 {}
 LL |         pub const fn v21() -> v18 {
    |         ------------------------- other definition for `v21`
 
-error: aborting due to 10 previous errors; 2 warnings emitted
+error: aborting due to 8 previous errors; 2 warnings emitted
 
 Some errors have detailed explanations: E0412, E0422, E0425, E0432, E0592.
 For more information about an error, try `rustc --explain E0412`.

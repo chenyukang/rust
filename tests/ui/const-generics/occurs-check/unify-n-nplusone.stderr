@@ -4,6 +4,18 @@ error[E0308]: mismatched types
 LL |     arr = bind(arr);
    |           ^^^^^^^^^ encountered a self-referencing constant
 
-error: aborting due to 1 previous error
+error[E0277]: the trait bound `[u8; 5]: Default` is not satisfied
+  --> $DIR/unify-n-nplusone.rs:13:19
+   |
+LL |     let mut arr = Default::default();
+   |                   ^^^^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `[u8; 5]`
+   |
+   = help: the following other types implement trait `Default`:
+             &[T]
+             &mut [T]
+             [T; 32]
 
-For more information about this error, try `rustc --explain E0308`.
+error: aborting due to 2 previous errors
+
+Some errors have detailed explanations: E0277, E0308.
+For more information about an error, try `rustc --explain E0277`.

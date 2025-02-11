@@ -4,11 +4,11 @@ error[E0158]: constant pattern cannot depend on generic parameters
 LL |         const { V } => {},
    |         ^^^^^^^^^^^ `const` depends on a generic parameter
 
-error[E0158]: constant pattern cannot depend on generic parameters
+error: could not evaluate constant pattern
   --> $DIR/const-match-pat-generic.rs:19:9
    |
 LL |         const { f(V) } => {},
-   |         ^^^^^^^^^^^^^^ `const` depends on a generic parameter
+   |         ^^^^^^^^^^^^^^ could not evaluate constant
 
 error: aborting due to 2 previous errors
 
