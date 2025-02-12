@@ -7,7 +7,7 @@ trait Tr {
     fn foo(&self);
 
     fn bar(&self) {
-        (|| { self.foo() })()
+        (|| self.foo() )()
     }
 }
 

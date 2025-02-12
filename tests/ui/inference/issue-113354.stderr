@@ -1,5 +1,5 @@
 error[E0308]: mismatched types
-  --> $DIR/issue-113354.rs:3:24
+  --> $DIR/issue-113354.rs:4:24
    |
 LL |     let _ = || { while Some(_) = Some(1) { } };
    |                        ^^^^^^^^^^^^^^^^^ expected `bool`, found `()`

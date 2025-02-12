@@ -1,4 +1,5 @@
 //@ run-rustfix
+#![allow(unused_braces)]
 use std::collections::hash_set::Iter;
 use std::collections::HashSet;
 

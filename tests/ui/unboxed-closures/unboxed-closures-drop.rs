@@ -46,7 +46,7 @@ fn c<F:FnOnce(isize, isize) -> isize>(f: F) -> isize {
 
 fn test_fn() {
     {
-        a(move |a: isize, b| { a + b });
+        a(move |a: isize, b| a + b );
     }
     assert_eq!(drop_count(), 0);
 
@@ -68,7 +68,7 @@ fn test_fn() {
 
 fn test_fn_mut() {
     {
-        b(move |a: isize, b| { a + b });
+        b(move |a: isize, b| a + b );
     }
     assert_eq!(drop_count(), 3);
 
@@ -90,7 +90,7 @@ fn test_fn_mut() {
 
 fn test_fn_once() {
     {
-        c(move |a: isize, b| { a + b });
+        c(move |a: isize, b| a + b );
     }
     assert_eq!(drop_count(), 6);
 

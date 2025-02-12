@@ -36,7 +36,7 @@ fn main() {
     {
         let mut test = X(Box::new(5));
         {
-            let mut change = || { *test = 10 };
+            let mut change = || *test = 10;
             change();
         }
         assert_eq!(*test, 10);

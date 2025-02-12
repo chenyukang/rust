@@ -1,4 +1,5 @@
 //@ run-rustfix
+#![allow(unused_braces)]
 //! diagnostic test for #132806: make sure the suggestion to bind by-reference in patterns doesn't
 //! erroneously remove the wrong `&`
 

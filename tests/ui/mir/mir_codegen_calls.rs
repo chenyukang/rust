@@ -172,7 +172,7 @@ fn main() {
     assert_eq!(test9(), 41 + 42 * 43);
 
     let r = 3;
-    let closure = |x: i32, y: i32| { r*(x + (y*2)) };
+    let closure = |x: i32, y: i32| r*(x + (y*2));
     assert_eq!(test_fn_const_call(&closure), 294);
     assert_eq!(test_closure(&closure, 100, 1), 306);
     let function_object = &closure as &dyn Fn(i32, i32) -> i32;

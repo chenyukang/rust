@@ -22,7 +22,7 @@ impl Drop for Foo {
 
 fn main() {
     thread::spawn(|| {
-        assert_eq!(FOO.try_with(|_| { 132 }).expect("`try_with` failed"), 132);
+        assert_eq!(FOO.try_with(|_| 132).expect("`try_with` failed"), 132);
     })
     .join()
     .unwrap();

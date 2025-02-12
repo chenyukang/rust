@@ -1,5 +1,6 @@
 //@ run-pass
 #![allow(unused_parens)]
+#![allow(unused_braces)]
 #![allow(unit_bindings)]
 
 fn f<T, F>(g: F) -> T where F: FnOnce() -> T { g() }

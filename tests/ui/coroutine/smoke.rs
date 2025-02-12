@@ -150,7 +150,7 @@ fn send_and_sync() {
 
 #[test]
 fn send_over_threads() {
-    let mut foo = #[coroutine] || { yield };
+    let mut foo = #[coroutine] || yield;
     thread::spawn(move || {
         match Pin::new(&mut foo).resume(()) {
             CoroutineState::Yielded(()) => {}
@@ -163,7 +163,7 @@ fn send_over_threads() {
     }).join().unwrap();
 
     let a = String::from("a");
-    let mut foo = #[coroutine] || { yield a };
+    let mut foo = #[coroutine] || yield a;
     thread::spawn(move || {
         match Pin::new(&mut foo).resume(()) {
             CoroutineState::Yielded(ref s) if *s == "a" => {}
