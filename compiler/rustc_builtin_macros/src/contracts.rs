@@ -130,6 +130,7 @@ fn expand_requires_tts(
 ) -> Result<TokenStream, ErrorGuaranteed> {
     let feature_span = ecx.with_def_site_ctxt(attr_span);
     expand_contract_clause(ecx, attr_span, annotated, |new_tts| {
+        add_allow_unused_parens(new_tts, attr_span);
         new_tts.push_tree(TokenTree::Token(
             token::Token::from_ast_ident(Ident::new(kw::ContractRequires, feature_span)),
             Spacing::Joint,
@@ -156,10 +157,12 @@ fn expand_ensures_tts(
 ) -> Result<TokenStream, ErrorGuaranteed> {
     let feature_span = ecx.with_def_site_ctxt(attr_span);
     expand_contract_clause(ecx, attr_span, annotated, |new_tts| {
+        add_allow_unused_parens(new_tts, attr_span);
         new_tts.push_tree(TokenTree::Token(
             token::Token::from_ast_ident(Ident::new(kw::ContractEnsures, feature_span)),
             Spacing::Joint,
         ));
+
         new_tts.push_tree(TokenTree::Delimited(
             DelimSpan::from_single(attr_span),
             DelimSpacing::new(Spacing::JointHidden, Spacing::JointHidden),
@@ -168,4 +171,35 @@ fn expand_ensures_tts(
         ));
         Ok(())
     })
+}
+
+fn add_allow_unused_parens(new_tts: &mut TokenStream, attr_span: Span) {
+    // push_tree `#[allow(unused_parens)]` to avoid linting on the contract expression
+    new_tts.push_tree(TokenTree::Token(
+        token::Token::new(token::TokenKind::Pound, attr_span),
+        Spacing::Joint,
+    ));
+    new_tts.push_tree(TokenTree::Delimited(
+        DelimSpan::from_single(attr_span),
+        DelimSpacing::new(Spacing::JointHidden, Spacing::JointHidden),
+        token::Delimiter::Parenthesis,
+        TokenStream::from_iter(vec![
+            TokenTree::Token(
+                token::Token::from_ast_ident(Ident::new(Symbol::intern("allow"), attr_span)),
+                Spacing::Joint,
+            ),
+            TokenTree::Delimited(
+                DelimSpan::from_single(attr_span),
+                DelimSpacing::new(Spacing::JointHidden, Spacing::JointHidden),
+                token::Delimiter::Parenthesis,
+                TokenStream::from_iter(vec![TokenTree::Token(
+                    token::Token::from_ast_ident(Ident::new(
+                        Symbol::intern("unused_parens"),
+                        attr_span,
+                    )),
+                    Spacing::Joint,
+                )]),
+            ),
+        ]),
+    ));
 }
