@@ -2,8 +2,9 @@ use rustc_ast::token;
 use rustc_ast::tokenstream::{DelimSpacing, DelimSpan, Spacing, TokenStream, TokenTree};
 use rustc_errors::ErrorGuaranteed;
 use rustc_expand::base::{AttrProcMacro, ExtCtxt};
-use rustc_span::Span;
+use rustc_span::hygiene::Transparency;
 use rustc_span::symbol::{Ident, Symbol, kw};
+use rustc_span::{ExpnData, ExpnKind, LocalExpnId, MacroKind, Span, sym};
 
 pub(crate) struct ExpandRequires;
 
@@ -56,6 +57,18 @@ fn expand_contract_clause(
     let is_kw = |tt: &TokenTree, sym: Symbol| {
         if let TokenTree::Token(token, _) = tt { token.is_ident_named(sym) } else { false }
     };
+
+    let expn_data = ExpnData {
+        ..ExpnData::default(
+            ExpnKind::Macro(MacroKind::Attr, sym::contract_checks),
+            attr_span,
+            attr_span.edition(),
+            None,
+            None,
+        )
+    };
+    let expn_id = LocalExpnId::fresh(expn_data, attr_span.ctxt());
+    let attr_span = attr_span.apply_mark(expn_id.to_expn_id(), Transparency::Transparent);
 
     // Find the `fn` keyword to check if this is a function.
     if cursor
