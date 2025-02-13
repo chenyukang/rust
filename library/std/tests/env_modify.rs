@@ -79,9 +79,9 @@ fn test_env_set_var() {
 
     let mut e = vars_os();
     set_var(&n, "VALUE");
-    assert!(!e.any(|(k, v)| { &*k == &*n && &*v == "VALUE" }));
+    assert!(!e.any(|(k, v)| &*k == &*n && &*v == "VALUE"));
 
-    assert!(vars_os().any(|(k, v)| { &*k == &*n && &*v == "VALUE" }));
+    assert!(vars_os().any(|(k, v)| &*k == &*n && &*v == "VALUE"));
 }
 
 #[test]
