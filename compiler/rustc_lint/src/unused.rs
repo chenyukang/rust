@@ -3,7 +3,7 @@ use std::ops::ControlFlow;
 
 use rustc_ast as ast;
 use rustc_ast::util::{classify, parser};
-use rustc_ast::{ExprKind, StmtKind};
+use rustc_ast::{ExprKind, FnRetTy, StmtKind};
 use rustc_errors::{MultiSpan, pluralize};
 use rustc_hir::def::{DefKind, Res};
 use rustc_hir::def_id::DefId;
@@ -594,6 +594,7 @@ enum UnusedDelimsCtx {
     AnonConst,
     MatchArmExpr,
     IndexExpr,
+    ClosureBody,
 }
 
 impl From<UnusedDelimsCtx> for &'static str {
@@ -615,6 +616,7 @@ impl From<UnusedDelimsCtx> for &'static str {
             UnusedDelimsCtx::ArrayLenExpr | UnusedDelimsCtx::AnonConst => "const expression",
             UnusedDelimsCtx::MatchArmExpr => "match arm expression",
             UnusedDelimsCtx::IndexExpr => "index expression",
+            UnusedDelimsCtx::ClosureBody => "closure body",
         }
     }
 }
@@ -933,6 +935,18 @@ trait UnusedDelimLint {
                 let (args_to_check, ctx) = match *call_or_other {
                     Call(_, ref args) => (&args[..], UnusedDelimsCtx::FunctionArg),
                     MethodCall(ref call) => (&call.args[..], UnusedDelimsCtx::MethodArg),
+                    Closure(ref closure)
+                        if matches!(closure.fn_decl.output, FnRetTy::Default(_))
+                            // skip `#[core::contracts::requires(...)]` and `#[core::contracts::ensures(...)]` which generate closure
+                            && !cx
+                                .sess()
+                                .source_map()
+                                .span_to_snippet(closure.fn_decl_span)
+                                .unwrap_or_default()
+                                .contains("core::contracts") =>
+                    {
+                        (&[closure.body.clone()][..], UnusedDelimsCtx::ClosureBody)
+                    }
                     // actual catch-all arm
                     _ => {
                         return;
