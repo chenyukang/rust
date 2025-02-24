@@ -1426,23 +1426,25 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         );
         self.add_typo_suggestion(err, suggestion, ident.span);
 
-        let import_suggestions =
-            self.lookup_import_candidates(ident, Namespace::MacroNS, parent_scope, is_expected);
-        let (span, found_use) = match parent_scope.module.nearest_parent_mod().as_local() {
-            Some(def_id) => UsePlacementFinder::check(krate, self.def_id_to_node_id[def_id]),
-            None => (None, FoundUse::No),
-        };
-        show_candidates(
-            self.tcx,
-            err,
-            span,
-            &import_suggestions,
-            Instead::No,
-            found_use,
-            DiagMode::Normal,
-            vec![],
-            "",
-        );
+        if !self.macro_names.contains(&ident.normalize_to_macros_2_0()) {
+            let import_suggestions =
+                self.lookup_import_candidates(ident, Namespace::MacroNS, parent_scope, is_expected);
+            let (span, found_use) = match parent_scope.module.nearest_parent_mod().as_local() {
+                Some(def_id) => UsePlacementFinder::check(krate, self.def_id_to_node_id[def_id]),
+                None => (None, FoundUse::No),
+            };
+            show_candidates(
+                self.tcx,
+                err,
+                span,
+                &import_suggestions,
+                Instead::No,
+                found_use,
+                DiagMode::Normal,
+                vec![],
+                "",
+            );
+        }
 
         if macro_kind == MacroKind::Bang && ident.name == sym::macro_rules {
             let label_span = ident.span.shrink_to_hi();
