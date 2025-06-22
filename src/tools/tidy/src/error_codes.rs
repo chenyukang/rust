@@ -212,11 +212,11 @@ fn check_error_codes_docs(
             check_explanation_has_doctest(&contents, &err_code);
 
         if emit_ignore_warning {
-            verbose_print!(
-                verbose,
-                "warning: Error code `{err_code}` uses the ignore header. This should not be used, add the error code to the \
-                `IGNORE_DOCTEST_CHECK` constant instead."
-            );
+            // verbose_print!(
+            //     verbose,
+            //     "warning: Error code `{err_code}` uses the ignore header. This should not be used, add the error code to the \
+            //     `IGNORE_DOCTEST_CHECK` constant instead."
+            // );
         }
 
         if no_longer_emitted {

@@ -87,10 +87,15 @@ fn main() {
 
                 let handle = thread::Builder::new().name($name).spawn_scoped(s, || {
                     let mut flag = false;
+                    let time_now = std::time::Instant::now();
+                    let name = format!("{}", stringify!($p));
                     $p::check($($args, )* &mut flag);
+                    let elapsed = time_now.elapsed();
+                    eprintln!("tidy check {:<50} took time: {:.2?}", name, elapsed);
                     if (flag) {
                         bad.store(true, Ordering::Relaxed);
                     }
+
                 }).unwrap();
                 handles.push_back(handle);
             }
