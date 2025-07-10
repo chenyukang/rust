@@ -93,7 +93,7 @@ fn show_substructure(cx: &ExtCtxt<'_>, span: Span, substr: &Substructure<'_>) ->
         field: &FieldInfo,
         index: usize,
         len: usize,
-    ) -> ast::ptr::P<ast::Expr> {
+    ) -> Box<ast::Expr> {
         if index < len - 1 {
             field.self_expr.clone()
         } else {

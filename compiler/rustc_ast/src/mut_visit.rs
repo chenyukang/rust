@@ -17,7 +17,6 @@ use smallvec::{SmallVec, smallvec};
 use thin_vec::ThinVec;
 
 use crate::ast::*;
-use crate::ptr::P;
 use crate::tokenstream::*;
 use crate::visit::{AssocCtxt, BoundKind, FnCtxt, VisitorResult, try_visit, visit_opt, walk_list};
 
@@ -55,15 +54,15 @@ macro_rules! generate_flat_map_visitor_fns {
 }
 
 generate_flat_map_visitor_fns! {
-    visit_items, P<Item>, flat_map_item;
-    visit_foreign_items, P<ForeignItem>, flat_map_foreign_item;
+    visit_items, Box<Item>, flat_map_item;
+    visit_foreign_items, Box<ForeignItem>, flat_map_foreign_item;
     visit_generic_params, GenericParam, flat_map_generic_param;
     visit_stmts, Stmt, flat_map_stmt;
-    visit_exprs, P<Expr>, filter_map_expr;
+    visit_exprs, Box<Expr>, filter_map_expr;
     visit_expr_fields, ExprField, flat_map_expr_field;
     visit_pat_fields, PatField, flat_map_pat_field;
     visit_variants, Variant, flat_map_variant;
-    visit_assoc_items, P<AssocItem>, flat_map_assoc_item, ctxt: AssocCtxt;
+    visit_assoc_items, Box<AssocItem>, flat_map_assoc_item, ctxt: AssocCtxt;
     visit_where_predicates, WherePredicate, flat_map_where_predicate;
     visit_params, Param, flat_map_param;
     visit_field_defs, FieldDef, flat_map_field_def;
@@ -104,9 +103,9 @@ generate_walk_flat_map_fns! {
     walk_flat_map_where_predicate(WherePredicate) => visit_where_predicate;
     walk_flat_map_field_def(FieldDef) => visit_field_def;
     walk_flat_map_expr_field(ExprField) => visit_expr_field;
-    walk_flat_map_item(P<Item>) => visit_item;
-    walk_flat_map_foreign_item(P<ForeignItem>) => visit_foreign_item;
-    walk_flat_map_assoc_item(P<AssocItem>, ctxt: AssocCtxt) => visit_assoc_item;
+    walk_flat_map_item(Box<Item>) => visit_item;
+    walk_flat_map_foreign_item(Box<ForeignItem>) => visit_foreign_item;
+    walk_flat_map_assoc_item(Box<AssocItem>, ctxt: AssocCtxt) => visit_assoc_item;
 }
 
 fn walk_ty_alias_where_clauses<T: MutVisitor>(vis: &mut T, tawcs: &mut TyAliasWhereClauses) {
@@ -117,7 +116,7 @@ fn walk_ty_alias_where_clauses<T: MutVisitor>(vis: &mut T, tawcs: &mut TyAliasWh
     vis.visit_span(span_after);
 }
 
-pub fn walk_filter_map_expr<T: MutVisitor>(vis: &mut T, mut e: P<Expr>) -> Option<P<Expr>> {
+pub fn walk_filter_map_expr<T: MutVisitor>(vis: &mut T, mut e: Box<Expr>) -> Option<Box<Expr>> {
     vis.visit_expr(&mut e);
     Some(e)
 }
