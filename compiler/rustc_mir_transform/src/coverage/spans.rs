@@ -50,14 +50,20 @@ pub(super) fn extract_refined_covspans<'tcx>(
             return;
         }
 
-        // Each pushed covspan should have the same context as the body span.
-        // If it somehow doesn't, discard the covspan, or panic in debug builds.
+        // Each covspan should have the same context as the body span, or if not
+        // (e.g. due to nested macro expansions), they should share a common source callsite.
         if !body_span.eq_ctxt(covspan_span) {
-            debug_assert!(
-                false,
-                "span context mismatch: body_span={body_span:?}, covspan.span={covspan_span:?}"
-            );
-            return;
+            let body_callsite = body_span.source_callsite();
+            let covspan_callsite = covspan_span.source_callsite();
+            if !body_callsite.source_equal(covspan_callsite)
+                || !body_callsite.eq_ctxt(covspan_callsite)
+            {
+                debug_assert!(
+                    false,
+                    "span context mismatch: body_span={body_span:?}, covspan.span={covspan_span:?}"
+                );
+                return;
+            }
         }
 
         covspans.push(covspan);
