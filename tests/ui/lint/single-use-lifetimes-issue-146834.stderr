@@ -1,0 +1,19 @@
+error[E0658]: use of unstable library feature `contracts`
+  --> $DIR/single-use-lifetimes-issue-146834.rs:4:3
+   |
+LL | #[core::contracts::ensures]
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: see issue #128044 <https://github.com/rust-lang/rust/issues/128044> for more information
+   = help: add `#![feature(contracts)]` to the crate attributes to enable
+   = note: this compiler was built on YYYY-MM-DD; consider upgrading it if it is out of date
+
+error: `ensures` attribute requires an argument, e.g., `#[ensures(|result: &T| condition)]`
+  --> $DIR/single-use-lifetimes-issue-146834.rs:4:1
+   |
+LL | #[core::contracts::ensures]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: aborting due to 2 previous errors
+
+For more information about this error, try `rustc --explain E0658`.

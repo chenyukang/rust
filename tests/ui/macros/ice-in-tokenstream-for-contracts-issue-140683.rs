@@ -4,10 +4,9 @@
 struct T;
 
 impl T {
-    #[core::contracts::ensures] //~ ERROR expected a `Fn(&_)` closure, found `()`
+    #[core::contracts::ensures] //~ ERROR `ensures` attribute requires an argument
     fn b() {(loop)}
     //~^ ERROR expected `{`, found `)`
-    //~| ERROR expected `{`, found `)`
 }
 
 fn main() {}

@@ -128,6 +128,13 @@ fn expand_requires_tts(
     annotation: TokenStream,
     annotated: TokenStream,
 ) -> Result<TokenStream, ErrorGuaranteed> {
+    if annotation.is_empty() {
+        return Err(ecx.sess.dcx().span_err(
+            attr_span,
+            "`requires` attribute requires an argument, e.g., `#[requires(condition)]`",
+        ));
+    }
+
     let feature_span = ecx.with_def_site_ctxt(attr_span);
     expand_contract_clause(ecx, attr_span, annotated, |new_tts| {
         new_tts.push_tree(TokenTree::Token(
@@ -154,6 +161,13 @@ fn expand_ensures_tts(
     annotation: TokenStream,
     annotated: TokenStream,
 ) -> Result<TokenStream, ErrorGuaranteed> {
+    if annotation.is_empty() {
+        return Err(ecx.sess.dcx().span_err(
+            attr_span,
+            "`ensures` attribute requires an argument, e.g., `#[ensures(|result: &T| condition)]`",
+        ));
+    }
+
     let feature_span = ecx.with_def_site_ctxt(attr_span);
     expand_contract_clause(ecx, attr_span, annotated, |new_tts| {
         new_tts.push_tree(TokenTree::Token(
