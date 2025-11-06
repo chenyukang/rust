@@ -884,7 +884,18 @@ fn check_assoc_const_binding_type<'tcx>(
         .unwrap();
     let generics = tcx.generics_of(enclosing_item_owner_id);
     for index in collector.params {
-        let param = generics.param_at(index as _, tcx);
+        let index = index as usize;
+        // The param index might be out of bounds if it's from a different context
+        // (e.g., an opaque type's generics vs the enclosing item's generics).
+        // In such cases, we still need to report an error, but we can't get details
+        if index >= generics.count() {
+            guar.get_or_insert(cx.dcx().span_delayed_bug(
+                assoc_const.span,
+                format!("associated const binding type contains invalid generic parameters"),
+            ));
+            continue;
+        }
+        let param = generics.param_at(index, tcx);
         let is_self_param = param.name == kw::SelfUpper;
         guar.get_or_insert(cx.dcx().emit_err(crate::errors::ParamInTyOfAssocConstBinding {
             span: assoc_const.span,
