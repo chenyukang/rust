@@ -190,7 +190,7 @@ impl<'p, 'tcx: 'p> RustcPatCtxt<'p, 'tcx> {
         let ty::Adt(_, args) = ty.kind() else { bug!() };
         variant.fields.iter().map(move |field| {
             let ty = field.ty(self.tcx, args);
-            // `field.ty()` doesn't normalize after instantiating.
+            // `field.ty()` doesn't normalize after instantiating
             let ty = self.tcx.normalize_erasing_regions(self.typing_env, ty);
             let ty = self.reveal_opaque_ty(ty);
             (field, ty)
