@@ -16,5 +16,11 @@ error: out of range hex escape
 LL |     let z = "\xe2";
    |              ^^^^ must be a character in the range [\x00-\x7f]
 
-error: aborting due to 3 previous errors
+error: out of range hex escape
+  --> $DIR/ascii-only-character-escape.rs:8:11
+   |
+LL |     dbg!('\xFF');
+   |           ^^^^ must be a character in the range [\x00-\x7f]
+
+error: aborting due to 4 previous errors
 
