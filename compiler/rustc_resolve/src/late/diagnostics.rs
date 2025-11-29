@@ -1857,18 +1857,26 @@ impl<'ast, 'ra, 'tcx> LateResolutionVisitor<'_, 'ast, 'ra, 'tcx> {
 
                             // Start with the opening brace
                             parts.push((
-                                path_span.shrink_to_hi().until(args[0].span),
+                                path_span.shrink_to_hi().until(args[0].span.source_callsite()),
                                 "{".to_owned(),
                             ));
 
                             for (field, arg) in fields.iter().zip(args.iter()) {
                                 // Add the field name before the argument
-                                parts.push((arg.span.shrink_to_lo(), format!("{}: ", field)));
+                                parts.push((
+                                    arg.span.source_callsite().shrink_to_lo(),
+                                    format!("{}: ", field),
+                                ));
                             }
 
                             // Add the closing brace
                             parts.push((
-                                args.last().unwrap().span.shrink_to_hi().until(span.shrink_to_hi()),
+                                args.last()
+                                    .unwrap()
+                                    .span
+                                    .source_callsite()
+                                    .shrink_to_hi()
+                                    .until(span.shrink_to_hi()),
                                 "}".to_owned(),
                             ));
 
