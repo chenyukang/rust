@@ -694,6 +694,8 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                     && let Some(rsteps) = rsteps
                     && lsteps > 0
                     && rsteps > 0
+                    && lhs.span.can_be_used_for_suggestions()
+                    && rhs.span.can_be_used_for_suggestions()
                 {
                     let mut suggestion = make_sugg(lhs, lsteps).1;
                     suggestion.append(&mut make_sugg(rhs, rsteps).1);
@@ -705,6 +707,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                     return true;
                 } else if let Some(lsteps) = lsteps
                     && lsteps > 0
+                    && lhs.span.can_be_used_for_suggestions()
                 {
                     let (msg, suggestion) = make_sugg(lhs, lsteps);
                     err.multipart_suggestion_verbose(
@@ -715,6 +718,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                     return true;
                 } else if let Some(rsteps) = rsteps
                     && rsteps > 0
+                    && rhs.span.can_be_used_for_suggestions()
                 {
                     let (msg, suggestion) = make_sugg(rhs, rsteps);
                     err.multipart_suggestion_verbose(
@@ -4782,6 +4786,11 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         else {
             return;
         };
+
+        // Don't suggest changes in code that is not user-written (e.g., macro expansions)
+        if !span.can_be_used_for_suggestions() {
+            return;
+        }
 
         // Three cases where we can make a suggestion:
         // 1. `[T; _]` (array of T)
