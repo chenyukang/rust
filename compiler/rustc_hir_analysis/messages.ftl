@@ -211,6 +211,9 @@ hir_analysis_field_already_declared_previous_nested =
 
 hir_analysis_generic_args_on_overridden_impl = could not resolve generic parameters on overridden impl
 
+hir_analysis_generic_param_from_outer_item_in_ty_of_assoc_const_binding =
+    the type of the associated constant `{$assoc_const}` must not reference generic parameters from outer items
+
 hir_analysis_impl_not_marked_default = `{$ident}` specializes an item from a parent `impl`, but that item is not marked `default`
     .label = cannot specialize default item `{$ident}`
     .ok_label = parent `impl` is here

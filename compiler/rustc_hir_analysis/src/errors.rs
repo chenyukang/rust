@@ -369,6 +369,14 @@ pub(crate) struct EscapingBoundVarInTyOfAssocConstBinding<'tcx> {
     pub ty_note: Option<TyOfAssocConstBindingNote<'tcx>>,
 }
 
+#[derive(Diagnostic)]
+#[diag(hir_analysis_generic_param_from_outer_item_in_ty_of_assoc_const_binding)]
+pub(crate) struct GenericParamFromOuterItemInTyOfAssocConstBinding {
+    #[primary_span]
+    pub span: Span,
+    pub assoc_const: Ident,
+}
+
 #[derive(Subdiagnostic)]
 #[help(hir_analysis_parenthesized_fn_trait_expansion)]
 pub(crate) struct ParenthesizedFnTraitExpansion {

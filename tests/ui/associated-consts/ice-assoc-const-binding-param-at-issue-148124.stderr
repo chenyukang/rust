@@ -1,0 +1,64 @@
+warning: the feature `min_generic_const_args` is incomplete and may not be safe to use and/or cause compiler crashes
+  --> $DIR/ice-assoc-const-binding-param-at-issue-148124.rs:7:12
+   |
+LL | #![feature(min_generic_const_args)]
+   |            ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: see issue #132980 <https://github.com/rust-lang/rust/issues/132980> for more information
+   = note: `#[warn(incomplete_features)]` on by default
+
+error: the type of the associated constant `K` must not reference generic parameters from outer items
+  --> $DIR/ice-assoc-const-binding-param-at-issue-148124.rs:23:67
+   |
+LL |     type T = impl Trait<<fn(&'a str) -> &'a str as Discard>::Out, K = { () }>;
+   |                                                                   ^
+
+error: expected `{type error}`, found const tuple
+  --> $DIR/ice-assoc-const-binding-param-at-issue-148124.rs:23:73
+   |
+LL |     type T = impl Trait<<fn(&'a str) -> &'a str as Discard>::Out, K = { () }>;
+   |                                                                         ^^
+
+error: use of trait associated const without `#[type_const]`
+  --> $DIR/ice-assoc-const-binding-param-at-issue-148124.rs:23:67
+   |
+LL |     type T = impl Trait<<fn(&'a str) -> &'a str as Discard>::Out, K = { () }>;
+   |                                                                   ^^^^^^^^^^
+   |
+   = note: the declaration in the trait must be marked with `#[type_const]`
+
+error: unconstrained opaque type
+  --> $DIR/ice-assoc-const-binding-param-at-issue-148124.rs:23:14
+   |
+LL |     type T = impl Trait<<fn(&'a str) -> &'a str as Discard>::Out, K = { () }>;
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `T` must be used in combination with a concrete type within the same impl
+
+error: the type of the associated constant `K` must not reference generic parameters from outer items
+  --> $DIR/ice-assoc-const-binding-param-at-issue-148124.rs:23:67
+   |
+LL |     type T = impl Trait<<fn(&'a str) -> &'a str as Discard>::Out, K = { () }>;
+   |                                                                   ^
+   |
+   = note: duplicate diagnostic emitted due to `-Z deduplicate-diagnostics=no`
+
+error: expected `{type error}`, found const tuple
+  --> $DIR/ice-assoc-const-binding-param-at-issue-148124.rs:23:73
+   |
+LL |     type T = impl Trait<<fn(&'a str) -> &'a str as Discard>::Out, K = { () }>;
+   |                                                                         ^^
+   |
+   = note: duplicate diagnostic emitted due to `-Z deduplicate-diagnostics=no`
+
+error: use of trait associated const without `#[type_const]`
+  --> $DIR/ice-assoc-const-binding-param-at-issue-148124.rs:23:67
+   |
+LL |     type T = impl Trait<<fn(&'a str) -> &'a str as Discard>::Out, K = { () }>;
+   |                                                                   ^^^^^^^^^^
+   |
+   = note: the declaration in the trait must be marked with `#[type_const]`
+   = note: duplicate diagnostic emitted due to `-Z deduplicate-diagnostics=no`
+
+error: aborting due to 7 previous errors; 1 warning emitted
+

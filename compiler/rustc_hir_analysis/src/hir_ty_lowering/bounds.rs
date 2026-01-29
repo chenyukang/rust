@@ -906,7 +906,22 @@ pub(crate) fn check_assoc_const_binding_type<'tcx>(
         .unwrap();
     let generics = tcx.generics_of(enclosing_item_owner_id);
     for index in collector.params {
-        let param = generics.param_at(index as _, tcx);
+        let index = index as usize;
+        // The param index might be out of bounds if it's from a different context
+        // (e.g., an opaque type's generics vs the enclosing item's generics).
+        // This can happen when an associated const binding references generic
+        // parameters that don't belong to the enclosing item.
+        if index >= generics.count() {
+            // Report a more helpful error instead of ICEing
+            guar.get_or_insert(cx.dcx().emit_err(
+                errors::GenericParamFromOuterItemInTyOfAssocConstBinding {
+                    span: assoc_const.span,
+                    assoc_const,
+                },
+            ));
+            continue;
+        }
+        let param = generics.param_at(index, tcx);
         let is_self_param = param.name == kw::SelfUpper;
         guar.get_or_insert(cx.dcx().emit_err(crate::errors::ParamInTyOfAssocConstBinding {
             span: assoc_const.span,
