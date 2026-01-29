@@ -1320,10 +1320,26 @@ impl<'a, 'tcx> Visitor<'tcx> for FindInferSourceVisitor<'a, 'tcx> {
             })
             .any(|generics| generics.has_impl_trait())
         };
+        // Check if the method is from a conversion trait (Into, TryInto) and its return type
+        // is an unresolved inference variable. This helps point to `.into()` calls where the
+        // return type must be explicitly specified.
+        let is_into_method_with_unresolved_ret = |expr: &hir::Expr<'_>, def_id| -> bool {
+            if let Some(trait_def_id) = tcx.trait_of_assoc(def_id)
+                && (tcx.is_diagnostic_item(sym::Into, trait_def_id)
+                    || tcx.is_diagnostic_item(sym::TryInto, trait_def_id))
+                && let Some(ty) = self.opt_node_type(expr.hir_id)
+                && matches!(ty.kind(), ty::Infer(ty::TyVar(_)))
+            {
+                true
+            } else {
+                false
+            }
+        };
         if let ExprKind::MethodCall(path, receiver, method_args, span) = expr.kind
             && let Some(args) = self.node_args_opt(expr.hir_id)
-            && args.iter().any(|arg| self.generic_arg_contains_target(arg))
             && let Some(def_id) = self.typeck_results.type_dependent_def_id(expr.hir_id)
+            && (args.iter().any(|arg| self.generic_arg_contains_target(arg))
+                || is_into_method_with_unresolved_ret(expr, def_id))
             && self.tecx.tcx.trait_of_assoc(def_id).is_some()
             && !has_impl_trait(def_id)
             // FIXME(fn_delegation): In delegation item argument spans are equal to last path
