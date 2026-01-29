@@ -886,7 +886,79 @@ impl<'ast, 'ra, 'tcx> LateResolutionVisitor<'_, 'ast, 'ra, 'tcx> {
             candidates = self.smart_resolve_partial_mod_path_errors(path, following_seg);
         }
 
+        // For inaccessible candidates, check if they come from a module that was
+        // imported via glob import. If so, add a note explaining that glob imports
+        // don't include private items.
+        self.check_for_glob_import_private_items(&mut candidates);
+
         (false, suggested_candidates, candidates)
+    }
+
+    /// For inaccessible candidates, check if they come from a module that was
+    /// imported via glob import. If so, update their note to explain that
+    /// glob imports don't include private items.
+    fn check_for_glob_import_private_items(&self, candidates: &mut Vec<ImportSuggestion>) {
+        // Get the current module
+        let current_module = self.parent_scope.module;
+
+        // Collect information about glob-imported modules by checking the resolutions
+        let mut glob_imported_modules: Vec<(DefId, Span)> = Vec::new();
+        for (_, resolution) in self.r.resolutions(current_module).borrow().iter() {
+            let resolution = resolution.borrow();
+            if let Some(decl) = resolution.best_decl() {
+                if decl.is_glob_import() {
+                    // Get the module that was glob-imported
+                    if let crate::DeclKind::Import { import, .. } = decl.kind {
+                        if let Some(ModuleOrUniformRoot::Module(module)) =
+                            import.imported_module.get()
+                        {
+                            let def_id = module.def_id();
+                            let span = import.span;
+                            // Avoid duplicates
+                            if !glob_imported_modules.iter().any(|(id, _)| *id == def_id) {
+                                glob_imported_modules.push((def_id, span));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if glob_imported_modules.is_empty() {
+            return;
+        }
+
+        // For each inaccessible candidate, check if its parent module was glob-imported
+        for candidate in candidates.iter_mut() {
+            if candidate.accessible {
+                continue;
+            }
+
+            // Get the parent module of this candidate
+            let Some(did) = candidate.did else {
+                continue;
+            };
+            let Some(parent_def_id) = self.r.tcx.opt_parent(did) else {
+                continue;
+            };
+
+            // Check if this parent module was glob-imported
+            for (glob_module_def_id, glob_span) in &glob_imported_modules {
+                if *glob_module_def_id == parent_def_id {
+                    let item_name = candidate
+                        .path
+                        .segments
+                        .last()
+                        .map_or_else(|| String::from("item"), |seg| seg.ident.name.to_string());
+                    let note = format!(
+                        "the item `{item_name}` is private and cannot be accessed through the glob import at {}",
+                        self.r.tcx.sess.source_map().span_to_diagnostic_string(*glob_span)
+                    );
+                    candidate.note = Some(note);
+                    break;
+                }
+            }
+        }
     }
 
     fn lookup_doc_alias_name(&mut self, path: &[Segment], ns: Namespace) -> Option<(DefId, Ident)> {

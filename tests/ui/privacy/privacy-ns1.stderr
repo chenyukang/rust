@@ -7,6 +7,7 @@ LL |     pub struct Baz;
 LL |     Bar();
    |     ^^^
    |
+   = note: the item `Bar` is private and cannot be accessed through the glob import at $DIR/privacy-ns1.rs:19:9: 19:16
 note: these functions exist but are inaccessible
   --> $DIR/privacy-ns1.rs:15:5
    |
@@ -34,6 +35,7 @@ LL |     pub struct Baz;
 LL |     Bar();
    |     ^^^
    |
+   = note: the item `Bar` is private and cannot be accessed through the glob import at $DIR/privacy-ns1.rs:50:9: 50:16
 note: these functions exist but are inaccessible
   --> $DIR/privacy-ns1.rs:15:5
    |
@@ -61,6 +63,7 @@ LL |     pub struct Baz;
 LL |     let _x: Box<Bar>;
    |                 ^^^
    |
+   = note: the item `Bar` is private and cannot be accessed through the glob import at $DIR/privacy-ns1.rs:50:9: 50:16
 note: these traits exist but are inaccessible
   --> $DIR/privacy-ns1.rs:26:5
    |

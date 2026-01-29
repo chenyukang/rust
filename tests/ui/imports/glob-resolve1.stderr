@@ -9,6 +9,7 @@ note: function `bar::fpriv` exists but is inaccessible
    |
 LL |     fn fpriv() {}
    |     ^^^^^^^^^^ not accessible
+   = note: the item `fpriv` is private and cannot be accessed through the glob import at $DIR/glob-resolve1.rs:4:5: 4:11
 
 error[E0425]: cannot find function `epriv` in this scope
   --> $DIR/glob-resolve1.rs:28:5
@@ -51,6 +52,7 @@ note: unit struct `bar::C` exists but is inaccessible
    |
 LL |     struct C;
    |     ^^^^^^^^^ not accessible
+   = note: the item `C` is private and cannot be accessed through the glob import at $DIR/glob-resolve1.rs:4:5: 4:11
 
 error[E0425]: cannot find function `import` in this scope
   --> $DIR/glob-resolve1.rs:31:5
@@ -63,6 +65,7 @@ note: function `bar::import` exists but is inaccessible
    |
 LL |     fn fpriv() {}
    |     ^^^^^^^^^^ not accessible
+   = note: the item `import` is private and cannot be accessed through the glob import at $DIR/glob-resolve1.rs:4:5: 4:11
 help: consider importing this function
    |
 LL + use other::import;
@@ -82,6 +85,7 @@ note: enum `bar::A` exists but is inaccessible
    |
 LL |     enum A {
    |     ^^^^^^ not accessible
+   = note: the item `A` is private and cannot be accessed through the glob import at $DIR/glob-resolve1.rs:4:5: 4:11
 help: an enum with a similar name exists
    |
 LL -     foo::<A>();
@@ -102,6 +106,7 @@ note: struct `bar::C` exists but is inaccessible
    |
 LL |     struct C;
    |     ^^^^^^^^^ not accessible
+   = note: the item `C` is private and cannot be accessed through the glob import at $DIR/glob-resolve1.rs:4:5: 4:11
 help: an enum with a similar name exists
    |
 LL -     foo::<C>();
@@ -122,6 +127,7 @@ note: type alias `bar::D` exists but is inaccessible
    |
 LL |     type D = isize;
    |     ^^^^^^^^^^^^^^^ not accessible
+   = note: the item `D` is private and cannot be accessed through the glob import at $DIR/glob-resolve1.rs:4:5: 4:11
 help: an enum with a similar name exists
    |
 LL -     foo::<D>();

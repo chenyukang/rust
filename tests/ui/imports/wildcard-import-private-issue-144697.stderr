@@ -1,0 +1,16 @@
+error[E0425]: cannot find function `calculate` in this scope
+  --> $DIR/wildcard-import-private-issue-144697.rs:19:5
+   |
+LL |     calculate();
+   |     ^^^^^^^^^ not found in this scope
+   |
+note: function `crate::inner::calculate` exists but is inaccessible
+  --> $DIR/wildcard-import-private-issue-144697.rs:5:5
+   |
+LL |     fn calculate() -> usize {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+   = note: the item `calculate` is private and cannot be accessed through the glob import at $DIR/wildcard-import-private-issue-144697.rs:16:5: 16:13
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0425`.
