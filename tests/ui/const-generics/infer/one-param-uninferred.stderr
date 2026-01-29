@@ -11,8 +11,8 @@ LL | fn foo<const N: usize, const M: usize>() -> [u8; N] {
    |                        ^^^^^^^^^^^^^^ required by this const generic parameter in `foo`
 help: consider specifying the generic arguments
    |
-LL |     let _: [u8; 17] = foo::<17, M>();
-   |                          +++++++++
+LL |     let _: [u8; 17] = foo::<const { 17 }, const { M }>();
+   |                          +++++++++++++++++++++++++++++
 
 error: aborting due to 1 previous error
 

@@ -29,8 +29,8 @@ LL | type ProjOf<T> = T::Proj;
    |
 help: consider fully qualifying the associated type
    |
-LL | type ProjOf<T> = <T as Parametrized</* 'a, T, N */>>::Proj;
-   |                  +  ++++++++++++++++++++++++++++++++
+LL | type ProjOf<T> = <T as Parametrized</* 'a, T, const N */>>::Proj;
+   |                  +  ++++++++++++++++++++++++++++++++++++++
 
 error: aborting due to 3 previous errors
 

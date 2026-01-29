@@ -1,0 +1,27 @@
+error[E0599]: no method named `build` found for struct `PartialTest<const { false }, const { true }>` in the current scope
+  --> $DIR/const-param-render-issue-151792.rs:19:7
+   |
+LL | struct PartialTest<const FOO: bool, const BAR: bool>;
+   | ---------------------------------------------------- method `build` not found for this struct
+...
+LL |     x.build();
+   |       ^^^^^ method not found in `PartialTest<const { false }, const { true }>`
+   |
+   = note: the method was found for
+           - `PartialTest<const { true }, const { true }>`
+
+error[E0599]: no method named `with_bar` found for struct `PartialTest<const { true }, const { true }>` in the current scope
+  --> $DIR/const-param-render-issue-151792.rs:23:7
+   |
+LL | struct PartialTest<const FOO: bool, const BAR: bool>;
+   | ---------------------------------------------------- method `with_bar` not found for this struct
+...
+LL |     y.with_bar();
+   |       ^^^^^^^^ method not found in `PartialTest<const { true }, const { true }>`
+   |
+   = note: the method was found for
+           - `PartialTest<const FOO, const { false }>`
+
+error: aborting due to 2 previous errors
+
+For more information about this error, try `rustc --explain E0599`.

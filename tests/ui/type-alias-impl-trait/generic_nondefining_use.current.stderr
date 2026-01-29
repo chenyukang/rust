@@ -16,8 +16,8 @@ LL | type OneLifetime<'a> = impl Debug;
 LL |     6u32
    |     ^^^^
 
-error[E0792]: expected generic constant parameter, found `123`
-  --> $DIR/generic_nondefining_use.rs:35:24
+error[E0792]: expected generic constant parameter, found `const { 123 }`
+  --> $DIR/generic_nondefining_use.rs:34:24
    |
 LL | type OneConst<const X: usize> = impl Debug;
    |               -------------- this generic parameter must be used with a generic constant parameter

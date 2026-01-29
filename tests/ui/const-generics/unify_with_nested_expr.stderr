@@ -11,8 +11,8 @@ LL | fn bar<const N: usize>()
    |        ^^^^^^^^^^^^^^ required by this const generic parameter in `bar`
 help: consider specifying the generic argument
    |
-LL |     bar::<N>();
-   |        +++++
+LL |     bar::<const { N }>();
+   |        +++++++++++++++
 
 error: aborting due to 1 previous error
 

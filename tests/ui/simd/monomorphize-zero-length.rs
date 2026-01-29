@@ -6,5 +6,5 @@
 struct Simd<T, const N: usize>([T; N]);
 
 fn main() {
-    let _empty = Simd([1.0; 0]); //~ ERROR the SIMD type `Simd<f64, 0>` has zero elements
+    let _empty = Simd([1.0; 0]); //~ ERROR the SIMD type `Simd<f64, const { 0 }>` has zero elements
 }

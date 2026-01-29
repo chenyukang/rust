@@ -193,6 +193,11 @@ impl<'tcx> PrettyPrinter<'tcx> for TypeNamePrinter<'tcx> {
         // `std::any::type_name` should never print verbose type names
         false
     }
+
+    fn pretty_print_const_as_generic_arg(&mut self, ct: ty::Const<'tcx>) -> Result<(), PrintError> {
+        // For `std::any::type_name`, use the original const printing without `const` prefix
+        self.pretty_print_const(ct, false)
+    }
 }
 
 impl Write for TypeNamePrinter<'_> {

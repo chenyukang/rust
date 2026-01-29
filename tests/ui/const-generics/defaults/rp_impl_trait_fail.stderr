@@ -1,34 +1,34 @@
-error[E0277]: the trait bound `Uwu<10, 12>: Trait` is not satisfied
+error[E0277]: the trait bound `Uwu<const { 10 }, const { 12 }>: Trait` is not satisfied
   --> $DIR/rp_impl_trait_fail.rs:6:14
    |
 LL | fn rawr() -> impl Trait {
    |              ^^^^^^^^^^ unsatisfied trait bound
 LL |
 LL |     Uwu::<10, 12>
-   |     ------------- return type was inferred to be `Uwu<10, 12>` here
+   |     ------------- return type was inferred to be `Uwu<const { 10 }, const { 12 }>` here
    |
-help: the trait `Trait` is not implemented for `Uwu<10, 12>`
+help: the trait `Trait` is not implemented for `Uwu<const { 10 }, const { 12 }>`
   --> $DIR/rp_impl_trait_fail.rs:1:1
    |
 LL | struct Uwu<const N: u32 = 1, const M: u32 = N>;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-help: the trait `Trait` is implemented for `Uwu<N>`
+help: the trait `Trait` is implemented for `Uwu<const N>`
   --> $DIR/rp_impl_trait_fail.rs:4:1
    |
 LL | impl<const N: u32> Trait for Uwu<N> {}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-error[E0277]: the trait bound `u32: Traitor<N>` is not satisfied
+error[E0277]: the trait bound `u32: Traitor<const N>` is not satisfied
   --> $DIR/rp_impl_trait_fail.rs:16:26
    |
 LL | fn uwu<const N: u8>() -> impl Traitor<N> {
-   |                          ^^^^^^^^^^^^^^^ the trait `Traitor<N>` is not implemented for `u32`
+   |                          ^^^^^^^^^^^^^^^ the trait `Traitor<const N>` is not implemented for `u32`
 LL |
 LL |     1_u32
    |     ----- return type was inferred to be `u32` here
    |
-help: the trait `Traitor<N, N>` is not implemented for `u32`
-      but trait `Traitor<N, 2>` is implemented for it
+help: the trait `Traitor<const N, const N>` is not implemented for `u32`
+      but trait `Traitor<const N, const { 2 }>` is implemented for it
   --> $DIR/rp_impl_trait_fail.rs:13:1
    |
 LL | impl<const N: u8> Traitor<N, 2> for u32 {}
@@ -43,8 +43,8 @@ LL |
 LL |     1_u64
    |     ----- return type was inferred to be `u64` here
    |
-help: the trait `Traitor<1, 1>` is not implemented for `u64`
-      but trait `Traitor<1, 2>` is implemented for it
+help: the trait `Traitor<const { 1 }, const { 1 }>` is not implemented for `u64`
+      but trait `Traitor<const { 1 }, const { 2 }>` is implemented for it
   --> $DIR/rp_impl_trait_fail.rs:14:1
    |
 LL | impl Traitor<1, 2> for u64 {}
@@ -63,8 +63,8 @@ LL | fn uwu<const N: u8>() -> impl Traitor<N> {
    |        ^^^^^^^^^^^ required by this const generic parameter in `uwu`
 help: consider specifying the generic argument
    |
-LL |     uwu::<N>();
-   |        +++++
+LL |     uwu::<const { N }>();
+   |        +++++++++++++++
 
 error: aborting due to 4 previous errors
 

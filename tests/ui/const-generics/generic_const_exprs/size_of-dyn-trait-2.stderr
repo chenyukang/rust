@@ -19,7 +19,7 @@ LL | fn foo(x: A<dyn Send>) {}
    |           ^^^^^^^^^^^ doesn't have a size known at compile-time
    |
    = help: the trait `Sized` is not implemented for `(dyn Send + 'static)`
-note: required for `(dyn Send + 'static)` to implement `Size<8>`
+note: required for `(dyn Send + 'static)` to implement `Size<const { 8 }>`
   --> $DIR/size_of-dyn-trait-2.rs:8:16
    |
 LL | impl<T: Sized> Size<{ std::mem::size_of::<T>() }> for T {}

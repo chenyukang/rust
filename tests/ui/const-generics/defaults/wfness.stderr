@@ -4,14 +4,14 @@ error[E0080]: attempt to compute `u8::MAX + 1_u8`, which would overflow
 LL | struct Ooopsies<const N: u8 = { u8::MAX + 1 }>;
    |                                 ^^^^^^^^^^^ evaluation of `Ooopsies::{constant#0}` failed here
 
-error[E0277]: the trait bound `(): Trait<2>` is not satisfied
+error[E0277]: the trait bound `(): Trait<const { 2 }>` is not satisfied
   --> $DIR/wfness.rs:8:9
    |
 LL |     (): Trait<N>;
-   |         ^^^^^^^^ the trait `Trait<2>` is not implemented for `()`
+   |         ^^^^^^^^ the trait `Trait<const { 2 }>` is not implemented for `()`
    |
-help: the trait `Trait<2>` is not implemented for `()`
-      but trait `Trait<3>` is implemented for it
+help: the trait `Trait<const { 2 }>` is not implemented for `()`
+      but trait `Trait<const { 3 }>` is implemented for it
   --> $DIR/wfness.rs:5:1
    |
 LL | impl Trait<3> for () {}
@@ -25,14 +25,14 @@ LL | where
 LL |     (): Trait<N>;
    |         ^^^^^^^^ required by this bound in `WhereClause`
 
-error[E0277]: the trait bound `(): Trait<1>` is not satisfied
+error[E0277]: the trait bound `(): Trait<const { 1 }>` is not satisfied
   --> $DIR/wfness.rs:18:13
    |
 LL | fn foo() -> DependentDefaultWfness {
-   |             ^^^^^^^^^^^^^^^^^^^^^^ the trait `Trait<1>` is not implemented for `()`
+   |             ^^^^^^^^^^^^^^^^^^^^^^ the trait `Trait<const { 1 }>` is not implemented for `()`
    |
-help: the trait `Trait<1>` is not implemented for `()`
-      but trait `Trait<3>` is implemented for it
+help: the trait `Trait<const { 1 }>` is not implemented for `()`
+      but trait `Trait<const { 3 }>` is implemented for it
   --> $DIR/wfness.rs:5:1
    |
 LL | impl Trait<3> for () {}

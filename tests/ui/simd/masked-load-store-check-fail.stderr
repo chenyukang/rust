@@ -9,7 +9,7 @@ LL |             Simd::<u8, 4>([9; 4]),
    |
    = note: expected struct `Simd<_, 2>`
               found struct `Simd<_, 4>`
-help: the return type of this call is `Simd<u8, 4>` due to the type of the argument passed
+help: the return type of this call is `Simd<u8, const { 4 }>` due to the type of the argument passed
   --> $DIR/masked-load-store-check-fail.rs:15:31
    |
 LL |           let _x: Simd<u8, 2> = simd_masked_load::<_, _, _, { SimdAlign::Element }>(
@@ -30,11 +30,11 @@ LL |         let _x: Simd<u32, 4> = simd_masked_load::<_, _, _, { SimdAlign::Ele
    |                                --------------------------------------------------- arguments to this function are incorrect
 ...
 LL |             default,
-   |             ^^^^^^^ expected `Simd<u32, 4>`, found `Simd<u8, 4>`
+   |             ^^^^^^^ expected `Simd<u32, const { 4 }>`, found `Simd<u8, const { 4 }>`
    |
    = note: expected struct `Simd<u32, _>`
               found struct `Simd<u8, _>`
-help: the return type of this call is `Simd<u8, 4>` due to the type of the argument passed
+help: the return type of this call is `Simd<u8, const { 4 }>` due to the type of the argument passed
   --> $DIR/masked-load-store-check-fail.rs:22:32
    |
 LL |           let _x: Simd<u32, 4> = simd_masked_load::<_, _, _, { SimdAlign::Element }>(

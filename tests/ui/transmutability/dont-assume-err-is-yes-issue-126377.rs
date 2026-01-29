@@ -12,7 +12,7 @@ where
 
 fn foo<const N: usize>() {
     is_transmutable::<{}>();
-    //~^ ERROR  the trait bound `(): TransmuteFrom<(), { Assume::SAFETY }>` is not satisfied
+    //~^ ERROR  the trait bound `(): TransmuteFrom<(), const { { Assume::SAFETY } }>` is not satisfied
     //~| ERROR mismatched types
 }
 

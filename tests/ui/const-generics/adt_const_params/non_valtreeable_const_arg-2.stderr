@@ -17,18 +17,18 @@ LL | struct Wrapper<const F: fn()>;
    |
    = note: the only supported types are integers, `bool`, and `char`
 
-error[E0599]: the function or associated item `call` exists for struct `Wrapper<function>`, but its trait bounds were not satisfied
+error[E0599]: the function or associated item `call` exists for struct `Wrapper<const { function }>`, but its trait bounds were not satisfied
   --> $DIR/non_valtreeable_const_arg-2.rs:17:26
    |
 LL | struct Wrapper<const F: fn()>;
-   | ----------------------------- function or associated item `call` not found for this struct because it doesn't satisfy `Wrapper<function>: Fn<_>`
+   | ----------------------------- function or associated item `call` not found for this struct because it doesn't satisfy `Wrapper<const { function }>: Fn<_>`
 ...
 LL |     Wrapper::<function>::call;
-   |                          ^^^^ function or associated item cannot be called on `Wrapper<function>` due to unsatisfied trait bounds
+   |                          ^^^^ function or associated item cannot be called on `Wrapper<const { function }>` due to unsatisfied trait bounds
    |
    = note: the following trait bounds were not satisfied:
-           `Wrapper<function>: Fn<_>`
-           which is required by `&Wrapper<function>: Fn<_>`
+           `Wrapper<const { function }>: Fn<_>`
+           which is required by `&Wrapper<const { function }>: Fn<_>`
 note: the trait `Fn` must be implemented
   --> $SRC_DIR/core/src/ops/function.rs:LL:COL
    = help: items from traits can only be used if the trait is implemented and in scope

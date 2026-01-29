@@ -4,7 +4,7 @@ trait Trait {}
 impl<const N: u32> Trait for Uwu<N> {}
 
 fn rawr() -> impl Trait {
-    //~^ error: the trait bound `Uwu<10, 12>: Trait` is not satisfied
+    //~^ error: the trait bound `Uwu<const { 10 }, const { 12 }>: Trait` is not satisfied
     Uwu::<10, 12>
 }
 
@@ -14,7 +14,7 @@ impl<const N: u8> Traitor<N, 2> for u32 {}
 impl Traitor<1, 2> for u64 {}
 
 fn uwu<const N: u8>() -> impl Traitor<N> {
-    //~^ error: the trait bound `u32: Traitor<N>` is not satisfied
+    //~^ error: the trait bound `u32: Traitor<const N>` is not satisfied
     1_u32
 }
 

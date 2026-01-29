@@ -94,7 +94,7 @@ fn main() {
     let boolean = true;
     let wrapper = Wrapper2::<'_, _, 3> { x: &boolean };
     wrapper.method();
-    //~^ ERROR no method named `method` found for struct `Wrapper2<'_, bool, 3>
+    //~^ ERROR no method named `method` found for struct `Wrapper2<'_, bool, const { 3 }>`
     wrapper.other();
     //~^ ERROR no method named `other` found for struct `Wrapper2
     let a = vec![1, 2, 3];

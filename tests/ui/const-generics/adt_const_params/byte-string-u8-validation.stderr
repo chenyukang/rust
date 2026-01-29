@@ -5,7 +5,7 @@ LL | struct ConstBytes<const T: &'static [*mut u8; 3]>
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = note: Binder { value: ConstArgHasType(T/#0, &'static [*mut u8; 3_usize]), bound_vars: [] }
-   = note: Binder { value: TraitPredicate(<ConstBytes<{const error}> as std::marker::Sized>, polarity:Positive), bound_vars: [] }
+   = note: Binder { value: TraitPredicate(<ConstBytes<const { {const error} }> as std::marker::Sized>, polarity:Positive), bound_vars: [] }
 
 error[E0308]: mismatched types
   --> $DIR/byte-string-u8-validation.rs:13:16

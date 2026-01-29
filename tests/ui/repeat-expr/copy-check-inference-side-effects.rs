@@ -13,7 +13,7 @@ fn works_if_inference_side_effects() {
     // This will only pass if inference side effects from proving `Foo<?x>: Copy` are
     // able to be relied upon by other repeat expressions.
     let a /* : [Foo<?x>; 2] */ = [Foo::<_>; 2];
-    //~^ ERROR: type annotations needed for `[Foo<_>; 2]`
+    //~^ ERROR: type annotations needed for `[Foo<const { _ }>; 2]`
     let b /* : [String; ?x] */ = ["string".to_string(); _];
 
     unify(&a, &b);

@@ -259,7 +259,7 @@ impl Foo<254> for () {}
 impl Foo<255> for () {}
 
 fn foo<const N: u8>() {
-    <() as Foo<N>>::test() //~ ERROR the trait bound `(): Foo<N>`
+    <() as Foo<N>>::test() //~ ERROR the trait bound `(): Foo<const N>`
 }
 
 fn main() {

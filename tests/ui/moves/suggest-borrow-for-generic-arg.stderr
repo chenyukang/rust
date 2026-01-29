@@ -72,7 +72,7 @@ error[E0382]: use of moved value: `iter`
   --> $DIR/suggest-borrow-for-generic-arg.rs:39:42
    |
 LL |     let mut iter = [1, 2, 3, 4, 5, 6].into_iter();
-   |         -------- move occurs because `iter` has type `std::array::IntoIter<usize, 6>`, which does not implement the `Copy` trait
+   |         -------- move occurs because `iter` has type `std::array::IntoIter<usize, const { 6 }>`, which does not implement the `Copy` trait
 LL |     let _six: usize = aux::sum_three(iter);
    |                                      ---- value moved here
 LL |

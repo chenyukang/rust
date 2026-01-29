@@ -1,4 +1,4 @@
-error: the SIMD type `Simd<0>` has zero elements
+error: the SIMD type `Simd<const { 0 }>` has zero elements
   --> $DIR/type-generic-monomorphisation-empty.rs:9:9
    |
 LL |     let _empty = Simd::<0>([]);

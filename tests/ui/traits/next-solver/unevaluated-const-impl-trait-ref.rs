@@ -7,7 +7,11 @@ trait Trait<const N: usize> {}
 impl Trait<{ 1 - 1 }> for () {}
 impl Trait<{ 1 + 1 }> for () {}
 
-fn needs<const N: usize>() where (): Trait<N> {}
+fn needs<const N: usize>()
+where
+    (): Trait<N>,
+{
+}
 
 #[cfg(works)]
 fn main() {
@@ -18,5 +22,5 @@ fn main() {
 #[cfg(fails)]
 fn main() {
     needs::<1>();
-    //[fails]~^ ERROR the trait bound `(): Trait<1>` is not satisfied
+    //[fails]~^ ERROR the trait bound `(): Trait<const { 1 }>` is not satisfied
 }

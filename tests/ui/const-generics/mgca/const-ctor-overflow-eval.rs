@@ -6,14 +6,14 @@ use std::marker::ConstParamTy;
 struct U;
 
 #[derive(ConstParamTy, PartialEq, Eq)]
-//~^ ERROR overflow evaluating the requirement `S<U> well-formed`
-//~| ERROR overflow evaluating the requirement `S<U> well-formed`
+//~^ ERROR overflow evaluating the requirement `S<const { U }> well-formed`
+//~| ERROR overflow evaluating the requirement `S<const { U }> well-formed`
 
 struct S<const N: U>()
 where
     S<{ U }>:;
-//~^ ERROR overflow evaluating the requirement `S<U> well-formed`
-//~| ERROR overflow evaluating the requirement `S<U> well-formed`
-//~| ERROR overflow evaluating the requirement `S<U> well-formed`
+//~^ ERROR overflow evaluating the requirement `S<const { U }> well-formed`
+//~| ERROR overflow evaluating the requirement `S<const { U }> well-formed`
+//~| ERROR overflow evaluating the requirement `S<const { U }> well-formed`
 
 fn main() {}

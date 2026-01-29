@@ -13,11 +13,11 @@ error[E0308]: mismatched types
 LL |     is_transmutable::<{}>();
    |                       ^^ expected `bool`, found `()`
 
-error[E0277]: the trait bound `(): TransmuteFrom<(), { Assume::SAFETY }>` is not satisfied
+error[E0277]: the trait bound `(): TransmuteFrom<(), const { { Assume::SAFETY } }>` is not satisfied
   --> $DIR/dont-assume-err-is-yes-issue-126377.rs:14:23
    |
 LL |     is_transmutable::<{}>();
-   |                       ^^ the nightly-only, unstable trait `TransmuteFrom<(), { Assume::SAFETY }>` is not implemented for `()`
+   |                       ^^ the nightly-only, unstable trait `TransmuteFrom<(), const { { Assume::SAFETY } }>` is not implemented for `()`
    |
 note: required by a bound in `is_transmutable`
   --> $DIR/dont-assume-err-is-yes-issue-126377.rs:9:9

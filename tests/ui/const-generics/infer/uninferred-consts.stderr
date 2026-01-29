@@ -11,8 +11,8 @@ LL |     fn foo<const A: usize, const B: usize>(self) {}
    |            ^^^^^^^^^^^^^^ required by this const generic parameter in `Foo::foo`
 help: consider specifying the generic arguments
    |
-LL |     Foo.foo::<A, B>();
-   |            ++++++++
+LL |     Foo.foo::<const { A }, const { B }>();
+   |            ++++++++++++++++++++++++++++
 
 error[E0284]: type annotations needed
   --> $DIR/uninferred-consts.rs:9:9
@@ -27,8 +27,8 @@ LL |     fn foo<const A: usize, const B: usize>(self) {}
    |                            ^^^^^^^^^^^^^^ required by this const generic parameter in `Foo::foo`
 help: consider specifying the generic arguments
    |
-LL |     Foo.foo::<A, B>();
-   |            ++++++++
+LL |     Foo.foo::<const { A }, const { B }>();
+   |            ++++++++++++++++++++++++++++
 
 error: aborting due to 2 previous errors
 

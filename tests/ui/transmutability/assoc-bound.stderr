@@ -1,10 +1,10 @@
-error[E0277]: the trait bound `<T as A>::AssocA: TransmuteFrom<(), Assume { alignment: false, lifetimes: false, safety: false, validity: false }>` is not satisfied
+error[E0277]: the trait bound `<T as A>::AssocA: TransmuteFrom<(), const { Assume { alignment: false, lifetimes: false, safety: false, validity: false } }>` is not satisfied
   --> $DIR/assoc-bound.rs:16:19
    |
 LL |     type AssocB = T::AssocA;
    |                   ^^^^^^^^^ unsatisfied trait bound
    |
-   = help: the nightly-only, unstable trait `TransmuteFrom<(), Assume { alignment: false, lifetimes: false, safety: false, validity: false }>` is not implemented for `<T as A>::AssocA`
+   = help: the nightly-only, unstable trait `TransmuteFrom<(), const { Assume { alignment: false, lifetimes: false, safety: false, validity: false } }>` is not implemented for `<T as A>::AssocA`
 note: required by a bound in `B::AssocB`
   --> $DIR/assoc-bound.rs:9:18
    |
@@ -12,11 +12,11 @@ LL |     type AssocB: std::mem::TransmuteFrom<()>;
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `B::AssocB`
 help: consider further restricting the associated type
    |
-LL |     T: A, <T as A>::AssocA: TransmuteFrom<(), Assume { alignment: false, lifetimes: false, safety: false, validity: false }>
-   |           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+LL |     T: A, <T as A>::AssocA: TransmuteFrom<(), const { Assume { alignment: false, lifetimes: false, safety: false, validity: false } }>
+   |           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 error[E0277]: `()` cannot be safely transmuted into `<&i32 as A>::AssocA`
-  --> $DIR/assoc-bound.rs:24:19
+  --> $DIR/assoc-bound.rs:23:19
    |
 LL |     type AssocB = <&'static i32 as A>::AssocA;
    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `<&i32 as A>::AssocA` has an unknown layout

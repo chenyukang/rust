@@ -1,4 +1,4 @@
-error[E0271]: type mismatch resolving `<IntoIter<{integer}, 3> as IntoIterator>::Item == &{integer}`
+error[E0271]: type mismatch resolving `<IntoIter<{integer}, const { 3 }> as IntoIterator>::Item == &{integer}`
   --> $DIR/into_iter-when-iter-was-intended.rs:5:37
    |
 LL |     let _a = [0, 1, 2].iter().chain([3, 4, 5].into_iter());

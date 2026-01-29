@@ -11,8 +11,8 @@ LL |     pub fn consts<const N: i32>() -> i32 {
    |                   ^^^^^^^^^^^^ required by this const generic parameter in `consts`
 help: consider specifying the generic argument
    |
-LL | reuse to_reuse::consts::<N>;
-   |                       +++++
+LL | reuse to_reuse::consts::<const { N }>;
+   |                       +++++++++++++++
 
 error[E0794]: cannot specify lifetime arguments explicitly if late bound lifetime parameters are present
   --> $DIR/free-fn-to-free-fn.rs:21:12

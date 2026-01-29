@@ -33,8 +33,8 @@ LL | type ProjOf<T> = T::Proj;
    |
 help: consider restricting type parameter `T` with trait `Parametrized`
    |
-LL | type ProjOf<T: Parametrized</* 'a, T, N */>> = T::Proj;
-   |              ++++++++++++++++++++++++++++++
+LL | type ProjOf<T: Parametrized</* 'a, T, const N */>> = T::Proj;
+   |              ++++++++++++++++++++++++++++++++++++
 
 error: aborting due to 3 previous errors
 

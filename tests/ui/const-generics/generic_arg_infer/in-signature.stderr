@@ -19,7 +19,7 @@ LL | fn ty_fn() -> Bar<i32, _> {
 help: replace with the correct return type
    |
 LL - fn ty_fn() -> Bar<i32, _> {
-LL + fn ty_fn() -> Bar<i32, 3> {
+LL + fn ty_fn() -> Bar<i32, const { 3 }> {
    |
 
 error[E0121]: the placeholder `_` is not allowed within types on item signatures for return types
@@ -33,7 +33,7 @@ LL | fn ty_fn_mixed() -> Bar<_, _> {
 help: replace with the correct return type
    |
 LL - fn ty_fn_mixed() -> Bar<_, _> {
-LL + fn ty_fn_mixed() -> Bar<i32, 3> {
+LL + fn ty_fn_mixed() -> Bar<i32, const { 3 }> {
    |
 
 error[E0121]: the placeholder `_` is not allowed within types on item signatures for constants
@@ -69,7 +69,7 @@ LL | const TY_CT: Bar<i32, _> = Bar::<i32, 3>(0);
 help: replace this with a fully-specified type
    |
 LL - const TY_CT: Bar<i32, _> = Bar::<i32, 3>(0);
-LL + const TY_CT: Bar<i32, 3> = Bar::<i32, 3>(0);
+LL + const TY_CT: Bar<i32, const { 3 }> = Bar::<i32, 3>(0);
    |
 
 error[E0121]: the placeholder `_` is not allowed within types on item signatures for static variables
@@ -81,7 +81,7 @@ LL | static TY_STATIC: Bar<i32, _> = Bar::<i32, 3>(0);
 help: replace this with a fully-specified type
    |
 LL - static TY_STATIC: Bar<i32, _> = Bar::<i32, 3>(0);
-LL + static TY_STATIC: Bar<i32, 3> = Bar::<i32, 3>(0);
+LL + static TY_STATIC: Bar<i32, const { 3 }> = Bar::<i32, 3>(0);
    |
 
 error[E0121]: the placeholder `_` is not allowed within types on item signatures for constants
@@ -95,7 +95,7 @@ LL | const TY_CT_MIXED: Bar<_, _> = Bar::<i32, 3>(0);
 help: replace this with a fully-specified type
    |
 LL - const TY_CT_MIXED: Bar<_, _> = Bar::<i32, 3>(0);
-LL + const TY_CT_MIXED: Bar<i32, 3> = Bar::<i32, 3>(0);
+LL + const TY_CT_MIXED: Bar<i32, const { 3 }> = Bar::<i32, 3>(0);
    |
 
 error[E0121]: the placeholder `_` is not allowed within types on item signatures for static variables
@@ -109,7 +109,7 @@ LL | static TY_STATIC_MIXED: Bar<_, _> = Bar::<i32, 3>(0);
 help: replace this with a fully-specified type
    |
 LL - static TY_STATIC_MIXED: Bar<_, _> = Bar::<i32, 3>(0);
-LL + static TY_STATIC_MIXED: Bar<i32, 3> = Bar::<i32, 3>(0);
+LL + static TY_STATIC_MIXED: Bar<i32, const { 3 }> = Bar::<i32, 3>(0);
    |
 
 error[E0121]: the placeholder `_` is not allowed within types on item signatures for associated types

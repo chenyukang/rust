@@ -1,11 +1,11 @@
-error[E0277]: the trait bound `u16: Bar<N>` is not satisfied
+error[E0277]: the trait bound `u16: Bar<const N>` is not satisfied
   --> $DIR/associated-type-bound-fail.rs:9:18
    |
 LL |     type Assoc = u16;
-   |                  ^^^ the trait `Bar<N>` is not implemented for `u16`
+   |                  ^^^ the trait `Bar<const N>` is not implemented for `u16`
    |
-help: the trait `Bar<N>` is not implemented for `u16`
-      but trait `Bar<3>` is implemented for it
+help: the trait `Bar<const N>` is not implemented for `u16`
+      but trait `Bar<const { 3 }>` is implemented for it
   --> $DIR/associated-type-bound-fail.rs:7:1
    |
 LL | impl Bar<3> for u16 {}

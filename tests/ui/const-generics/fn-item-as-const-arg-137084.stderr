@@ -8,7 +8,7 @@ LL |     a::<d>
    |     ^^^^^^ expected `()`, found fn item
    |
    = note: expected unit type `()`
-                found fn item `fn() {a::<d>}`
+                found fn item `fn() {a::<const { d }>}`
 help: try adding a return type
    |
 LL | fn d(e: &String) -> fn() {

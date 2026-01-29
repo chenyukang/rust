@@ -50,28 +50,28 @@ LL | struct Wrapper<T>(T);
 LL |     wrapper.other();
    |             ^^^^^ method not found in `Wrapper<bool>`
 
-error[E0599]: no method named `method` found for struct `Wrapper2<'_, bool, 3>` in the current scope
+error[E0599]: no method named `method` found for struct `Wrapper2<'_, bool, const { 3 }>` in the current scope
   --> $DIR/method-not-found-generic-arg-elision.rs:96:13
    |
 LL | struct Wrapper2<'a, T, const C: usize> {
    | -------------------------------------- method `method` not found for this struct
 ...
 LL |     wrapper.method();
-   |             ^^^^^^ method not found in `Wrapper2<'_, bool, 3>`
+   |             ^^^^^^ method not found in `Wrapper2<'_, bool, const { 3 }>`
    |
    = note: the method was found for
-           - `Wrapper2<'a, i16, C>`
-           - `Wrapper2<'a, i32, C>`
-           - `Wrapper2<'a, i8, C>`
+           - `Wrapper2<'a, i16, const C>`
+           - `Wrapper2<'a, i32, const C>`
+           - `Wrapper2<'a, i8, const C>`
 
-error[E0599]: no method named `other` found for struct `Wrapper2<'a, T, C>` in the current scope
+error[E0599]: no method named `other` found for struct `Wrapper2<'a, T, const C>` in the current scope
   --> $DIR/method-not-found-generic-arg-elision.rs:98:13
    |
 LL | struct Wrapper2<'a, T, const C: usize> {
    | -------------------------------------- method `other` not found for this struct
 ...
 LL |     wrapper.other();
-   |             ^^^^^ method not found in `Wrapper2<'_, bool, 3>`
+   |             ^^^^^ method not found in `Wrapper2<'_, bool, const { 3 }>`
 
 error[E0599]: no method named `not_found` found for struct `Vec<{integer}>` in the current scope
   --> $DIR/method-not-found-generic-arg-elision.rs:101:7

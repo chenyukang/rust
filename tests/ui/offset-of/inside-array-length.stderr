@@ -59,7 +59,7 @@ note: ...which requires normalizing `Binder { value: ConstEvaluatable(Unevaluate
 LL | fn foo<'a, T: 'a>(_: [(); std::mem::offset_of!((T,), 0)]) {}
    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    = note: ...which again requires evaluating type-level constant, completing the cycle
-note: cycle used when normalizing `inside_array_length::::foo::{constant#0}`
+note: cycle used when normalizing `const { inside_array_length::::foo::{constant#0} }`
   --> $DIR/inside-array-length.rs:9:27
    |
 LL | fn foo<'a, T: 'a>(_: [(); std::mem::offset_of!((T,), 0)]) {}

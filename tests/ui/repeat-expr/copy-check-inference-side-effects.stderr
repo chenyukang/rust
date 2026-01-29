@@ -1,4 +1,4 @@
-error[E0282]: type annotations needed for `[Foo<_>; 2]`
+error[E0282]: type annotations needed for `[Foo<const { _ }>; 2]`
   --> $DIR/copy-check-inference-side-effects.rs:15:9
    |
 LL |     let a /* : [Foo<?x>; 2] */ = [Foo::<_>; 2];
@@ -9,8 +9,8 @@ LL |     let b /* : [String; ?x] */ = ["string".to_string(); _];
    |
 help: consider giving `a` an explicit type, where the value of const parameter `N` is specified
    |
-LL |     let a: [Foo<N>; 2] /* : [Foo<?x>; 2] */ = [Foo::<_>; 2];
-   |          +++++++++++++
+LL |     let a: [Foo<const { N }>; 2] /* : [Foo<?x>; 2] */ = [Foo::<_>; 2];
+   |          +++++++++++++++++++++++
 
 error[E0282]: type annotations needed for `[String; _]`
   --> $DIR/copy-check-inference-side-effects.rs:25:9

@@ -99,14 +99,14 @@ LL |
 LL |     iter::empty::<String>()
    |     ----------------------- return type was inferred to be `std::iter::Empty<String>` here
 
-error[E0271]: expected `IntoIter<u32, 1>` to be an iterator that yields `i32`, but it yields `u32`
+error[E0271]: expected `IntoIter<u32, const { 1 }>` to be an iterator that yields `i32`, but it yields `u32`
   --> $DIR/duplicate-bound-err.rs:111:17
    |
 LL |     fn foo() -> impl Iterator<Item = i32, Item = u32> {
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `i32`, found `u32`
 ...
 LL |         [2u32].into_iter()
-   |         ------------------ return type was inferred to be `std::array::IntoIter<u32, 1>` here
+   |         ------------------ return type was inferred to be `std::array::IntoIter<u32, const { 1 }>` here
 
 error[E0719]: the value of the associated type `Item` in trait `Iterator` is already specified
   --> $DIR/duplicate-bound-err.rs:87:42

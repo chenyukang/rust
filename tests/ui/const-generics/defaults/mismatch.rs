@@ -17,8 +17,8 @@ fn main() {
     //~| NOTE expected struct `Example3`
     let e: Example3<7> = ();
     //~^ ERROR mismatched types
-    //~| NOTE expected struct `Example3<7>`
+    //~| NOTE expected struct `Example3<const { 7 }>`
     let e: Example4<7> = ();
     //~^ ERROR mismatched types
-    //~| NOTE expected struct `Example4<7>`
+    //~| NOTE expected struct `Example4<const { 7 }>`
 }

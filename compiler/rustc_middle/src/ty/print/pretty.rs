@@ -1592,6 +1592,31 @@ pub trait PrettyPrinter<'tcx>: Printer<'tcx> + fmt::Write {
         Ok(())
     }
 
+    /// Pretty print a const when it's used as a generic argument.
+    /// This adds `const` prefix to make it clear the argument is a const parameter,
+    /// not a type parameter.
+    fn pretty_print_const_as_generic_arg(&mut self, ct: ty::Const<'tcx>) -> Result<(), PrintError> {
+        match ct.kind() {
+            // For const params, print as `const N` to distinguish from type params
+            ty::ConstKind::Param(ParamConst { name, .. }) => {
+                write!(self, "const {name}")?;
+            }
+            // For const values, print as `const { value }` to make it clear it's a const
+            ty::ConstKind::Value(cv) => {
+                write!(self, "const {{ ")?;
+                self.pretty_print_const_valtree(cv, false)?;
+                write!(self, " }}")?;
+            }
+            // For other const kinds, use the regular printing with const prefix
+            _ => {
+                write!(self, "const {{ ")?;
+                self.pretty_print_const(ct, false)?;
+                write!(self, " }}")?;
+            }
+        }
+        Ok(())
+    }
+
     fn pretty_print_const_expr(
         &mut self,
         expr: Expr<'tcx>,
@@ -3372,7 +3397,7 @@ define_print_and_forward_display! {
         match self.kind() {
             GenericArgKind::Lifetime(lt) => lt.print(p)?,
             GenericArgKind::Type(ty) => ty.print(p)?,
-            GenericArgKind::Const(ct) => ct.print(p)?,
+            GenericArgKind::Const(ct) => p.pretty_print_const_as_generic_arg(ct)?,
         }
     }
 }
