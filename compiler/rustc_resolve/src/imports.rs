@@ -486,6 +486,24 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         )
     }
 
+    /// Force plant `Res::Err` declaration into the module for a conflicting name.
+    /// This is used to avoid further errors when using duplicated names. See #151421.
+    pub(crate) fn force_plant_error_decl_into_module(
+        &mut self,
+        ident: IdentKey,
+        orig_ident_span: Span,
+        ns: Namespace,
+        decl: Decl<'ra>,
+    ) {
+        let module = decl.parent_module.unwrap();
+        let key = BindingKey::new(ident, ns);
+        let dummy_decl = self.dummy_decl;
+        self.update_local_resolution(module, key, orig_ident_span, false, |_, resolution| {
+            // Replace the existing resolution with `Res::Err` to avoid further errors.
+            resolution.non_glob_decl = Some(dummy_decl);
+        })
+    }
+
     // Use `f` to mutate the resolution of the name in the module.
     // If the resolution becomes a success, define it in the module's glob importers.
     fn update_local_resolution<T, F>(

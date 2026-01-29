@@ -57,6 +57,9 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
             self.try_plant_decl_into_local_module(ident, orig_ident_span, ns, decl, false)
         {
             self.report_conflict(ident, ns, old_decl, decl);
+            // Replace the resolution with `Res::Err` to avoid further errors when
+            // using this duplicated name. See #151421.
+            self.force_plant_error_decl_into_module(ident, orig_ident_span, ns, decl);
         }
     }
 

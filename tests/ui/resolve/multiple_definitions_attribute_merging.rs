@@ -1,14 +1,7 @@
-//! This test ICEs because the `repr(packed)` attributes
+//! This test used to ICE because the `repr(packed)` attributes
 //! end up on the `Dealigned` struct's attribute list, but the
-//! derive didn't see that.
-
-//@known-bug: #120873
-//@ failure-status: 101
-//@ normalize-stderr: "note: .*\n\n" -> ""
-//@ normalize-stderr: "thread 'rustc'.*panicked.*\n" -> ""
-//@ normalize-stderr: "(error: internal compiler error: [^:]+):\d+:\d+: " -> "$1:LL:CC: "
-//@ normalize-stderr: "/rustc(?:-dev)?/[a-z0-9.]+/" -> ""
-//@ rustc-env:RUST_BACKTRACE=0
+//! derive didn't see that. This is now fixed by registering
+//! duplicated names as `Res::Err` to avoid further errors.
 
 #[repr(packed)]
 struct Dealigned<T>(u8, T);
@@ -16,5 +9,6 @@ struct Dealigned<T>(u8, T);
 #[derive(PartialEq)]
 #[repr(C)]
 struct Dealigned<T>(u8, T);
+//~^ ERROR the name `Dealigned` is defined multiple times
 
 fn main() {}
