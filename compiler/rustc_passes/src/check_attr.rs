@@ -605,9 +605,10 @@ impl<'tcx> CheckAttrVisitor<'tcx> {
         }
     }
 
-    /// Checks if `#[diagnostic::on_unimplemented]` is applied to a trait definition
+    /// Checks if `#[diagnostic::on_unimplemented]` is applied to a trait definition or inherent impl
     fn check_diagnostic_on_unimplemented(&self, attr_span: Span, hir_id: HirId, target: Target) {
-        if !matches!(target, Target::Trait) {
+        // Allow on trait definitions and inherent impls
+        if !matches!(target, Target::Trait | Target::Impl { of_trait: false }) {
             self.tcx.emit_node_span_lint(
                 MISPLACED_DIAGNOSTIC_ATTRIBUTES,
                 hir_id,

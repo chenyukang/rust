@@ -582,9 +582,11 @@ impl<'tcx> OnUnimplementedDirective {
             sym::on_unimplemented
         } else if let DefKind::Impl { of_trait: true } = tcx.def_kind(item_def_id) {
             sym::on_const
+        } else if let DefKind::Impl { of_trait: false } = tcx.def_kind(item_def_id) {
+            // Inherent impl - support on_unimplemented for customizing E0599 errors
+            sym::on_unimplemented
         } else {
             // It could be a trait_alias (`trait MyTrait = SomeOtherTrait`)
-            // or an implementation (`impl MyTrait for Foo {}`)
             //
             // We don't support those.
             return Ok(None);
@@ -801,6 +803,30 @@ impl<'tcx> OnUnimplementedDirective {
             parent_label: parent_label.map(|e_s| e_s.format(tcx, trait_ref, args)),
             append_const_msg,
         }
+    }
+
+    /// Evaluate the on_unimplemented directive for an inherent impl.
+    /// This is a simplified version that doesn't need trait_ref or condition matching.
+    pub fn evaluate_impl(&self, _tcx: TyCtxt<'tcx>) -> OnUnimplementedNote {
+        let mut message = None;
+        let mut label = None;
+        let mut notes = Vec::new();
+
+        // For inherent impls, we don't support conditions or subcommands,
+        // just extract the raw message, label, and notes
+        if let Some(ref message_) = self.message {
+            message = Some(message_.1.symbol.as_str().to_string());
+        }
+
+        if let Some(ref label_) = self.label {
+            label = Some(label_.1.symbol.as_str().to_string());
+        }
+
+        for note in &self.notes {
+            notes.push(note.symbol.as_str().to_string());
+        }
+
+        OnUnimplementedNote { label, message, notes, parent_label: None, append_const_msg: None }
     }
 }
 

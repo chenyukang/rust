@@ -38,7 +38,9 @@ use rustc_span::{
     kw, sym,
 };
 use rustc_trait_selection::error_reporting::traits::DefIdOrName;
-use rustc_trait_selection::error_reporting::traits::on_unimplemented::OnUnimplementedNote;
+use rustc_trait_selection::error_reporting::traits::on_unimplemented::{
+    OnUnimplementedDirective, OnUnimplementedNote,
+};
 use rustc_trait_selection::infer::InferCtxtExt;
 use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt as _;
 use rustc_trait_selection::traits::{
@@ -1417,6 +1419,24 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 if !inherent_impls_candidate.is_empty() {
                     inherent_impls_candidate.sort_by_key(|id| self.tcx.def_path_str(id));
                     inherent_impls_candidate.dedup();
+
+                    // Check for #[diagnostic::on_unimplemented] on candidate impls
+                    // and use custom message/label/notes if available
+                    for impl_def_id in &inherent_impls_candidate {
+                        if let Ok(Some(directive)) =
+                            OnUnimplementedDirective::of_item(self.tcx, *impl_def_id)
+                        {
+                            let note = directive.evaluate_impl(self.tcx);
+                            if let Some(ref custom_label) = note.label {
+                                err.span_label(span, custom_label.clone());
+                            }
+                            for custom_note in note.notes {
+                                err.note(custom_note);
+                            }
+                            // Only use the first impl with on_unimplemented
+                            break;
+                        }
+                    }
 
                     // number of types to show at most
                     let limit = if inherent_impls_candidate.len() == 5 { 5 } else { 4 };

@@ -1,4 +1,4 @@
-warning: `#[diagnostic::on_unimplemented]` can only be applied to trait definitions
+warning: `#[diagnostic::on_unimplemented]` can only be applied to trait definitions and inherent impls
   --> $DIR/on_impl_trait.rs:8:1
    |
 LL | #[diagnostic::on_unimplemented(message = "blah", label = "blah", note = "blah")]

@@ -1,4 +1,4 @@
-warning: `#[diagnostic::on_unimplemented]` can only be applied to trait definitions
+warning: `#[diagnostic::on_unimplemented]` can only be applied to trait definitions and inherent impls
   --> $DIR/do_not_accept_options_of_the_internal_rustc_attribute.rs:26:1
    |
 LL | #[diagnostic::on_unimplemented(message = "Not allowed to apply it on a impl")]

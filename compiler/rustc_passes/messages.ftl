@@ -92,7 +92,7 @@ passes_diagnostic_diagnostic_on_const_only_for_trait_impls =
     .label = not a trait impl
 
 passes_diagnostic_diagnostic_on_unimplemented_only_for_traits =
-    `#[diagnostic::on_unimplemented]` can only be applied to trait definitions
+    `#[diagnostic::on_unimplemented]` can only be applied to trait definitions and inherent impls
 
 passes_diagnostic_item_first_defined =
     the diagnostic item is first defined here
