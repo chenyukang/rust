@@ -30,7 +30,7 @@ use rustc_session::lint::builtin::{
 use rustc_session::utils::was_invoked_from_cargo;
 use rustc_span::edit_distance::find_best_match_for_name;
 use rustc_span::edition::Edition;
-use rustc_span::hygiene::MacroKind;
+use rustc_span::hygiene::{LocalExpnId, MacroKind};
 use rustc_span::source_map::{SourceMap, Spanned};
 use rustc_span::{BytePos, DUMMY_SP, Ident, Span, Symbol, SyntaxContext, kw, sym};
 use thin_vec::{ThinVec, thin_vec};
@@ -1353,6 +1353,17 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                 if let DeclKind::Import { source_decl, .. } = name_binding.kind
                     && this.is_accessible_from(source_decl.vis(), parent_scope.module)
                     && !this.is_accessible_from(name_binding.vis(), parent_scope.module)
+                {
+                    return;
+                }
+
+                // #136140: Do not suggest importing a macro-expanded `#[macro_export]` macro
+                // from the current crate using absolute paths, as it would trigger the
+                // `macro_expanded_macro_exports_accessed_by_absolute_paths` lint.
+                if !crate_path.is_empty()
+                    && name_binding.expansion != LocalExpnId::ROOT
+                    && let DeclKind::Import { import, .. } = name_binding.kind
+                    && matches!(import.kind, ImportKind::MacroExport)
                 {
                     return;
                 }

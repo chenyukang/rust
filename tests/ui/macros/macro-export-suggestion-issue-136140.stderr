@@ -1,0 +1,10 @@
+error: cannot find macro `nothing` in this scope
+  --> $DIR/macro-export-suggestion-issue-136140.rs:20:9
+   |
+LL |         nothing!();
+   |         ^^^^^^^
+   |
+   = help: have you added the `#[macro_use]` on the module/import?
+
+error: aborting due to 1 previous error
+
