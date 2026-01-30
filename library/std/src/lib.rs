@@ -338,6 +338,7 @@
 #![feature(float_algebraic)]
 #![feature(float_gamma)]
 #![feature(float_minimum_maximum)]
+#![feature(float_mul_add_relaxed)]
 #![feature(fmt_internals)]
 #![feature(fn_ptr_trait)]
 #![feature(generic_atomic)]

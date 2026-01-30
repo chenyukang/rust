@@ -1849,6 +1849,37 @@ pub mod math {
         intrinsics::fmaf32(x, y, z)
     }
 
+    /// Experimental version of `mul_add_relaxed` in `core`. See [`f32::mul_add_relaxed`] for details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// #![feature(float_mul_add_relaxed)]
+    ///
+    /// use core::f32;
+    ///
+    /// let m = 10.0_f32;
+    /// let x = 4.0_f32;
+    /// let b = 60.0_f32;
+    ///
+    /// // The exact result is 100.0, and the result may be either 100.0 or
+    /// // a value very close to 100.0.
+    /// let abs_difference = (f32::math::mul_add_relaxed(m, x, b) - 100.0).abs();
+    /// assert!(abs_difference <= f32::EPSILON);
+    /// ```
+    ///
+    /// _This standalone function is for testing only.
+    /// It will be stabilized as an inherent method._
+    ///
+    /// [`f32::mul_add_relaxed`]: ../../../std/primitive.f32.html#method.mul_add_relaxed
+    #[inline]
+    #[must_use = "method returns a new number and does not mutate the original value"]
+    #[unstable(feature = "float_mul_add_relaxed", issue = "151770")]
+    #[rustc_const_unstable(feature = "float_mul_add_relaxed", issue = "151770")]
+    pub const fn mul_add_relaxed(x: f32, y: f32, z: f32) -> f32 {
+        intrinsics::fmuladdf32(x, y, z)
+    }
+
     /// Experimental version of `div_euclid` in `core`. See [`f32::div_euclid`] for details.
     ///
     /// # Examples

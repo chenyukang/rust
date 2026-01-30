@@ -222,6 +222,43 @@ impl f64 {
         core::f64::math::mul_add(self, a, b)
     }
 
+    /// Computes `(self * a) + b`, with the possibility of better performance
+    /// at the cost of possible non-determinism (the operation may either be
+    /// fused or not, depending on the target and optimization settings).
+    ///
+    /// This is a relaxed version of [`mul_add`](Self::mul_add) that can be used
+    /// for improved performance on targets where this is supported. See
+    /// [`mul_add`](Self::mul_add) if you require the fused operation, or
+    /// [`algebraic_mul`](Self::algebraic_mul) and [`algebraic_add`](Self::algebraic_add)
+    /// for even more performance and non-determinism.
+    ///
+    /// On targets that do not support a fused multiply-add operation, this
+    /// may be lowered to separate multiply and add instructions, resulting
+    /// in two rounding errors instead of one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// #![feature(float_mul_add_relaxed)]
+    ///
+    /// let m = 10.0_f64;
+    /// let x = 4.0_f64;
+    /// let b = 60.0_f64;
+    ///
+    /// // The exact result is 100.0, and the result may be either 100.0 or
+    /// // a value very close to 100.0.
+    /// let abs_difference = (m.mul_add_relaxed(x, b) - 100.0).abs();
+    /// assert!(abs_difference <= f64::EPSILON);
+    /// ```
+    #[rustc_allow_incoherent_impl]
+    #[must_use = "method returns a new number and does not mutate the original value"]
+    #[unstable(feature = "float_mul_add_relaxed", issue = "151770")]
+    #[rustc_const_unstable(feature = "float_mul_add_relaxed", issue = "151770")]
+    #[inline]
+    pub const fn mul_add_relaxed(self, a: f64, b: f64) -> f64 {
+        core::f64::math::mul_add_relaxed(self, a, b)
+    }
+
     /// Calculates Euclidean division, the matching method for `rem_euclid`.
     ///
     /// This computes the integer `n` such that
