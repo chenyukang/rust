@@ -1679,7 +1679,14 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         };
 
         if let Some((params_with_generics, _)) = self.get_hir_param_info(def_id, is_method) {
-            debug_assert_eq!(params_with_generics.len(), matched_inputs.len());
+            // When calling `Fn*` trait methods inside `core`, `get_hir_param_info` can find the
+            // HIR definition (e.g., `FnOnce::call_once(self, args)`). However, the `matched_inputs`
+            // is based on the unpacked tuple arguments. For example, `FnOnce(U) -> U` has 1 unpacked
+            // argument, but `call_once(self, args)` has 2 HIR params (or 1 if `is_method` is true,
+            // but for `Call` expressions, `is_method` is false). In such cases, bail out early.
+            if params_with_generics.len() != matched_inputs.len() {
+                return;
+            }
             for (idx, (generic_param, _)) in params_with_generics.iter_enumerated() {
                 if matched_inputs[idx].is_none() {
                     continue;
