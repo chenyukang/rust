@@ -1,0 +1,98 @@
+error[E0658]: use of unstable library feature `contracts`
+  --> $DIR/disjoint-spans-ice-issue-146834.rs:5:4
+   |
+LL | #![core::contracts::ensures]
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: see issue #128044 <https://github.com/rust-lang/rust/issues/128044> for more information
+   = help: add `#![feature(contracts)]` to the crate attributes to enable
+   = note: this compiler was built on YYYY-MM-DD; consider upgrading it if it is out of date
+
+error[E0658]: inner macro attributes are unstable
+  --> $DIR/disjoint-spans-ice-issue-146834.rs:5:4
+   |
+LL | #![core::contracts::ensures]
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: see issue #54726 <https://github.com/rust-lang/rust/issues/54726> for more information
+   = help: add `#![feature(custom_inner_attributes)]` to the crate attributes to enable
+   = note: this compiler was built on YYYY-MM-DD; consider upgrading it if it is out of date
+
+error[E0106]: missing lifetime specifiers
+  --> $DIR/disjoint-spans-ice-issue-146834.rs:5:1
+   |
+LL |   #![core::contracts::ensures]
+   |   ^
+   |   |
+   |   expected named lifetime parameter
+   |  _expected named lifetime parameter
+   | |
+...  |
+LL | | fn main() {}
+   | |____________-
+   |
+   = help: this function's return type contains a borrowed value with an elided lifetime, but the lifetime cannot be derived from the arguments
+note: these named lifetimes are available to use
+  --> $DIR/disjoint-spans-ice-issue-146834.rs:5:1
+   |
+LL | / #![core::contracts::ensures]
+...  |
+LL | | fn main() {}
+   | |____________^
+help: consider using one of the available lifetimes here
+   |
+LL | #'lifetime ![core::contracts::ensures]
+   |  +++++++++
+
+error[E0658]: `#[prelude_import]` is for use by rustc only
+  --> $DIR/disjoint-spans-ice-issue-146834.rs:5:1
+   |
+LL | / #![core::contracts::ensures]
+...  |
+LL | | fn main() {}
+   | |____________^
+   |
+   = help: add `#![feature(prelude_import)]` to the crate attributes to enable
+   = note: this compiler was built on YYYY-MM-DD; consider upgrading it if it is out of date
+
+warning: lifetime parameter `'a` only used once
+  --> $DIR/disjoint-spans-ice-issue-146834.rs:5:1
+   |
+LL | // #![core::contracts::ensures]
+...  ||
+LL | || fn main() {}
+   | ||____________^- help: elide the single-use lifetime
+   | |             |
+   | |_____________this lifetime...
+   |               ...is used only here
+   |
+   = note: requested on the command line with `-W single-use-lifetimes`
+
+warning: lifetime parameter `'b` only used once
+  --> $DIR/disjoint-spans-ice-issue-146834.rs:5:1
+   |
+LL | // #![core::contracts::ensures]
+...  ||
+LL | || fn main() {}
+   | ||____________^- help: elide the single-use lifetime
+   | |             |
+   | |_____________this lifetime...
+   |               ...is used only here
+
+error[E0277]: expected a `Fn(&_)` closure, found `()`
+  --> $DIR/disjoint-spans-ice-issue-146834.rs:5:1
+   |
+LL | #![core::contracts::ensures]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   | |
+   | expected an `Fn(&_)` closure, found `()`
+   | required by a bound introduced by this call
+   |
+   = help: the trait `for<'a> Fn(&'a _)` is not implemented for `()`
+note: required by a bound in `build_check_ensures`
+  --> $SRC_DIR/core/src/contracts.rs:LL:COL
+
+error: aborting due to 5 previous errors; 2 warnings emitted
+
+Some errors have detailed explanations: E0106, E0277, E0658.
+For more information about an error, try `rustc --explain E0106`.

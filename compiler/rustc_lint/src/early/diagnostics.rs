@@ -198,8 +198,13 @@ pub fn decorate_builtin_lint(
 
                 // issue 107998 for the case such as a wrong function pointer type
                 // `deletion_span` is empty and there is no need to report lifetime uses here
-                let deletion_span =
-                    if deletion_span.is_empty() { None } else { Some(deletion_span) };
+                // issue 146834: avoid overlapping spans in multipart suggestion
+                let deletion_span = if deletion_span.is_empty() || deletion_span.overlaps(use_span)
+                {
+                    None
+                } else {
+                    Some(deletion_span)
+                };
                 Some(lints::SingleUseLifetimeSugg { deletion_span, use_span, replace_lt })
             } else {
                 None
