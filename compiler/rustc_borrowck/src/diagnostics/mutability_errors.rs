@@ -559,8 +559,21 @@ impl<'infcx, 'tcx> MirBorrowckCtxt<'_, 'infcx, 'tcx> {
                         let local = &self.body.local_decls[local];
                         match local.local_info() {
                             LocalInfo::StaticRef { def_id, .. } => {
-                                let span = self.infcx.tcx.def_span(def_id);
-                                err.span_label(span, format!("this `static` cannot be {acted_on}"));
+                                let static_span = self.infcx.tcx.def_span(def_id);
+                                err.span_label(
+                                    static_span,
+                                    format!("this `static` cannot be {acted_on}"),
+                                );
+                                // Check if the static's type is `&mut T`, and if so,
+                                // add a note explaining that `&mut T` doesn't implement `Copy`.
+                                let static_ty =
+                                    self.infcx.tcx.type_of(def_id).instantiate_identity();
+                                if let ty::Ref(_, _, hir::Mutability::Mut) = static_ty.kind() {
+                                    err.note(format!(
+                                        "`{static_ty}` doesn't implement `Copy`, \
+                                         so it cannot be copied from the static",
+                                    ));
+                                }
                             }
                             LocalInfo::ConstRef { def_id } => {
                                 let span = self.infcx.tcx.def_span(def_id);

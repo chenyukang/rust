@@ -125,6 +125,8 @@ LL | static OH_YES: &mut i32 = &mut 42;
 ...
 LL |     *OH_YES = 99;
    |     ^^^^^^^^^^^^ cannot assign
+   |
+   = note: `&'static mut i32` doesn't implement `Copy`, so it cannot be copied from the static
 
 warning: skipping const checks
    |

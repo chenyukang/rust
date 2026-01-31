@@ -1,0 +1,14 @@
+error[E0596]: cannot borrow `*DANGLING` as mutable, as `DANGLING` is an immutable static item
+  --> $DIR/confusing-static-mut-error-issue-142772.rs:8:22
+   |
+LL | static DANGLING: &mut () = unsafe { &mut *(1 as *mut ()) };
+   | ------------------------ this `static` cannot be borrowed as mutable
+...
+LL | const WUT: &mut () = DANGLING;
+   |                      ^^^^^^^^ cannot borrow as mutable
+   |
+   = note: `&'static mut ()` doesn't implement `Copy`, so it cannot be copied from the static
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0596`.

@@ -16,6 +16,8 @@ LL | static buf: &mut [u8] = &mut [1u8,2,3,4,5,7];
 ...
 LL |     buf[0]=2;
    |     ^^^^^^^^ cannot assign
+   |
+   = note: `&'static mut [u8]` doesn't implement `Copy`, so it cannot be copied from the static
 
 error: aborting due to 2 previous errors
 
