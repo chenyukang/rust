@@ -1,0 +1,91 @@
+error[E0432]: unresolved import `super::m`
+  --> $DIR/nested-import-visibility-issue-141134.rs:13:25
+   |
+LL |         pub use super::{m, S};
+   |                         ^ no `m` in `a`
+   |
+   = note: this could be because a macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+help: a macro with this name exists at the root of the crate
+   |
+LL ~         pub use crate::m;
+LL ~ pub use super::{S};
+   |
+
+error[E0432]: unresolved import `super::m`
+  --> $DIR/nested-import-visibility-issue-141134.rs:18:32
+   |
+LL |         pub(crate) use super::{m, S};
+   |                                ^ no `m` in `a`
+   |
+   = note: this could be because a macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+   = help: consider importing this unresolved item through its public re-export instead:
+           a::b0::m
+help: a macro with this name exists at the root of the crate
+   |
+LL ~         pub(crate) use crate::m;
+LL ~ pub(crate) use super::{S};
+   |
+
+error[E0432]: unresolved import `super::m`
+  --> $DIR/nested-import-visibility-issue-141134.rs:23:38
+   |
+LL |         pub(in crate::a) use super::{m, S};
+   |                                      ^ no `m` in `a`
+   |
+   = note: this could be because a macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+   = help: consider importing this unresolved item through its public re-export instead:
+           a::b1::m
+help: a macro with this name exists at the root of the crate
+   |
+LL ~         pub(in crate::a) use crate::m;
+LL ~ pub(in crate::a) use super::{S};
+   |
+
+error[E0432]: unresolved import `super::m`
+  --> $DIR/nested-import-visibility-issue-141134.rs:28:32
+   |
+LL |         pub(super) use super::{m, S};
+   |                                ^ no `m` in `a`
+   |
+   = note: this could be because a macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+   = help: consider importing this unresolved item through its public re-export instead:
+           a::b2::m
+help: a macro with this name exists at the root of the crate
+   |
+LL ~         pub(super) use crate::m;
+LL ~ pub(super) use super::{S};
+   |
+
+error[E0432]: unresolved import `super::m`
+  --> $DIR/nested-import-visibility-issue-141134.rs:33:31
+   |
+LL |         pub(self) use super::{m, S};
+   |                               ^ no `m` in `a`
+   |
+   = note: this could be because a macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+   = help: consider importing this unresolved item through its public re-export instead:
+           a::b3::m
+help: a macro with this name exists at the root of the crate
+   |
+LL ~         pub(self) use crate::m;
+LL ~ pub(self) use super::{S};
+   |
+
+error[E0432]: unresolved import `super::m`
+  --> $DIR/nested-import-visibility-issue-141134.rs:38:21
+   |
+LL |         use super::{m, S}; // this case should not have visibility prefix
+   |                     ^ no `m` in `a`
+   |
+   = note: this could be because a macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+   = help: consider importing this unresolved item through its public re-export instead:
+           a::b3::m
+help: a macro with this name exists at the root of the crate
+   |
+LL ~         use crate::m;
+LL ~ use super::{S}; // this case should not have visibility prefix
+   |
+
+error: aborting due to 6 previous errors
+
+For more information about this error, try `rustc --explain E0432`.

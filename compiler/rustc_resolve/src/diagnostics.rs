@@ -2993,10 +2993,18 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                     corrections.push((source_map.end_point(after_crate_name), "};".to_string()));
                 }
             } else {
-                // If the root import is module-relative, add the import separately
+                // If the root import is module-relative, add the import separately.
+                // Get the visibility prefix from the original import.
+                let vis_prefix = if !import.vis_span.is_empty()
+                    && let Ok(vis_snippet) = source_map.span_to_snippet(import.vis_span)
+                {
+                    format!("{vis_snippet} ")
+                } else {
+                    String::new()
+                };
                 corrections.push((
                     import.use_span.shrink_to_lo(),
-                    format!("use {module_name}::{import_snippet};\n"),
+                    format!("{vis_prefix}use {module_name}::{import_snippet};\n"),
                 ));
             }
         }
