@@ -8,13 +8,13 @@
 fn main() {
     let a = ();
     let b = |_| &a;
-    //[nll]~^ ERROR `a` does not live long enough
-    //[polonius]~^^ ERROR `a` does not live long enough
-    bad(&b);
     //[nll]~^ ERROR implementation of `Fn`
     //[nll]~| ERROR implementation of `FnOnce`
-    //[polonius]~^^^ ERROR implementation of `Fn`
+    //[nll]~| ERROR `a` does not live long enough
+    //[polonius]~^^^^ ERROR implementation of `Fn`
     //[polonius]~| ERROR implementation of `FnOnce`
+    //[polonius]~| ERROR `a` does not live long enough
+    bad(&b);
 }
 
 fn bad<F: Fn(&()) -> &()>(_: F) {}

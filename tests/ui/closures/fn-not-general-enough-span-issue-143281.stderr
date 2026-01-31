@@ -1,0 +1,39 @@
+error: implementation of `Fn` is not general enough
+  --> $DIR/fn-not-general-enough-span-issue-143281.rs:8:10
+   |
+LL |     Some(|_| {})
+   |          ^^^ implementation of `Fn` is not general enough
+   |
+   = note: closure with signature `fn(&'2 String)` must implement `Fn<(&'1 String,)>`, for any lifetime `'1`...
+   = note: ...but it actually implements `Fn<(&'2 String,)>`, for some specific lifetime `'2`
+
+error: implementation of `FnOnce` is not general enough
+  --> $DIR/fn-not-general-enough-span-issue-143281.rs:8:10
+   |
+LL |     Some(|_| {})
+   |          ^^^ implementation of `FnOnce` is not general enough
+   |
+   = note: closure with signature `fn(&'2 String)` must implement `FnOnce<(&'1 String,)>`, for any lifetime `'1`...
+   = note: ...but it actually implements `FnOnce<(&'2 String,)>`, for some specific lifetime `'2`
+
+error: implementation of `Fn` is not general enough
+  --> $DIR/fn-not-general-enough-span-issue-143281.rs:8:10
+   |
+LL |     Some(|_| {})
+   |          ^^^ implementation of `Fn` is not general enough
+   |
+   = note: closure with signature `fn(&'0 String)` must implement `Fn<(&String,)>`, for some specific lifetime `'0`...
+   = note: ...but it actually implements `Fn<(&'1 String,)>`, for some specific lifetime `'1`
+
+error: implementation of `Fn` is not general enough
+  --> $DIR/fn-not-general-enough-span-issue-143281.rs:8:10
+   |
+LL |     Some(|_| {})
+   |          ^^^ implementation of `Fn` is not general enough
+   |
+   = note: closure with signature `fn(&'0 String)` must implement `Fn<(&String,)>`, for some specific lifetime `'0`...
+   = note: ...but it actually implements `Fn<(&'1 String,)>`, for some specific lifetime `'1`
+   = note: duplicate diagnostic emitted due to `-Z deduplicate-diagnostics=no`
+
+error: aborting due to 4 previous errors
+
