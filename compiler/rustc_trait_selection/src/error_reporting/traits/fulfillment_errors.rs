@@ -177,6 +177,14 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                         if let Err(guar) = self.fn_arg_obligation(&obligation) {
                             return guar;
                         }
+                        // Silence redundant errors when a derived obligation's parent trait
+                        // predicate has already been reported (e.g., when a struct field has
+                        // a failing trait bound and uses of the struct trigger the same error).
+                        if let Err(guar) =
+                            self.derived_cause_already_reported(&obligation, leaf_trait_predicate)
+                        {
+                            return guar;
+                        }
                         let (post_message, pre_message, type_def) = self
                             .get_parent_trait_ref(obligation.cause.code())
                             .map(|(t, s)| {
@@ -1024,6 +1032,112 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         {
             return Err(*guar);
         }
+        Ok(())
+    }
+
+    /// Check if a trait predicate in the derived cause chain has already been reported.
+    /// This prevents duplicate errors when a struct field's trait bound fails and later
+    /// uses of the struct trigger the same underlying trait error (e.g., for `Sized` checks).
+    #[instrument(level = "debug", skip(self), ret)]
+    fn derived_cause_already_reported(
+        &self,
+        obligation: &PredicateObligation<'tcx>,
+        leaf_trait_predicate: ty::PolyTraitPredicate<'tcx>,
+    ) -> Result<(), ErrorGuaranteed> {
+        // Check if this obligation has a derived cause anywhere in its chain
+        // and collect the root cause code
+        let (has_derived_cause, root_cause) = {
+            let mut code = obligation.cause.code();
+            let mut found = false;
+            loop {
+                if matches!(
+                    code,
+                    ObligationCauseCode::BuiltinDerived(_)
+                        | ObligationCauseCode::WellFormedDerived(_)
+                        | ObligationCauseCode::ImplDerived(_)
+                ) {
+                    found = true;
+                }
+                match code.parent() {
+                    Some(parent) => code = parent,
+                    None => break,
+                }
+            }
+            (found, code)
+        };
+
+        if !has_derived_cause {
+            debug!("not a derived obligation, returning Ok");
+            return Ok(());
+        }
+
+        // Only suppress errors from usage contexts (function arguments, expressions, etc.),
+        // not from type definitions where the original error should be shown.
+        let is_usage_context = matches!(
+            root_cause,
+            ObligationCauseCode::SizedArgumentType(_)
+                | ObligationCauseCode::SizedReturnType
+                | ObligationCauseCode::SizedCallReturnType
+                | ObligationCauseCode::FunctionArg { .. }
+                | ObligationCauseCode::WhereClauseInExpr(..)
+        );
+
+        if !is_usage_context {
+            debug!("not a usage context, returning Ok");
+            return Ok(());
+        }
+
+        // If there are already errors and this is a derived Sized check on a struct,
+        // check if the struct's definition has a projection type that would require
+        // the same trait predicate. If so, the error was likely already reported
+        // during the struct's WF check.
+        if let Some(guar) = self.dcx().has_errors() {
+            // Walk up the cause chain to find a BuiltinDerived from a Sized check on an ADT
+            let mut code = obligation.cause.code();
+            loop {
+                if let ObligationCauseCode::BuiltinDerived(derived) = code {
+                    if let Some(sized_trait) = self.tcx.lang_items().sized_trait()
+                        && derived.parent_trait_pred.def_id() == sized_trait
+                        && let ty::Adt(adt_def, _) =
+                            derived.parent_trait_pred.self_ty().skip_binder().kind()
+                    {
+                        // Check if any field of this struct contains a projection type
+                        // that would require the same trait predicate
+                        let trait_def_id = leaf_trait_predicate.def_id();
+                        let self_ty = leaf_trait_predicate.self_ty().skip_binder();
+
+                        for variant in adt_def.variants() {
+                            for field in &variant.fields {
+                                let field_ty = self.tcx.type_of(field.did).skip_binder();
+                                // Check if the field type is a projection with the same trait
+                                if let ty::Alias(ty::AliasTyKind::Projection, alias_ty) =
+                                    field_ty.kind()
+                                {
+                                    let projection_trait_ref = alias_ty.trait_ref(self.tcx);
+                                    if projection_trait_ref.def_id == trait_def_id
+                                        && self.can_eq(
+                                            obligation.param_env,
+                                            projection_trait_ref.self_ty(),
+                                            self_ty,
+                                        )
+                                    {
+                                        debug!(
+                                            "suppressing derived error - struct field has projection requiring same predicate"
+                                        );
+                                        return Err(guar);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                match code.parent() {
+                    Some(parent) => code = parent,
+                    None => break,
+                }
+            }
+        }
+
         Ok(())
     }
 

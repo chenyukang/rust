@@ -1,0 +1,15 @@
+error[E0277]: the trait bound `u32: With` is not satisfied
+  --> $DIR/duplicate-trait-error-issue-151876.rs:8:12
+   |
+LL | struct Foo(<u32 as With>::Assoc);
+   |            ^^^^^^^^^^^^^^^^^^^^ the trait `With` is not implemented for `u32`
+   |
+help: this trait has no implementations, consider adding one
+  --> $DIR/duplicate-trait-error-issue-151876.rs:4:1
+   |
+LL | trait With {
+   | ^^^^^^^^^^
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0277`.
