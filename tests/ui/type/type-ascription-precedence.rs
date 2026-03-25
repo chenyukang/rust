@@ -1,7 +1,5 @@
 // Operator precedence of type ascription
 // Type ascription has very high precedence, the same as operator `as`
-#![feature(type_ascription)]
-
 use std::ops::*;
 struct S;
 struct Z;

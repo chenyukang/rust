@@ -1,41 +1,41 @@
 error: expected one of `!`, `.`, `::`, `;`, `?`, `{`, `}`, or an operator, found `:`
-  --> $DIR/type-ascription-precedence.rs:27:7
+  --> $DIR/type-ascription-precedence.rs:25:7
    |
 LL |     &S: &S;
    |       ^ expected one of 8 possible tokens
 
 error: expected identifier, found `:`
-  --> $DIR/type-ascription-precedence.rs:33:8
+  --> $DIR/type-ascription-precedence.rs:31:8
    |
 LL |     *(S: Z);
    |        ^ expected identifier
 
 error: expected identifier, found `:`
-  --> $DIR/type-ascription-precedence.rs:37:8
+  --> $DIR/type-ascription-precedence.rs:35:8
    |
 LL |     -(S: Z);
    |        ^ expected identifier
 
 error: expected one of `.`, `;`, `?`, `}`, or an operator, found `:`
-  --> $DIR/type-ascription-precedence.rs:41:12
+  --> $DIR/type-ascription-precedence.rs:39:12
    |
 LL |     (S + Z): Z;
    |            ^ expected one of `.`, `;`, `?`, `}`, or an operator
 
 error: expected one of `.`, `;`, `?`, `}`, or an operator, found `:`
-  --> $DIR/type-ascription-precedence.rs:45:12
+  --> $DIR/type-ascription-precedence.rs:43:12
    |
 LL |     (S * Z): Z;
    |            ^ expected one of `.`, `;`, `?`, `}`, or an operator
 
 error: expected identifier, found `:`
-  --> $DIR/type-ascription-precedence.rs:49:11
+  --> $DIR/type-ascription-precedence.rs:47:11
    |
 LL |     S .. S: S;
    |           ^ expected identifier
 
 error: expected one of `.`, `;`, `?`, `}`, or an operator, found `:`
-  --> $DIR/type-ascription-precedence.rs:53:13
+  --> $DIR/type-ascription-precedence.rs:51:13
    |
 LL |     (S .. S): S;
    |             ^ expected one of `.`, `;`, `?`, `}`, or an operator

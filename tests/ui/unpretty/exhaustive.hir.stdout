@@ -120,7 +120,7 @@ mod expressions {
     fn expr_cast() { let expr; expr as T; expr as T<u8>; }
 
     /// ExprKind::Type
-    fn expr_type() { let expr; type_ascribe!(expr, T); }
+    fn expr_type() { let expr; builtin # type_ascribe(expr, T); }
 
     /// ExprKind::Let
     fn expr_let() {
@@ -241,8 +241,8 @@ mod expressions {
     fn expr_try_block() {
         { from_output(()) }
         { return; from_output(()) }
-        type_ascribe!({ from_output(()) }, Option<_>);
-        type_ascribe!({
+        builtin # type_ascribe({ from_output(()) }, Option<_>);
+        builtin # type_ascribe({
                 from_output(match branch(None) {
                         Break {  0: residual } => #[allow(unreachable_code)]
                             break from_residual(residual),

@@ -1769,8 +1769,7 @@ pub enum ExprKind {
     Cast(Box<Expr>, Box<Ty>),
     /// A type ascription (e.g., `builtin # type_ascribe(42, usize)`).
     ///
-    /// Usually not written directly in user code but
-    /// indirectly via the macro `type_ascribe!(...)`.
+    /// Only constructible via internal builtin syntax.
     Type(Box<Expr>, Box<Ty>),
     /// A `let pat = expr` expression that is only semantically allowed in the condition
     /// of `if` / `while` expressions. (e.g., `if let 0 = x { .. }`).

@@ -2,8 +2,6 @@
 #![allow(unused_assignments)]
 #![allow(dead_code)]
 #![deny(unreachable_code)]
-#![feature(type_ascription)]
-
 fn a() {
     // the `22` is unreachable:
     let x: [usize; 2] = [return, 22]; //~ ERROR unreachable

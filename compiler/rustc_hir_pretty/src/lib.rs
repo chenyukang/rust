@@ -1575,7 +1575,7 @@ impl<'a> State<'a> {
                 self.print_type(ty);
             }
             hir::ExprKind::Type(expr, ty) => {
-                self.word("type_ascribe!(");
+                self.word("builtin # type_ascribe(");
                 let ib = self.ibox(0);
                 self.print_expr(expr);
 

@@ -449,7 +449,6 @@ ui/closures/issue-868.rs
 ui/closures/issue-87461.rs
 ui/closures/issue-87814-1.rs
 ui/closures/issue-87814-2.rs
-ui/closures/issue-90871.rs
 ui/closures/issue-97607.rs
 ui/closures/issue-99565.rs
 ui/codegen/auxiliary/issue-97708-aux.rs
@@ -496,7 +495,6 @@ ui/confuse-field-and-method/issue-32128.rs
 ui/confuse-field-and-method/issue-33784.rs
 ui/const-generics/associated-const-bindings/issue-102335-const.rs
 ui/const-generics/associated-const-bindings/issue-105330.rs
-ui/const-generics/associated-const-bindings/issue-93835.rs
 ui/const-generics/generic_arg_infer/issue-91614.rs
 ui/const-generics/generic_const_exprs/const_kind_expr/issue_114151.rs
 ui/const-generics/generic_const_exprs/issue-100217.rs
@@ -949,7 +947,6 @@ ui/enum/issue-23304-1.rs
 ui/enum/issue-23304-2.rs
 ui/enum/issue-42747.rs
 ui/enum/issue-67945-1.rs
-ui/enum/issue-67945-2.rs
 ui/error-codes/e0119/auxiliary/issue-23563-a.rs
 ui/error-codes/e0119/issue-23563.rs
 ui/error-codes/e0119/issue-27403.rs
@@ -1495,7 +1492,6 @@ ui/lint/unused/issue-71290-unused-paren-binop.rs
 ui/lint/unused/issue-74883-unused-paren-baren-yield.rs
 ui/lint/unused/issue-81314-unused-span-ident.rs
 ui/lint/unused/issue-85913.rs
-ui/lint/unused/issue-88519-unused-paren.rs
 ui/lint/unused/issue-90807-unused-paren-error.rs
 ui/lint/unused/issue-90807-unused-paren.rs
 ui/lint/unused/issue-92751.rs
@@ -1861,7 +1857,6 @@ ui/nll/user-annotations/issue-54570-bootstrapping.rs
 ui/nll/user-annotations/issue-55219.rs
 ui/nll/user-annotations/issue-55241.rs
 ui/nll/user-annotations/issue-55748-pat-types-constrain-bindings.rs
-ui/nll/user-annotations/issue-57731-ascibed-coupled-types.rs
 ui/numbers-arithmetic/issue-8460.rs
 ui/or-patterns/issue-64879-trailing-before-guard.rs
 ui/or-patterns/issue-67514-irrefutable-param.rs
@@ -2945,7 +2940,6 @@ ui/typeck/issue-90319.rs
 ui/typeck/issue-90483-inaccessible-field-adjustment.rs
 ui/typeck/issue-90804-incorrect-reference-suggestion.rs
 ui/typeck/issue-91210-ptr-method.rs
-ui/typeck/issue-91267.rs
 ui/typeck/issue-91328.rs
 ui/typeck/issue-91334.rs
 ui/typeck/issue-91450-inner-ty-error.rs
