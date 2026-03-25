@@ -247,6 +247,7 @@ late_lint_methods!(
             UnqualifiedLocalImports: UnqualifiedLocalImports,
             FunctionCastsAsInteger: FunctionCastsAsInteger,
             CheckTransmutes: CheckTransmutes,
+            UnusedBracesLate: UnusedBracesLate::default(),
             LifetimeSyntax: LifetimeSyntax,
             InternalEqTraitMethodImpls: InternalEqTraitMethodImpls,
         ]

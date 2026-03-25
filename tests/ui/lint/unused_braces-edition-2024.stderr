@@ -1,0 +1,19 @@
+warning: unnecessary braces around function argument
+  --> $DIR/unused_braces-edition-2024.rs:10:13
+   |
+LL |     consume({ 7 });
+   |             ^^ ^^
+   |
+note: the lint level is defined here
+  --> $DIR/unused_braces-edition-2024.rs:5:9
+   |
+LL | #![warn(unused_braces)]
+   |         ^^^^^^^^^^^^^
+help: remove these braces
+   |
+LL -     consume({ 7 });
+LL +     consume(7);
+   |
+
+warning: 1 warning emitted
+

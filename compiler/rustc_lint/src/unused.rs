@@ -2,6 +2,7 @@ use rustc_ast::util::{classify, parser};
 use rustc_ast::{self as ast, ExprKind, FnRetTy, HasAttrs as _, StmtKind};
 use rustc_data_structures::fx::FxHashMap;
 use rustc_errors::MultiSpan;
+use rustc_hir::intravisit::{self, Visitor};
 use rustc_hir::{self as hir};
 use rustc_middle::ty::{self, adjustment};
 use rustc_session::{declare_lint, declare_lint_pass, impl_lint_pass};
@@ -975,6 +976,154 @@ declare_lint! {
 
 declare_lint_pass!(UnusedBraces => [UNUSED_BRACES]);
 
+#[derive(Default)]
+pub(crate) struct UnusedBracesLate;
+
+impl_lint_pass!(UnusedBracesLate => []);
+
+fn hir_expr_requires_semi_to_be_stmt(expr: &hir::Expr<'_>) -> bool {
+    !matches!(
+        expr.kind,
+        hir::ExprKind::If(..)
+            | hir::ExprKind::Match(..)
+            | hir::ExprKind::Block(..)
+            | hir::ExprKind::Loop(..)
+    )
+}
+
+fn is_hir_expr_braces_necessary(inner: &hir::Expr<'_>) -> bool {
+    if matches!(inner.kind, hir::ExprKind::AddrOf(hir::BorrowKind::Raw, _, _)) {
+        return true;
+    }
+
+    let mut innermost = inner;
+    loop {
+        innermost = match innermost.kind {
+            hir::ExprKind::Binary(_, lhs, _) => lhs,
+            hir::ExprKind::Call(fun, _) => fun,
+            hir::ExprKind::Cast(expr, _) => expr,
+            hir::ExprKind::Type(expr, _) => expr,
+            hir::ExprKind::Index(base, _, _) => base,
+            _ => break,
+        };
+        if !hir_expr_requires_semi_to_be_stmt(innermost) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn emit_unused_braces_hir(cx: &LateContext<'_>, value: &hir::Expr<'_>, msg: &str) {
+    let span_with_attrs = match value.kind {
+        hir::ExprKind::Block(&hir::Block { stmts: [], expr: Some(expr), .. }, None) => expr.span,
+        _ => return,
+    };
+    let spans = span_with_attrs
+        .find_ancestor_inside(value.span)
+        .map(|span| (value.span.with_hi(span.lo()), value.span.with_lo(span.hi())));
+    let primary_span = if let Some((lo, hi)) = spans {
+        if hi.is_empty() {
+            return;
+        }
+        MultiSpan::from(vec![lo, hi])
+    } else {
+        MultiSpan::from(value.span)
+    };
+    let suggestion = spans.map(|(lo, hi)| UnusedDelimSuggestion {
+        start_span: lo,
+        start_replace: "",
+        end_span: hi,
+        end_replace: "",
+        delim: "braces",
+    });
+    cx.emit_span_lint(
+        UNUSED_BRACES,
+        primary_span,
+        UnusedDelim { delim: "braces", item: msg, suggestion },
+    );
+}
+
+struct SignificantDropSensitivityVisitor<'a, 'tcx> {
+    cx: &'a LateContext<'tcx>,
+    typing_env: ty::TypingEnv<'tcx>,
+    root_hir_id: hir::HirId,
+    sensitive_context: bool,
+    found: bool,
+}
+
+impl<'a, 'tcx> SignificantDropSensitivityVisitor<'a, 'tcx> {
+    fn visit_with_sensitivity(&mut self, expr: &'tcx hir::Expr<'tcx>, sensitive_context: bool) {
+        let prev = std::mem::replace(&mut self.sensitive_context, sensitive_context);
+        self.visit_expr(expr);
+        self.sensitive_context = prev;
+    }
+
+    fn has_significant_drop(&self, expr: &'tcx hir::Expr<'tcx>) -> bool {
+        !expr.is_syntactic_place_expr()
+            && self
+                .cx
+                .typeck_results()
+                .expr_ty(expr)
+                .has_significant_drop(self.cx.tcx, self.typing_env)
+    }
+
+    fn has_borrow_adjustment(&self, expr: &'tcx hir::Expr<'tcx>) -> bool {
+        self.cx
+            .typeck_results()
+            .expr_adjustments(expr)
+            .iter()
+            .any(|adj| matches!(adj.kind, adjustment::Adjust::Borrow(_)))
+    }
+}
+
+impl<'tcx> Visitor<'tcx> for SignificantDropSensitivityVisitor<'_, 'tcx> {
+    fn visit_expr(&mut self, expr: &'tcx hir::Expr<'tcx>) {
+        if self.found {
+            return;
+        }
+
+        if (self.sensitive_context || self.has_borrow_adjustment(expr))
+            && self.has_significant_drop(expr)
+        {
+            self.found = true;
+            return;
+        }
+
+        if expr.hir_id != self.root_hir_id && matches!(expr.kind, hir::ExprKind::Block(..)) {
+            return;
+        }
+
+        match expr.kind {
+            hir::ExprKind::AddrOf(_, _, inner) => self.visit_with_sensitivity(inner, true),
+            hir::ExprKind::Field(base, _) => self.visit_with_sensitivity(base, true),
+            hir::ExprKind::Index(base, index, _) => {
+                self.visit_with_sensitivity(base, true);
+                self.visit_with_sensitivity(index, false);
+            }
+            hir::ExprKind::Unary(hir::UnOp::Deref, inner) => {
+                self.visit_with_sensitivity(inner, true)
+            }
+            _ => intravisit::walk_expr(self, expr),
+        }
+    }
+}
+
+fn arg_block_braces_have_semantic_value<'tcx>(
+    cx: &LateContext<'tcx>,
+    expr: &'tcx hir::Expr<'tcx>,
+) -> bool {
+    let mut visitor = SignificantDropSensitivityVisitor {
+        cx,
+        typing_env: cx.typing_env(),
+        root_hir_id: expr.hir_id,
+        sensitive_context: false,
+        found: false,
+    };
+    visitor.visit_expr(expr);
+    visitor.found
+}
+
 impl UnusedDelimLint for UnusedBraces {
     const DELIM_STR: &'static str = "braces";
 
@@ -1024,6 +1173,8 @@ impl UnusedDelimLint for UnusedBraces {
                 // FIXME(const_generics): handle paths when #67075 is fixed.
                 if let [stmt] = inner.stmts.as_slice()
                     && let ast::StmtKind::Expr(ref expr) = stmt.kind
+                    && !(matches!(ctx, UnusedDelimsCtx::FunctionArg | UnusedDelimsCtx::MethodArg)
+                        && value.span.edition().at_least_rust_2024())
                     && !Self::is_expr_delims_necessary(expr, ctx, followed_by_block)
                     && (ctx != UnusedDelimsCtx::AnonConst
                         || (matches!(expr.kind, ast::ExprKind::Lit(_))
@@ -1123,6 +1274,46 @@ impl EarlyLintPass for UnusedBraces {
 
     fn check_item(&mut self, cx: &EarlyContext<'_>, item: &ast::Item) {
         <Self as UnusedDelimLint>::check_item(self, cx, item)
+    }
+}
+
+impl<'tcx> LateLintPass<'tcx> for UnusedBracesLate {
+    fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx hir::Expr<'tcx>) {
+        if !expr.span.edition().at_least_rust_2024() {
+            return;
+        }
+
+        let (args, msg) = match expr.kind {
+            hir::ExprKind::Call(_, args) => (args, "function argument"),
+            hir::ExprKind::MethodCall(_, _receiver, args, _) => (args, "method argument"),
+            _ => return,
+        };
+
+        for arg in args {
+            let hir::ExprKind::Block(
+                &hir::Block {
+                    rules: hir::BlockCheckMode::DefaultBlock,
+                    stmts: [],
+                    expr: Some(inner),
+                    ..
+                },
+                None,
+            ) = arg.kind
+            else {
+                continue;
+            };
+
+            if is_hir_expr_braces_necessary(inner)
+                || cx.sess().source_map().is_multiline(arg.span)
+                || arg.span.from_expansion()
+                || inner.span.from_expansion()
+                || arg_block_braces_have_semantic_value(cx, inner)
+            {
+                continue;
+            }
+
+            emit_unused_braces_hir(cx, arg, msg);
+        }
     }
 }
 
