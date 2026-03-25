@@ -2305,11 +2305,6 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
             types.dedup();
             let all_types_equal = types.len() == 1;
 
-            let end = if candidates.len() <= 9 || self.tcx.sess.opts.verbose {
-                candidates.len()
-            } else {
-                8
-            };
             if candidates.len() < 5 {
                 let spans: Vec<_> =
                     candidates.iter().map(|&(_, def_id)| self.tcx.def_span(def_id)).collect();
@@ -2345,30 +2340,85 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                 };
                 err.span_help(span, msg);
             } else {
-                let candidate_names: Vec<String> = candidates
-                    .iter()
-                    .map(|(c, _)| {
-                        if all_traits_equal {
-                            format!(
-                                "\n  {}",
-                                self.tcx.short_string(c.self_ty(), err.long_ty_path())
-                            )
-                        } else if all_types_equal {
-                            format!(
-                                "\n  {}",
-                                self.tcx
-                                    .short_string(c.print_only_trait_path(), err.long_ty_path())
-                            )
+                let candidate_names = if all_traits_equal {
+                    let mut tuple_arities = Vec::with_capacity(candidates.len());
+                    if candidates.iter().all(|(c, _)| {
+                        if let ty::Tuple(fields) = c.self_ty().kind() {
+                            tuple_arities.push(fields.len());
+                            true
                         } else {
-                            format!(
-                                "\n  `{}` implements `{}`",
-                                self.tcx.short_string(c.self_ty(), err.long_ty_path()),
-                                self.tcx
-                                    .short_string(c.print_only_trait_path(), err.long_ty_path()),
-                            )
+                            false
                         }
-                    })
-                    .collect();
+                    }) {
+                        tuple_arities.sort_unstable();
+                        tuple_arities.dedup();
+
+                        if tuple_arities.len() >= 5
+                            && tuple_arities.windows(2).all(|window| window[1] == window[0] + 1)
+                        {
+                            let mut candidate_names = Vec::with_capacity(2);
+                            let range_start = usize::from(tuple_arities[0] == 0);
+                            if tuple_arities[0] == 0 {
+                                candidate_names.push("\n  ()".to_string());
+                            }
+                            let tuple_summary =
+                                if tuple_arities[range_start] == *tuple_arities.last().unwrap() {
+                                    let arity = tuple_arities[range_start];
+                                    let element_suffix = if arity == 1 { "" } else { "s" };
+                                    format!("\n  tuples with {arity} element{element_suffix}")
+                                } else {
+                                    format!(
+                                        "\n  tuples with {} to {} elements",
+                                        tuple_arities[range_start],
+                                        tuple_arities.last().unwrap(),
+                                    )
+                                };
+                            candidate_names.push(tuple_summary);
+                            Some(candidate_names)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+                .unwrap_or_else(|| {
+                    candidates
+                        .iter()
+                        .map(|(c, _)| {
+                            if all_traits_equal {
+                                format!(
+                                    "\n  {}",
+                                    self.tcx.short_string(c.self_ty(), err.long_ty_path())
+                                )
+                            } else if all_types_equal {
+                                format!(
+                                    "\n  {}",
+                                    self.tcx.short_string(
+                                        c.print_only_trait_path(),
+                                        err.long_ty_path()
+                                    )
+                                )
+                            } else {
+                                format!(
+                                    "\n  `{}` implements `{}`",
+                                    self.tcx.short_string(c.self_ty(), err.long_ty_path()),
+                                    self.tcx.short_string(
+                                        c.print_only_trait_path(),
+                                        err.long_ty_path()
+                                    ),
+                                )
+                            }
+                        })
+                        .collect()
+                });
+                let end = if candidate_names.len() <= 9 || self.tcx.sess.opts.verbose {
+                    candidate_names.len()
+                } else {
+                    8
+                };
                 let msg = if all_types_equal {
                     format!(
                         "`{}` implements trait `{}`",
@@ -2385,8 +2435,8 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                 err.help(format!(
                     "{msg}:{}{}",
                     candidate_names[..end].join(""),
-                    if candidates.len() > 9 && !self.tcx.sess.opts.verbose {
-                        format!("\nand {} others", candidates.len() - 8)
+                    if candidate_names.len() > 9 && !self.tcx.sess.opts.verbose {
+                        format!("\nand {} others", candidate_names.len() - 8)
                     } else {
                         String::new()
                     }
