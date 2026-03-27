@@ -1,0 +1,25 @@
+warning: variable `a` is assigned to, but never used
+  --> $DIR/compound-assignment-read-before-write-issue-154457.rs:6:9
+   |
+LL |     let mut a = 10.;
+   |         ^^^^^
+   |
+   = note: consider using `_a` instead
+note: the lint level is defined here
+  --> $DIR/compound-assignment-read-before-write-issue-154457.rs:3:9
+   |
+LL | #![warn(unused)]
+   |         ^^^^^^
+   = note: `#[warn(unused_variables)]` implied by `#[warn(unused)]`
+
+warning: value assigned to `a` is never read
+  --> $DIR/compound-assignment-read-before-write-issue-154457.rs:12:5
+   |
+LL |     a -= c;
+   |     ^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+   = note: `#[warn(unused_assignments)]` implied by `#[warn(unused)]`
+
+warning: 2 warnings emitted
+

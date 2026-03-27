@@ -181,17 +181,11 @@ fn f9() {
     let h = 13;
 
     a += b;
-    //~^ ERROR value assigned to `a` is never read
     a -= c;
-    //~^ ERROR value assigned to `a` is never read
     a *= d;
-    //~^ ERROR value assigned to `a` is never read
     a /= e;
-    //~^ ERROR value assigned to `a` is never read
     a |= f;
-    //~^ ERROR value assigned to `a` is never read
     a &= g;
-    //~^ ERROR value assigned to `a` is never read
     a %= h;
     //~^ ERROR value assigned to `a` is never read
 }
@@ -227,13 +221,9 @@ fn f9c() {
     let f = 13.;
 
     a += b;
-    //~^ ERROR value assigned to `a` is never read
     a -= c;
-    //~^ ERROR value assigned to `a` is never read
     a *= d;
-    //~^ ERROR value assigned to `a` is never read
     a /= e;
-    //~^ ERROR value assigned to `a` is never read
     a %= f;
     //~^ ERROR value assigned to `a` is never read
 }

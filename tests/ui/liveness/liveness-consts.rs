@@ -15,7 +15,7 @@ pub static A: i32 = {
 };
 
 pub const B: u32 = {
-    let mut b = 1; //~ WARN value assigned to `b` is never read
+    let mut b = 1;
     b += 1; //~ WARN value assigned to `b` is never read
     b = 42;
     b
