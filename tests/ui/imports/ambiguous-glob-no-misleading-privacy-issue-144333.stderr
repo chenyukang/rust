@@ -1,19 +1,19 @@
 error: `date_range` is ambiguous
-  --> $DIR/issue-144333-no-misleading-privacy.rs:6:30
+  --> $DIR/ambiguous-glob-no-misleading-privacy-issue-144333.rs:6:30
    |
 LL | use issue_144333_cross::dsl::date_range;
    |                              ^^^^^^^^^^ ambiguous name
    |
    = note: ambiguous because of multiple glob imports of a name in the same module
 note: `date_range` could refer to the function defined here
-  --> $DIR/auxiliary/issue-144333-cross.rs:4:20
+  --> $DIR/auxiliary/ambiguous-glob-cross-issue-144333.rs:4:20
    |
 LL |     pub(crate) use crate::external::*;
    |                    ^^^^^^^^^^^^^^^
    = help: consider updating this dependency to resolve this error
    = help: if updating the dependency does not resolve the problem report the problem to the author of the relevant crate
 note: `date_range` could also refer to the function defined here
-  --> $DIR/auxiliary/issue-144333-cross.rs:15:13
+  --> $DIR/auxiliary/ambiguous-glob-cross-issue-144333.rs:15:13
    |
 LL |     pub use self::functions::*;
    |             ^^^^^^^^^^^^^^^
@@ -22,21 +22,21 @@ LL |     pub use self::functions::*;
    = note: `#[deny(ambiguous_glob_imports)]` (part of `#[deny(future_incompatible)]`) on by default
 
 error: `time_range` is ambiguous
-  --> $DIR/issue-144333-no-misleading-privacy.rs:9:30
+  --> $DIR/ambiguous-glob-no-misleading-privacy-issue-144333.rs:9:30
    |
 LL | use issue_144333_cross::dsl::time_range;
    |                              ^^^^^^^^^^ ambiguous name
    |
    = note: ambiguous because of multiple glob imports of a name in the same module
 note: `time_range` could refer to the function defined here
-  --> $DIR/auxiliary/issue-144333-cross.rs:4:20
+  --> $DIR/auxiliary/ambiguous-glob-cross-issue-144333.rs:4:20
    |
 LL |     pub(crate) use crate::external::*;
    |                    ^^^^^^^^^^^^^^^
    = help: consider updating this dependency to resolve this error
    = help: if updating the dependency does not resolve the problem report the problem to the author of the relevant crate
 note: `time_range` could also refer to the function defined here
-  --> $DIR/auxiliary/issue-144333-cross.rs:15:13
+  --> $DIR/auxiliary/ambiguous-glob-cross-issue-144333.rs:15:13
    |
 LL |     pub use self::functions::*;
    |             ^^^^^^^^^^^^^^^
@@ -47,21 +47,21 @@ error: aborting due to 2 previous errors
 
 Future incompatibility report: Future breakage diagnostic:
 error: `date_range` is ambiguous
-  --> $DIR/issue-144333-no-misleading-privacy.rs:6:30
+  --> $DIR/ambiguous-glob-no-misleading-privacy-issue-144333.rs:6:30
    |
 LL | use issue_144333_cross::dsl::date_range;
    |                              ^^^^^^^^^^ ambiguous name
    |
    = note: ambiguous because of multiple glob imports of a name in the same module
 note: `date_range` could refer to the function defined here
-  --> $DIR/auxiliary/issue-144333-cross.rs:4:20
+  --> $DIR/auxiliary/ambiguous-glob-cross-issue-144333.rs:4:20
    |
 LL |     pub(crate) use crate::external::*;
    |                    ^^^^^^^^^^^^^^^
    = help: consider updating this dependency to resolve this error
    = help: if updating the dependency does not resolve the problem report the problem to the author of the relevant crate
 note: `date_range` could also refer to the function defined here
-  --> $DIR/auxiliary/issue-144333-cross.rs:15:13
+  --> $DIR/auxiliary/ambiguous-glob-cross-issue-144333.rs:15:13
    |
 LL |     pub use self::functions::*;
    |             ^^^^^^^^^^^^^^^
@@ -71,21 +71,21 @@ LL |     pub use self::functions::*;
 
 Future breakage diagnostic:
 error: `time_range` is ambiguous
-  --> $DIR/issue-144333-no-misleading-privacy.rs:9:30
+  --> $DIR/ambiguous-glob-no-misleading-privacy-issue-144333.rs:9:30
    |
 LL | use issue_144333_cross::dsl::time_range;
    |                              ^^^^^^^^^^ ambiguous name
    |
    = note: ambiguous because of multiple glob imports of a name in the same module
 note: `time_range` could refer to the function defined here
-  --> $DIR/auxiliary/issue-144333-cross.rs:4:20
+  --> $DIR/auxiliary/ambiguous-glob-cross-issue-144333.rs:4:20
    |
 LL |     pub(crate) use crate::external::*;
    |                    ^^^^^^^^^^^^^^^
    = help: consider updating this dependency to resolve this error
    = help: if updating the dependency does not resolve the problem report the problem to the author of the relevant crate
 note: `time_range` could also refer to the function defined here
-  --> $DIR/auxiliary/issue-144333-cross.rs:15:13
+  --> $DIR/auxiliary/ambiguous-glob-cross-issue-144333.rs:15:13
    |
 LL |     pub use self::functions::*;
    |             ^^^^^^^^^^^^^^^

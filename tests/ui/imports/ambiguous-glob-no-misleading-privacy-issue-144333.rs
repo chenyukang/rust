@@ -1,4 +1,4 @@
-//@ aux-crate: issue_144333_cross=issue-144333-cross.rs
+//@ aux-crate: issue_144333_cross=ambiguous-glob-cross-issue-144333.rs
 //@ edition: 2024
 
 extern crate issue_144333_cross;
