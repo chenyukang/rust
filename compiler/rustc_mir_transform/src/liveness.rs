@@ -47,6 +47,9 @@ struct Access {
     /// Is this a direct access to the place itself, no projections, or to a field?
     /// This helps distinguish `x = ...` from `x.field = ...`
     is_direct: bool,
+    /// Does this assignment read the previous value before writing a new one?
+    /// This is true for source-level self-assignments such as `x += y`.
+    reads_old_value: bool,
 }
 
 #[tracing::instrument(level = "debug", skip(tcx), ret)]
@@ -135,15 +138,25 @@ pub(crate) fn check_liveness<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> Den
 
     let self_assignment = find_self_assignments(&checked_places, body);
 
-    let mut live =
-        MaybeLivePlaces { tcx, capture_kind, checked_places: &checked_places, self_assignment }
-            .iterate_to_fixpoint(tcx, body, None)
-            .into_results_cursor(body);
+    let mut live = MaybeLivePlaces {
+        tcx,
+        capture_kind,
+        checked_places: &checked_places,
+        self_assignment: &self_assignment,
+    }
+    .iterate_to_fixpoint(tcx, body, None)
+    .into_results_cursor(body);
 
     let typing_env = ty::TypingEnv::post_analysis(tcx, body.source.def_id());
 
-    let mut assignments =
-        AssignmentResult::find_dead_assignments(tcx, typing_env, &checked_places, &mut live, body);
+    let mut assignments = AssignmentResult::find_dead_assignments(
+        tcx,
+        typing_env,
+        &checked_places,
+        &self_assignment,
+        &mut live,
+        body,
+    );
 
     assignments.merge_guards();
 
@@ -638,6 +651,7 @@ impl<'a, 'tcx> AssignmentResult<'a, 'tcx> {
         tcx: TyCtxt<'tcx>,
         typing_env: ty::TypingEnv<'tcx>,
         checked_places: &'a PlaceSet<'tcx>,
+        self_assignment: &'a FxHashSet<Location>,
         cursor: &mut ResultsCursor<'_, 'tcx, MaybeLivePlaces<'_, 'tcx>>,
         body: &'a Body<'tcx>,
     ) -> AssignmentResult<'a, 'tcx> {
@@ -648,26 +662,35 @@ impl<'a, 'tcx> AssignmentResult<'a, 'tcx> {
             &checked_places.places,
         );
 
-        let mut check_place =
-            |place: Place<'tcx>, kind, source_info: SourceInfo, live: &DenseBitSet<PlaceIndex>| {
-                if let Some((index, extra_projections)) = checked_places.get(place.as_ref()) {
-                    if !is_indirect(extra_projections) {
-                        let is_direct = extra_projections.is_empty();
-                        match assignments[index].entry(source_info) {
-                            IndexEntry::Vacant(v) => {
-                                let access = Access { kind, live: live.contains(index), is_direct };
-                                v.insert(access);
-                            }
-                            IndexEntry::Occupied(mut o) => {
-                                // There were already a sighting. Mark this statement as live if it
-                                // was, to avoid false positives.
-                                o.get_mut().live |= live.contains(index);
-                                o.get_mut().is_direct &= is_direct;
-                            }
+        let mut check_place = |place: Place<'tcx>,
+                               kind,
+                               source_info: SourceInfo,
+                               live: &DenseBitSet<PlaceIndex>,
+                               reads_old_value| {
+            if let Some((index, extra_projections)) = checked_places.get(place.as_ref()) {
+                if !is_indirect(extra_projections) {
+                    let is_direct = extra_projections.is_empty();
+                    match assignments[index].entry(source_info) {
+                        IndexEntry::Vacant(v) => {
+                            let access = Access {
+                                kind,
+                                live: live.contains(index),
+                                is_direct,
+                                reads_old_value,
+                            };
+                            v.insert(access);
+                        }
+                        IndexEntry::Occupied(mut o) => {
+                            // There were already a sighting. Mark this statement as live if it
+                            // was, to avoid false positives.
+                            o.get_mut().live |= live.contains(index);
+                            o.get_mut().is_direct &= is_direct;
+                            o.get_mut().reads_old_value |= reads_old_value;
                         }
                     }
                 }
-            };
+            }
+        };
 
         let mut record_drop = |place: Place<'tcx>| {
             if let Some((index, &[])) = checked_places.get(place.as_ref()) {
@@ -684,7 +707,7 @@ impl<'a, 'tcx> AssignmentResult<'a, 'tcx> {
             match &terminator.kind {
                 TerminatorKind::Call { destination: place, .. }
                 | TerminatorKind::Yield { resume_arg: place, .. } => {
-                    check_place(*place, AccessKind::Assign, terminator.source_info, live);
+                    check_place(*place, AccessKind::Assign, terminator.source_info, live, false);
                     record_drop(*place)
                 }
                 TerminatorKind::Drop { place, .. } => record_drop(*place),
@@ -693,7 +716,13 @@ impl<'a, 'tcx> AssignmentResult<'a, 'tcx> {
                         if let InlineAsmOperand::Out { place: Some(place), .. }
                         | InlineAsmOperand::InOut { out_place: Some(place), .. } = operand
                         {
-                            check_place(*place, AccessKind::Assign, terminator.source_info, live);
+                            check_place(
+                                *place,
+                                AccessKind::Assign,
+                                terminator.source_info,
+                                live,
+                                false,
+                            );
                         }
                     }
                 }
@@ -707,7 +736,15 @@ impl<'a, 'tcx> AssignmentResult<'a, 'tcx> {
                 match &statement.kind {
                     StatementKind::Assign(box (place, _))
                     | StatementKind::SetDiscriminant { box place, .. } => {
-                        check_place(*place, AccessKind::Assign, statement.source_info, live);
+                        let reads_old_value = matches!(statement.kind, StatementKind::Assign(..))
+                            && self_assignment.contains(&Location { block: bb, statement_index });
+                        check_place(
+                            *place,
+                            AccessKind::Assign,
+                            statement.source_info,
+                            live,
+                            reads_old_value,
+                        );
                     }
                     StatementKind::Retag(_, _)
                     | StatementKind::StorageLive(_)
@@ -746,7 +783,12 @@ impl<'a, 'tcx> AssignmentResult<'a, 'tcx> {
                     continue;
                 };
                 let source_info = body.local_decls[place.local].source_info;
-                let access = Access { kind, live: live.contains(index), is_direct: true };
+                let access = Access {
+                    kind,
+                    live: live.contains(index),
+                    is_direct: true,
+                    reads_old_value: false,
+                };
                 assignments[index].insert(source_info, access);
             }
         }
@@ -1094,19 +1136,28 @@ impl<'a, 'tcx> AssignmentResult<'a, 'tcx> {
                 self.body,
             );
 
-            // We probed MIR in reverse order for dataflow.
-            // We revert the vector to give a consistent order to the user.
-            for (source_info, Access { live, kind, is_direct }) in statements.into_iter().rev() {
-                if live {
+            // We probed MIR in reverse order for dataflow. Keep this order while computing which
+            // dead assignments should warn, then emit diagnostics in source order.
+            let mut next_reads_old = false;
+            let mut pending = Vec::new();
+            for (source_info, access) in statements {
+                let Access { live, kind, is_direct, reads_old_value } = access;
+                let is_direct_assign = kind == AccessKind::Assign && is_direct;
+                let reads_old = is_direct_assign && reads_old_value;
+                let suppressed_by_next = next_reads_old && kind == AccessKind::Assign;
+                // Drop guards assign through projections, but those writes are observed by Drop.
+                let skipped_drop_guard = !is_direct && is_maybe_drop_guard;
+
+                next_reads_old = reads_old;
+
+                if live || suppressed_by_next || skipped_drop_guard {
                     continue;
                 }
 
-                // If this place was dropped and has non-trivial drop,
-                // skip reporting field assignments.
-                if !is_direct && is_maybe_drop_guard {
-                    continue;
-                }
+                pending.push((source_info, kind));
+            }
 
+            for (source_info, kind) in pending.into_iter().rev() {
                 // Report the dead assignment.
                 let Some(hir_id) = source_info.scope.lint_root(&self.body.source_scopes) else {
                     continue;
@@ -1169,7 +1220,7 @@ pub struct MaybeLivePlaces<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
     checked_places: &'a PlaceSet<'tcx>,
     capture_kind: CaptureKind,
-    self_assignment: FxHashSet<Location>,
+    self_assignment: &'a FxHashSet<Location>,
 }
 
 impl<'tcx> MaybeLivePlaces<'_, 'tcx> {
@@ -1179,10 +1230,10 @@ impl<'tcx> MaybeLivePlaces<'_, 'tcx> {
     ) -> TransferFunction<'a, 'tcx> {
         TransferFunction {
             tcx: self.tcx,
-            checked_places: &self.checked_places,
+            checked_places: self.checked_places,
             capture_kind: self.capture_kind,
             trans,
-            self_assignment: &self.self_assignment,
+            self_assignment: self.self_assignment,
         }
     }
 }
