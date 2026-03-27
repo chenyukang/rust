@@ -77,6 +77,7 @@ pub struct CStore {
     unused_externs: Vec<Symbol>,
 
     used_extern_options: FxHashSet<Symbol>,
+    had_extern_crate_load_failure: bool,
 }
 
 impl std::fmt::Debug for CStore {
@@ -328,6 +329,10 @@ impl CStore {
         self.has_alloc_error_handler
     }
 
+    pub fn had_extern_crate_load_failure(&self) -> bool {
+        self.had_extern_crate_load_failure
+    }
+
     pub fn report_unused_deps(&self, tcx: TyCtxt<'_>) {
         let json_unused_externs = tcx.sess.opts.json_unused_externs;
 
@@ -514,6 +519,7 @@ impl CStore {
             resolved_externs: UnordMap::default(),
             unused_externs: Vec::new(),
             used_extern_options: Default::default(),
+            had_extern_crate_load_failure: false,
         }
     }
 
@@ -723,6 +729,9 @@ impl CStore {
             }
             Err(err) => {
                 debug!("failed to resolve crate {} {:?}", name, dep_kind);
+                if !tcx.sess.dcx().has_errors().is_some() {
+                    self.had_extern_crate_load_failure = true;
+                }
                 let missing_core = self
                     .maybe_resolve_crate(
                         tcx,
