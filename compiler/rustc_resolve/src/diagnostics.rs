@@ -162,6 +162,12 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
 
         let mut reported_spans = FxHashSet::default();
         for error in std::mem::take(&mut self.privacy_errors) {
+            if self.ambiguity_errors.iter().any(|ambiguity_error| {
+                ambiguity_error.ident.name == error.ident.name
+                    && error.dedup_span.contains(ambiguity_error.ident.span)
+            }) {
+                continue;
+            }
             if reported_spans.insert(error.dedup_span) {
                 self.report_privacy_error(&error);
             }

@@ -1,0 +1,95 @@
+error: `date_range` is ambiguous
+  --> $DIR/issue-144333-no-misleading-privacy.rs:6:30
+   |
+LL | use issue_144333_cross::dsl::date_range;
+   |                              ^^^^^^^^^^ ambiguous name
+   |
+   = note: ambiguous because of multiple glob imports of a name in the same module
+note: `date_range` could refer to the function defined here
+  --> $DIR/auxiliary/issue-144333-cross.rs:4:20
+   |
+LL |     pub(crate) use crate::external::*;
+   |                    ^^^^^^^^^^^^^^^
+   = help: consider updating this dependency to resolve this error
+   = help: if updating the dependency does not resolve the problem report the problem to the author of the relevant crate
+note: `date_range` could also refer to the function defined here
+  --> $DIR/auxiliary/issue-144333-cross.rs:15:13
+   |
+LL |     pub use self::functions::*;
+   |             ^^^^^^^^^^^^^^^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #114095 <https://github.com/rust-lang/rust/issues/114095>
+   = note: `#[deny(ambiguous_glob_imports)]` (part of `#[deny(future_incompatible)]`) on by default
+
+error: `time_range` is ambiguous
+  --> $DIR/issue-144333-no-misleading-privacy.rs:9:30
+   |
+LL | use issue_144333_cross::dsl::time_range;
+   |                              ^^^^^^^^^^ ambiguous name
+   |
+   = note: ambiguous because of multiple glob imports of a name in the same module
+note: `time_range` could refer to the function defined here
+  --> $DIR/auxiliary/issue-144333-cross.rs:4:20
+   |
+LL |     pub(crate) use crate::external::*;
+   |                    ^^^^^^^^^^^^^^^
+   = help: consider updating this dependency to resolve this error
+   = help: if updating the dependency does not resolve the problem report the problem to the author of the relevant crate
+note: `time_range` could also refer to the function defined here
+  --> $DIR/auxiliary/issue-144333-cross.rs:15:13
+   |
+LL |     pub use self::functions::*;
+   |             ^^^^^^^^^^^^^^^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #114095 <https://github.com/rust-lang/rust/issues/114095>
+
+error: aborting due to 2 previous errors
+
+Future incompatibility report: Future breakage diagnostic:
+error: `date_range` is ambiguous
+  --> $DIR/issue-144333-no-misleading-privacy.rs:6:30
+   |
+LL | use issue_144333_cross::dsl::date_range;
+   |                              ^^^^^^^^^^ ambiguous name
+   |
+   = note: ambiguous because of multiple glob imports of a name in the same module
+note: `date_range` could refer to the function defined here
+  --> $DIR/auxiliary/issue-144333-cross.rs:4:20
+   |
+LL |     pub(crate) use crate::external::*;
+   |                    ^^^^^^^^^^^^^^^
+   = help: consider updating this dependency to resolve this error
+   = help: if updating the dependency does not resolve the problem report the problem to the author of the relevant crate
+note: `date_range` could also refer to the function defined here
+  --> $DIR/auxiliary/issue-144333-cross.rs:15:13
+   |
+LL |     pub use self::functions::*;
+   |             ^^^^^^^^^^^^^^^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #114095 <https://github.com/rust-lang/rust/issues/114095>
+   = note: `#[deny(ambiguous_glob_imports)]` (part of `#[deny(future_incompatible)]`) on by default
+
+Future breakage diagnostic:
+error: `time_range` is ambiguous
+  --> $DIR/issue-144333-no-misleading-privacy.rs:9:30
+   |
+LL | use issue_144333_cross::dsl::time_range;
+   |                              ^^^^^^^^^^ ambiguous name
+   |
+   = note: ambiguous because of multiple glob imports of a name in the same module
+note: `time_range` could refer to the function defined here
+  --> $DIR/auxiliary/issue-144333-cross.rs:4:20
+   |
+LL |     pub(crate) use crate::external::*;
+   |                    ^^^^^^^^^^^^^^^
+   = help: consider updating this dependency to resolve this error
+   = help: if updating the dependency does not resolve the problem report the problem to the author of the relevant crate
+note: `time_range` could also refer to the function defined here
+  --> $DIR/auxiliary/issue-144333-cross.rs:15:13
+   |
+LL |     pub use self::functions::*;
+   |             ^^^^^^^^^^^^^^^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #114095 <https://github.com/rust-lang/rust/issues/114095>
+   = note: `#[deny(ambiguous_glob_imports)]` (part of `#[deny(future_incompatible)]`) on by default
+

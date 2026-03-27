@@ -1071,6 +1071,19 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         let binding = resolution.non_glob_decl.filter(|b| Some(*b) != ignore_decl);
 
         if let Some(finalize) = finalize {
+            if shadowing == Shadowing::Unrestricted
+                && let Some(binding) = binding
+                && !self.is_accessible_from(binding.vis(), parent_scope.module)
+                && matches!(binding.kind, DeclKind::Import { .. })
+                && let Some(glob_binding) = resolution.glob_decl.filter(|b| Some(*b) != ignore_decl)
+                && matches!(glob_binding.kind, DeclKind::Import { .. })
+                && self.is_accessible_from(glob_binding.vis(), parent_scope.module)
+            {
+                // Prefer an accessible glob-imported binding over a private imported binding in
+                // the same module, otherwise we turn a public re-export into a spurious privacy
+                // error for downstream paths.
+                return Err(ControlFlow::Continue(Determined));
+            }
             return self.get_mut().finalize_module_binding(
                 ident,
                 orig_ident_span,

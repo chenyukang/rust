@@ -1,3 +1,6 @@
+#![allow(unused_imports)]
+
+//@ check-pass
 //@ edition:2015
 mod options {
     pub struct ParseOptions {}
@@ -5,12 +8,12 @@ mod options {
 
 mod parser {
     pub use options::*;
-    // Private single import shadows public glob import, but arrives too late for initial
-    // resolution of `use parser::ParseOptions` because it depends on that resolution itself.
+    // A private import in the module should not make the public glob-imported binding
+    // inaccessible to downstream paths.
     #[allow(hidden_glob_reexports)]
     use ParseOptions;
 }
 
-pub use parser::ParseOptions; //~ ERROR struct import `ParseOptions` is private
+pub use parser::ParseOptions;
 
 fn main() {}
