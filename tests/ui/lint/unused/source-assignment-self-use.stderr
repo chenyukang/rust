@@ -1,0 +1,46 @@
+warning: value assigned to `x` is never read
+  --> $DIR/source-assignment-self-use.rs:10:5
+   |
+LL |     x = x + 1;
+   |     ^^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+note: the lint level is defined here
+  --> $DIR/source-assignment-self-use.rs:2:9
+   |
+LL | #![warn(unused_assignments)]
+   |         ^^^^^^^^^^^^^^^^^^
+
+warning: value assigned to `x` is never read
+  --> $DIR/source-assignment-self-use.rs:16:17
+   |
+LL |     let mut x = 1;
+   |                 ^
+   |
+   = help: maybe it is overwritten before being read?
+
+warning: value assigned to `x` is never read
+  --> $DIR/source-assignment-self-use.rs:17:5
+   |
+LL |     x += 1;
+   |     ^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+
+warning: value assigned to `x` is never read
+  --> $DIR/source-assignment-self-use.rs:24:5
+   |
+LL |     x = x / y;
+   |     ^^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+
+warning: value assigned to `x` is never read
+  --> $DIR/source-assignment-self-use.rs:31:5
+   |
+LL |     x = id(x);
+   |     ^^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+
+warning: 5 warnings emitted

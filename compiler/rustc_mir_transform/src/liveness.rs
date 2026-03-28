@@ -1,5 +1,7 @@
+use std::collections::BTreeMap;
+
 use rustc_abi::FieldIdx;
-use rustc_data_structures::fx::{FxHashSet, FxIndexMap, IndexEntry};
+use rustc_data_structures::fx::{FxHashMap, FxHashSet, FxIndexMap, IndexEntry};
 use rustc_hir::def::{CtorKind, DefKind};
 use rustc_hir::def_id::{DefId, LocalDefId};
 use rustc_hir::find_attr;
@@ -134,14 +136,14 @@ pub(crate) fn check_liveness<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> Den
     // Get the remaining variables' names from debuginfo.
     checked_places.record_debuginfo(&body.var_debug_info);
 
-    let self_assignment = find_self_assignments(&checked_places, body);
     let raw_pointer_origins = find_raw_pointer_origins(tcx, body);
+    let ignored_self_assignment_places = find_self_assignment_places(&checked_places, body);
 
     let mut live = MaybeLivePlaces {
         tcx,
         capture_kind,
         checked_places: &checked_places,
-        self_assignment,
+        ignored_self_assignment_places,
         raw_pointer_origins,
     }
     .iterate_to_fixpoint(tcx, body, None)
@@ -630,134 +632,220 @@ fn annotate_mut_binding_to_immutable_binding<'tcx>(
     }
 }
 
-/// Compute self-assignments of the form `a += b`.
-///
-/// MIR building generates 2 statements and 1 terminator for such assignments:
-/// - _temp = CheckedBinaryOp(a, b)
-/// - assert(!_temp.1)
-/// - a = _temp.0
-///
-/// This function tries to detect this pattern in order to avoid marking statement as a definition
-/// and use. This will let the analysis be dictated by the next use of `a`.
-///
-/// Note that we will still need to account for the use of `b`.
-fn find_self_assignments<'tcx>(
+/// Group assignments by their source position so we can reason about a source-level assignment as
+/// one unit even when MIR lowers it into multiple statements or terminators.
+fn collect_source_assignments<'tcx>(
     checked_places: &PlaceSet<'tcx>,
     body: &Body<'tcx>,
-) -> FxHashSet<Location> {
-    let mut self_assign = FxHashSet::default();
+) -> FxHashMap<SourceInfo, Vec<Place<'tcx>>> {
+    fn record<'tcx>(
+        checked_places: &PlaceSet<'tcx>,
+        assignments: &mut FxHashMap<SourceInfo, Vec<Place<'tcx>>>,
+        source_info: SourceInfo,
+        place: Place<'tcx>,
+    ) {
+        let Some((_index, extra_projections)) = checked_places.get(place.as_ref()) else {
+            return;
+        };
+        if is_indirect(extra_projections) {
+            return;
+        }
 
-    const FIELD_0: FieldIdx = FieldIdx::from_u32(0);
-    const FIELD_1: FieldIdx = FieldIdx::from_u32(1);
+        let places = assignments.entry(source_info).or_default();
+        if !places.contains(&place) {
+            places.push(place);
+        }
+    }
 
-    for (bb, bb_data) in body.basic_blocks.iter_enumerated() {
-        for (statement_index, stmt) in bb_data.statements.iter().enumerate() {
-            let StatementKind::Assign(box (first_place, rvalue)) = &stmt.kind else { continue };
-            match rvalue {
-                // For checked binary ops, the MIR builder inserts an assertion in between.
-                Rvalue::BinaryOp(
-                    BinOp::AddWithOverflow | BinOp::SubWithOverflow | BinOp::MulWithOverflow,
-                    box (Operand::Copy(lhs), _),
-                ) => {
-                    // Checked binary ops only appear at the end of the block, before the assertion.
-                    if statement_index + 1 != bb_data.statements.len() {
-                        continue;
-                    }
+    let mut assignments = FxHashMap::default();
+    for bb_data in body.basic_blocks.iter() {
+        for statement in &bb_data.statements {
+            match statement.kind {
+                StatementKind::Assign(box (place, _))
+                | StatementKind::SetDiscriminant { box place, .. } => {
+                    record(checked_places, &mut assignments, statement.source_info, place);
+                }
+                StatementKind::Retag(_, _)
+                | StatementKind::StorageLive(_)
+                | StatementKind::StorageDead(_)
+                | StatementKind::Coverage(_)
+                | StatementKind::Intrinsic(_)
+                | StatementKind::Nop
+                | StatementKind::FakeRead(_)
+                | StatementKind::PlaceMention(_)
+                | StatementKind::ConstEvalCounter
+                | StatementKind::BackwardIncompatibleDropHint { .. }
+                | StatementKind::AscribeUserType(_, _) => {}
+            }
+        }
 
-                    let TerminatorKind::Assert {
-                        cond,
-                        target,
-                        msg: box AssertKind::Overflow(..),
-                        ..
-                    } = &bb_data.terminator().kind
-                    else {
-                        continue;
-                    };
-                    let Some(assign) = body.basic_blocks[*target].statements.first() else {
-                        continue;
-                    };
-                    let StatementKind::Assign(box (dest, Rvalue::Use(Operand::Move(temp)))) =
-                        assign.kind
-                    else {
-                        continue;
-                    };
-
-                    if dest != *lhs {
-                        continue;
-                    }
-
-                    let Operand::Move(cond) = cond else { continue };
-                    let [PlaceElem::Field(FIELD_0, _)] = &temp.projection.as_slice() else {
-                        continue;
-                    };
-                    let [PlaceElem::Field(FIELD_1, _)] = &cond.projection.as_slice() else {
-                        continue;
-                    };
-
-                    // We ignore indirect self-assignment, because both occurrences of `dest` are uses.
-                    let is_indirect = checked_places
-                        .get(dest.as_ref())
-                        .map_or(false, |(_, projections)| is_indirect(projections));
-                    if is_indirect {
-                        continue;
-                    }
-
-                    if first_place.local == temp.local
-                        && first_place.local == cond.local
-                        && first_place.projection.is_empty()
+        let terminator = bb_data.terminator();
+        match &terminator.kind {
+            TerminatorKind::Call { destination, .. }
+            | TerminatorKind::Yield { resume_arg: destination, .. } => {
+                record(checked_places, &mut assignments, terminator.source_info, *destination);
+            }
+            TerminatorKind::InlineAsm { operands, .. } => {
+                for operand in operands {
+                    if let InlineAsmOperand::Out { place: Some(place), .. }
+                    | InlineAsmOperand::InOut { out_place: Some(place), .. } = operand
                     {
-                        // Original block
-                        self_assign.insert(Location {
-                            block: bb,
-                            statement_index: bb_data.statements.len() - 1,
-                        });
-                        self_assign.insert(Location {
-                            block: bb,
-                            statement_index: bb_data.statements.len(),
-                        });
-                        // Target block
-                        self_assign.insert(Location { block: *target, statement_index: 0 });
+                        record(checked_places, &mut assignments, terminator.source_info, *place);
                     }
                 }
-                // Straight self-assignment.
-                Rvalue::BinaryOp(op, box (Operand::Copy(lhs), _)) => {
-                    if lhs != first_place {
-                        continue;
-                    }
+            }
+            TerminatorKind::Goto { .. }
+            | TerminatorKind::SwitchInt { .. }
+            | TerminatorKind::Drop { .. }
+            | TerminatorKind::Assert { .. }
+            | TerminatorKind::UnwindResume
+            | TerminatorKind::UnwindTerminate(_)
+            | TerminatorKind::Return
+            | TerminatorKind::TailCall { .. }
+            | TerminatorKind::CoroutineDrop
+            | TerminatorKind::FalseEdge { .. }
+            | TerminatorKind::FalseUnwind { .. }
+            | TerminatorKind::Unreachable => {}
+        }
+    }
 
-                    // We ignore indirect self-assignment, because both occurrences of `dest` are uses.
-                    let is_indirect = checked_places
-                        .get(first_place.as_ref())
-                        .map_or(false, |(_, projections)| is_indirect(projections));
-                    if is_indirect {
-                        continue;
-                    }
+    assignments
+}
 
-                    self_assign.insert(Location { block: bb, statement_index });
+fn source_assignment_covers_use<'tcx>(assignment: PlaceRef<'tcx>, used: PlaceRef<'tcx>) -> bool {
+    assignment.local == used.local
+        && assignment.projection.len() <= used.projection.len()
+        && assignment
+            .projection
+            .iter()
+            .zip(used.projection.iter())
+            .all(|(assignment, used)| assignment == used)
+}
 
-                    // Checked division verifies overflow before performing the division, so we
-                    // need to go and ignore this check in the predecessor block.
-                    if let BinOp::Div | BinOp::Rem = op
-                        && statement_index == 0
-                        && let &[pred] = body.basic_blocks.predecessors()[bb].as_slice()
-                        && let TerminatorKind::Assert { msg, .. } =
-                            &body.basic_blocks[pred].terminator().kind
-                        && let AssertKind::Overflow(..) = **msg
-                        && let len = body.basic_blocks[pred].statements.len()
-                        && len >= 2
-                    {
-                        // BitAnd of two checks.
-                        self_assign.insert(Location { block: pred, statement_index: len - 1 });
-                        // `lhs == MIN`.
-                        self_assign.insert(Location { block: pred, statement_index: len - 2 });
-                    }
+/// Collect accesses inside a source-level assignment that should not feed the assignee's liveness
+/// back into itself. This makes the old value of `x` matter only when the result of `x = ...`
+/// actually remains live after the whole source assignment.
+fn find_self_assignment_places<'tcx>(
+    checked_places: &PlaceSet<'tcx>,
+    body: &Body<'tcx>,
+) -> FxHashMap<Location, Vec<Place<'tcx>>> {
+    struct AssigneeAccessCollector<'a, 'tcx> {
+        assignees: &'a [Place<'tcx>],
+        accesses: Vec<Place<'tcx>>,
+        uses: Vec<Place<'tcx>>,
+    }
+
+    impl<'a, 'tcx> AssigneeAccessCollector<'a, 'tcx> {
+        fn should_count_as_self_use(context: PlaceContext) -> bool {
+            !matches!(context, PlaceContext::MutatingUse(MutatingUseContext::Drop))
+        }
+
+        fn record(&mut self, place: PlaceRef<'tcx>, context: PlaceContext) {
+            for &assignee in self.assignees {
+                if !source_assignment_covers_use(assignee.as_ref(), place) {
+                    continue;
                 }
-                _ => {}
+
+                let extra_projections = &place.projection[assignee.projection.len()..];
+                match DefUse::for_place(extra_projections, context) {
+                    Some(DefUse::Def) => {
+                        if !self.accesses.contains(&assignee) {
+                            self.accesses.push(assignee);
+                        }
+                    }
+                    Some(DefUse::Use) => {
+                        if !self.accesses.contains(&assignee) {
+                            self.accesses.push(assignee);
+                        }
+                        if Self::should_count_as_self_use(context) && !self.uses.contains(&assignee)
+                        {
+                            self.uses.push(assignee);
+                        }
+                    }
+                    None => {}
+                }
             }
         }
     }
 
-    self_assign
+    impl<'tcx> Visitor<'tcx> for AssigneeAccessCollector<'_, 'tcx> {
+        fn visit_place(&mut self, place: &Place<'tcx>, context: PlaceContext, _: Location) {
+            self.record(place.as_ref(), context);
+        }
+
+        fn visit_local(&mut self, local: Local, context: PlaceContext, _: Location) {
+            self.record(local.into(), context);
+        }
+    }
+
+    fn collect_accesses_at_location<'tcx>(
+        assignees: &[Place<'tcx>],
+        statement: Option<&Statement<'tcx>>,
+        terminator: Option<&Terminator<'tcx>>,
+        location: Location,
+    ) -> (Vec<Place<'tcx>>, Vec<Place<'tcx>>) {
+        let mut collector = AssigneeAccessCollector { assignees, accesses: vec![], uses: vec![] };
+        if let Some(statement) = statement {
+            collector.visit_statement(statement, location);
+        }
+        if let Some(terminator) = terminator {
+            collector.visit_terminator(terminator, location);
+        }
+        (collector.accesses, collector.uses)
+    }
+
+    let source_assignments = collect_source_assignments(checked_places, body);
+    let mut self_used_by_source = FxHashMap::<SourceInfo, Vec<Place<'tcx>>>::default();
+    let mut accesses_by_location = BTreeMap::<Location, (SourceInfo, Vec<Place<'tcx>>)>::new();
+
+    for (bb, bb_data) in body.basic_blocks.iter_enumerated() {
+        for (statement_index, statement) in bb_data.statements.iter().enumerate() {
+            let Some(assignees) = source_assignments.get(&statement.source_info) else { continue };
+            let location = Location { block: bb, statement_index };
+            let (accesses, uses) =
+                collect_accesses_at_location(assignees, Some(statement), None, location);
+            if !accesses.is_empty() {
+                accesses_by_location.insert(location, (statement.source_info, accesses));
+            }
+            let self_used = self_used_by_source.entry(statement.source_info).or_default();
+            for assignee in uses {
+                if !self_used.contains(&assignee) {
+                    self_used.push(assignee);
+                }
+            }
+        }
+
+        let terminator = bb_data.terminator();
+        if let Some(assignees) = source_assignments.get(&terminator.source_info) {
+            let location = body.terminator_loc(bb);
+            let (accesses, uses) =
+                collect_accesses_at_location(assignees, None, Some(terminator), location);
+            if !accesses.is_empty() {
+                accesses_by_location.insert(location, (terminator.source_info, accesses));
+            }
+            let self_used = self_used_by_source.entry(terminator.source_info).or_default();
+            for assignee in uses {
+                if !self_used.contains(&assignee) {
+                    self_used.push(assignee);
+                }
+            }
+        }
+    }
+
+    let mut ignored = FxHashMap::default();
+    for (location, (source_info, accesses)) in accesses_by_location {
+        let Some(self_used) = self_used_by_source.get(&source_info) else { continue };
+        let mut ignored_places = vec![];
+        for access in accesses {
+            if self_used.contains(&access) && !ignored_places.contains(&access) {
+                ignored_places.push(access);
+            }
+        }
+        if !ignored_places.is_empty() {
+            ignored.insert(location, ignored_places);
+        }
+    }
+    ignored
 }
 
 #[derive(Default, Debug)]
@@ -986,13 +1074,18 @@ impl<'a, 'tcx> AssignmentResult<'a, 'tcx> {
             }
 
             for (statement_index, statement) in bb_data.statements.iter().enumerate().rev() {
-                cursor.seek_before_primary_effect(Location { block: bb, statement_index });
-                let live = cursor.get();
-                ever_live.union(live);
+                let location = Location { block: bb, statement_index };
+                cursor.seek_before_primary_effect(location);
+                ever_live.union(cursor.get());
                 match &statement.kind {
                     StatementKind::Assign(box (place, _))
                     | StatementKind::SetDiscriminant { box place, .. } => {
-                        check_place(*place, AccessKind::Assign, statement.source_info, live);
+                        check_place(
+                            *place,
+                            AccessKind::Assign,
+                            statement.source_info,
+                            cursor.get(),
+                        );
                     }
                     StatementKind::Retag(_, _)
                     | StatementKind::StorageLive(_)
@@ -1454,7 +1547,7 @@ pub struct MaybeLivePlaces<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
     checked_places: &'a PlaceSet<'tcx>,
     capture_kind: CaptureKind,
-    self_assignment: FxHashSet<Location>,
+    ignored_self_assignment_places: FxHashMap<Location, Vec<Place<'tcx>>>,
     raw_pointer_origins: IndexVec<Local, PlaceSources<'tcx>>,
 }
 
@@ -1468,7 +1561,7 @@ impl<'tcx> MaybeLivePlaces<'_, 'tcx> {
             checked_places: &self.checked_places,
             capture_kind: self.capture_kind,
             trans,
-            self_assignment: &self.self_assignment,
+            ignored_self_assignment_places: &self.ignored_self_assignment_places,
             raw_pointer_origins: &self.raw_pointer_origins,
         }
     }
@@ -1523,11 +1616,21 @@ struct TransferFunction<'a, 'tcx> {
     checked_places: &'a PlaceSet<'tcx>,
     trans: &'a mut DenseBitSet<PlaceIndex>,
     capture_kind: CaptureKind,
-    self_assignment: &'a FxHashSet<Location>,
+    ignored_self_assignment_places: &'a FxHashMap<Location, Vec<Place<'tcx>>>,
     raw_pointer_origins: &'a IndexVec<Local, PlaceSources<'tcx>>,
 }
 
 impl<'a, 'tcx> TransferFunction<'a, 'tcx> {
+    fn should_ignore_self_assignment_access(
+        &self,
+        place: PlaceRef<'tcx>,
+        location: Location,
+    ) -> bool {
+        self.ignored_self_assignment_places.get(&location).is_some_and(|places| {
+            places.iter().any(|assignment| source_assignment_covers_use(assignment.as_ref(), place))
+        })
+    }
+
     fn raw_pointer_operand_context(operand: &Operand<'tcx>) -> Option<PlaceContext> {
         match operand {
             Operand::Copy(_) => Some(PlaceContext::NonMutatingUse(NonMutatingUseContext::Copy)),
@@ -1568,37 +1671,6 @@ impl<'tcx> Visitor<'tcx> for TransferFunction<'_, 'tcx> {
                 FakeReadCause::ForLet(None) | FakeReadCause::ForGuardBinding,
                 _,
             )) => return,
-            // Handle self-assignment by restricting the read/write they do.
-            StatementKind::Assign(box (ref dest, ref rvalue))
-                if self.self_assignment.contains(&location) =>
-            {
-                if let Rvalue::BinaryOp(
-                    BinOp::AddWithOverflow | BinOp::SubWithOverflow | BinOp::MulWithOverflow,
-                    box (_, rhs),
-                ) = rvalue
-                {
-                    // We are computing the binary operation:
-                    // - the LHS will be assigned, so we don't read it;
-                    // - the RHS still needs to be read.
-                    self.visit_operand(rhs, location);
-                    self.visit_place(
-                        dest,
-                        PlaceContext::MutatingUse(MutatingUseContext::Store),
-                        location,
-                    );
-                } else if let Rvalue::BinaryOp(_, box (_, rhs)) = rvalue {
-                    // We are computing the binary operation:
-                    // - the LHS is being updated, so we don't read it;
-                    // - the RHS still needs to be read.
-                    self.visit_operand(rhs, location);
-                } else {
-                    // This is the second part of a checked self-assignment,
-                    // we are assigning the result.
-                    // We do not consider the write to the destination as a `def`.
-                    // `self_assignment` must be false if the assignment is indirect.
-                    self.visit_rvalue(rvalue, location);
-                }
-            }
             _ => self.super_statement(statement, location),
         }
     }
@@ -1670,6 +1742,10 @@ impl<'tcx> Visitor<'tcx> for TransferFunction<'_, 'tcx> {
     }
 
     fn visit_place(&mut self, place: &Place<'tcx>, context: PlaceContext, location: Location) {
+        if self.should_ignore_self_assignment_access(place.as_ref(), location) {
+            return;
+        }
+
         if let Some((PlaceElem::Deref, tail)) = place.projection.split_first() {
             for origin in self.raw_pointer_origins[place.local].iter() {
                 let origin = origin.project_deeper(tail, self.tcx);
@@ -1712,7 +1788,11 @@ impl<'tcx> Visitor<'tcx> for TransferFunction<'_, 'tcx> {
         }
     }
 
-    fn visit_local(&mut self, local: Local, context: PlaceContext, _: Location) {
+    fn visit_local(&mut self, local: Local, context: PlaceContext, location: Location) {
+        if self.should_ignore_self_assignment_access(local.into(), location) {
+            return;
+        }
+
         if let Some((index, _proj)) = self.checked_places.get(local.into()) {
             debug_assert_eq!(_proj, &[]);
             match DefUse::for_place(&[], context) {
