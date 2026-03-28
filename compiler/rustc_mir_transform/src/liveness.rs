@@ -10,6 +10,7 @@ use rustc_middle::mir::visit::{
     MutatingUseContext, NonMutatingUseContext, NonUseContext, PlaceContext, Visitor,
 };
 use rustc_middle::mir::*;
+use rustc_middle::ty::adjustment::PointerCoercion;
 use rustc_middle::ty::print::with_no_trimmed_paths;
 use rustc_middle::ty::{self, Ty, TyCtxt};
 use rustc_mir_dataflow::fmt::DebugWithContext;
@@ -44,8 +45,8 @@ struct Access {
     /// When we encounter multiple statements at the same location, we only increase the liveness,
     /// in order to avoid false positives.
     live: bool,
-    /// Is this a direct access to the place itself, no projections, or to a field?
-    /// This helps distinguish `x = ...` from `x.field = ...`
+    /// Is this an assignment to the tracked place itself, with no remaining projections?
+    /// This helps distinguish `x = ...` from `x.field = ...`.
     is_direct: bool,
 }
 
@@ -134,11 +135,17 @@ pub(crate) fn check_liveness<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> Den
     checked_places.record_debuginfo(&body.var_debug_info);
 
     let self_assignment = find_self_assignments(&checked_places, body);
+    let raw_pointer_origins = find_raw_pointer_origins(tcx, body);
 
-    let mut live =
-        MaybeLivePlaces { tcx, capture_kind, checked_places: &checked_places, self_assignment }
-            .iterate_to_fixpoint(tcx, body, None)
-            .into_results_cursor(body);
+    let mut live = MaybeLivePlaces {
+        tcx,
+        capture_kind,
+        checked_places: &checked_places,
+        self_assignment,
+        raw_pointer_origins,
+    }
+    .iterate_to_fixpoint(tcx, body, None)
+    .into_results_cursor(body);
 
     let typing_env = ty::TypingEnv::post_analysis(tcx, body.source.def_id());
 
@@ -247,6 +254,189 @@ fn maybe_drop_guard<'tcx>(
     } else {
         false
     }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum PointerLikeDef<'tcx> {
+    Unassigned,
+    One(Place<'tcx>),
+    Multiple,
+}
+
+#[derive(Copy, Clone, Debug)]
+enum ResolvedPointerLikeOrigin<'tcx> {
+    Unresolved,
+    Resolving,
+    None,
+    Some(Place<'tcx>),
+}
+
+fn pointer_like_place<'tcx>(operand: &Operand<'tcx>) -> Option<Place<'tcx>> {
+    match operand {
+        Operand::Copy(place) | Operand::Move(place) => Some(*place),
+        Operand::Constant(_) | Operand::RuntimeChecks(_) => None,
+    }
+}
+
+fn classify_pointer_like_source<'tcx>(rvalue: &Rvalue<'tcx>) -> Option<Place<'tcx>> {
+    match rvalue {
+        Rvalue::Ref(_, _, place) | Rvalue::RawPtr(_, place) => Some(*place),
+        Rvalue::Use(operand) => pointer_like_place(operand),
+        Rvalue::Cast(
+            CastKind::PtrToPtr
+            | CastKind::PointerCoercion(PointerCoercion::MutToConstPointer, _)
+            | CastKind::Subtype,
+            operand,
+            _,
+        ) => pointer_like_place(operand),
+        _ => None,
+    }
+}
+
+fn record_pointer_like_def<'tcx>(
+    defs: &mut IndexVec<Local, PointerLikeDef<'tcx>>,
+    body: &Body<'tcx>,
+    local: Local,
+    source: Option<Place<'tcx>>,
+) {
+    if !matches!(body.local_decls[local].ty.kind(), ty::Ref(..) | ty::RawPtr(..)) {
+        return;
+    }
+
+    defs[local] = match (defs[local], source) {
+        (PointerLikeDef::Unassigned, Some(source)) => PointerLikeDef::One(source),
+        (PointerLikeDef::Unassigned, None) => PointerLikeDef::Multiple,
+        _ => PointerLikeDef::Multiple,
+    };
+}
+
+fn find_raw_pointer_origins<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+) -> IndexVec<Local, Option<Place<'tcx>>> {
+    let mut defs: IndexVec<_, PointerLikeDef<'_>> =
+        IndexVec::from_elem(PointerLikeDef::Unassigned, &body.local_decls);
+
+    for block in body.basic_blocks.iter() {
+        for statement in &block.statements {
+            match &statement.kind {
+                StatementKind::Assign(box (place, rvalue)) => {
+                    if let Some(local) = place.as_local() {
+                        record_pointer_like_def(
+                            &mut defs,
+                            body,
+                            local,
+                            classify_pointer_like_source(rvalue),
+                        );
+                    }
+                }
+                StatementKind::SetDiscriminant { box place, .. } => {
+                    if let Some(local) = place.as_local() {
+                        record_pointer_like_def(&mut defs, body, local, None);
+                    }
+                }
+                StatementKind::Retag(_, _)
+                | StatementKind::StorageLive(_)
+                | StatementKind::StorageDead(_)
+                | StatementKind::Coverage(_)
+                | StatementKind::Intrinsic(_)
+                | StatementKind::Nop
+                | StatementKind::FakeRead(_)
+                | StatementKind::PlaceMention(_)
+                | StatementKind::ConstEvalCounter
+                | StatementKind::BackwardIncompatibleDropHint { .. }
+                | StatementKind::AscribeUserType(_, _) => {}
+            }
+        }
+
+        match &block.terminator().kind {
+            TerminatorKind::Call { destination, .. }
+            | TerminatorKind::Yield { resume_arg: destination, .. } => {
+                if let Some(local) = destination.as_local() {
+                    record_pointer_like_def(&mut defs, body, local, None);
+                }
+            }
+            TerminatorKind::InlineAsm { operands, .. } => {
+                for operand in operands {
+                    if let InlineAsmOperand::Out { place: Some(place), .. }
+                    | InlineAsmOperand::InOut { out_place: Some(place), .. } = operand
+                        && let Some(local) = place.as_local()
+                    {
+                        record_pointer_like_def(&mut defs, body, local, None);
+                    }
+                }
+            }
+            TerminatorKind::Drop { .. }
+            | TerminatorKind::Assert { .. }
+            | TerminatorKind::Goto { .. }
+            | TerminatorKind::SwitchInt { .. }
+            | TerminatorKind::UnwindResume
+            | TerminatorKind::UnwindTerminate(_)
+            | TerminatorKind::Return
+            | TerminatorKind::TailCall { .. }
+            | TerminatorKind::CoroutineDrop
+            | TerminatorKind::FalseEdge { .. }
+            | TerminatorKind::FalseUnwind { .. }
+            | TerminatorKind::Unreachable => {}
+        }
+    }
+
+    fn resolve_place<'tcx>(
+        place: Place<'tcx>,
+        body: &Body<'tcx>,
+        defs: &IndexVec<Local, PointerLikeDef<'tcx>>,
+        resolved: &mut IndexVec<Local, ResolvedPointerLikeOrigin<'tcx>>,
+        tcx: TyCtxt<'tcx>,
+    ) -> Option<Place<'tcx>> {
+        if let Some((PlaceElem::Deref, tail)) = place.projection.split_first()
+            && let Some(origin) = resolve_origin(place.local, body, defs, resolved, tcx)
+        {
+            return resolve_place(origin.project_deeper(tail, tcx), body, defs, resolved, tcx);
+        }
+
+        if place.projection.is_empty()
+            && matches!(body.local_decls[place.local].ty.kind(), ty::Ref(..) | ty::RawPtr(..))
+        {
+            return resolve_origin(place.local, body, defs, resolved, tcx);
+        }
+
+        Some(place)
+    }
+
+    fn resolve_origin<'tcx>(
+        local: Local,
+        body: &Body<'tcx>,
+        defs: &IndexVec<Local, PointerLikeDef<'tcx>>,
+        resolved: &mut IndexVec<Local, ResolvedPointerLikeOrigin<'tcx>>,
+        tcx: TyCtxt<'tcx>,
+    ) -> Option<Place<'tcx>> {
+        match resolved[local] {
+            ResolvedPointerLikeOrigin::Some(place) => return Some(place),
+            ResolvedPointerLikeOrigin::None | ResolvedPointerLikeOrigin::Resolving => return None,
+            ResolvedPointerLikeOrigin::Unresolved => {}
+        }
+
+        resolved[local] = ResolvedPointerLikeOrigin::Resolving;
+        let origin = match defs[local] {
+            PointerLikeDef::One(place) => resolve_place(place, body, defs, resolved, tcx),
+            PointerLikeDef::Unassigned | PointerLikeDef::Multiple => None,
+        };
+        resolved[local] = match origin {
+            Some(place) => ResolvedPointerLikeOrigin::Some(place),
+            None => ResolvedPointerLikeOrigin::None,
+        };
+        origin
+    }
+
+    let mut resolved =
+        IndexVec::from_elem(ResolvedPointerLikeOrigin::Unresolved, &body.local_decls);
+    let mut origins = IndexVec::from_elem(None, &body.local_decls);
+    for local in body.local_decls.indices() {
+        if matches!(body.local_decls[local].ty.kind(), ty::RawPtr(..)) {
+            origins[local] = resolve_origin(local, body, &defs, &mut resolved, tcx);
+        }
+    }
+    origins
 }
 
 /// Detect the following case
@@ -1170,6 +1360,7 @@ pub struct MaybeLivePlaces<'a, 'tcx> {
     checked_places: &'a PlaceSet<'tcx>,
     capture_kind: CaptureKind,
     self_assignment: FxHashSet<Location>,
+    raw_pointer_origins: IndexVec<Local, Option<Place<'tcx>>>,
 }
 
 impl<'tcx> MaybeLivePlaces<'_, 'tcx> {
@@ -1183,6 +1374,7 @@ impl<'tcx> MaybeLivePlaces<'_, 'tcx> {
             capture_kind: self.capture_kind,
             trans,
             self_assignment: &self.self_assignment,
+            raw_pointer_origins: &self.raw_pointer_origins,
         }
     }
 }
@@ -1237,6 +1429,7 @@ struct TransferFunction<'a, 'tcx> {
     trans: &'a mut DenseBitSet<PlaceIndex>,
     capture_kind: CaptureKind,
     self_assignment: &'a FxHashSet<Location>,
+    raw_pointer_origins: &'a IndexVec<Local, Option<Place<'tcx>>>,
 }
 
 impl<'tcx> Visitor<'tcx> for TransferFunction<'_, 'tcx> {
@@ -1335,6 +1528,23 @@ impl<'tcx> Visitor<'tcx> for TransferFunction<'_, 'tcx> {
     }
 
     fn visit_place(&mut self, place: &Place<'tcx>, context: PlaceContext, location: Location) {
+        if let Some(origin) = self.raw_pointer_origins[place.local]
+            && let Some((PlaceElem::Deref, tail)) = place.projection.split_first()
+        {
+            let origin = origin.project_deeper(tail, self.tcx);
+            if let Some((index, extra_projections)) = self.checked_places.get(origin.as_ref()) {
+                match DefUse::for_place(extra_projections, context) {
+                    Some(DefUse::Def) => {
+                        self.trans.remove(index);
+                    }
+                    Some(DefUse::Use) => {
+                        self.trans.insert(index);
+                    }
+                    None => {}
+                }
+            }
+        }
+
         if let Some((index, extra_projections)) = self.checked_places.get(place.as_ref()) {
             for i in (extra_projections.len()..=place.projection.len()).rev() {
                 let place_part =
