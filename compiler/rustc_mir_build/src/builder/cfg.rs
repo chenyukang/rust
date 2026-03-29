@@ -19,7 +19,9 @@ impl<'tcx> CFG<'tcx> {
     // it as #[inline(never)] to keep rustc's stack use in check.
     #[inline(never)]
     pub(crate) fn start_new_block(&mut self) -> BasicBlock {
-        self.basic_blocks.push(BasicBlockData::new(None, false))
+        let block = self.basic_blocks.push(BasicBlockData::new(None, false));
+        self.source_assignment_groups.start_new_block();
+        block
     }
 
     pub(crate) fn start_new_cleanup_block(&mut self) -> BasicBlock {
@@ -31,6 +33,7 @@ impl<'tcx> CFG<'tcx> {
     pub(crate) fn push(&mut self, block: BasicBlock, statement: Statement<'tcx>) {
         debug!("push({:?}, {:?})", block, statement);
         self.block_data_mut(block).statements.push(statement);
+        self.source_assignment_groups.push_statement(block, self.active_source_assignment);
     }
 
     pub(crate) fn push_assign(
@@ -128,6 +131,7 @@ impl<'tcx> CFG<'tcx> {
             self.block_data(block)
         );
         self.block_data_mut(block).terminator = Some(Terminator { source_info, kind });
+        self.source_assignment_groups.push_terminator(block, self.active_source_assignment);
     }
 
     /// In the `origin` block, push a `goto -> target` terminator.

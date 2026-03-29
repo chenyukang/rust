@@ -78,6 +78,51 @@ impl<'tcx> HasLocalDecls<'tcx> for IndexVec<Local, LocalDecl<'tcx>> {
     }
 }
 
+pub type SourceAssignmentIndex = u32;
+
+#[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
+pub struct SourceAssignmentGroup<'tcx> {
+    pub source_info: SourceInfo,
+    pub assignee: Place<'tcx>,
+}
+
+#[derive(Clone, Default, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
+pub struct SourceAssignmentLocations {
+    pub statements: Vec<Option<SourceAssignmentIndex>>,
+    pub terminator: Option<SourceAssignmentIndex>,
+}
+
+#[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
+pub struct SourceAssignmentGroups<'tcx> {
+    pub groups: Vec<SourceAssignmentGroup<'tcx>>,
+    pub locations: IndexVec<BasicBlock, SourceAssignmentLocations>,
+}
+
+impl<'tcx> SourceAssignmentGroups<'tcx> {
+    pub fn index_for_location(
+        &self,
+        body: &Body<'tcx>,
+        location: Location,
+    ) -> Option<SourceAssignmentIndex> {
+        let location_data = &self.locations[location.block];
+        if location.statement_index < body[location.block].statements.len() {
+            location_data.statements.get(location.statement_index).copied().flatten()
+        } else {
+            debug_assert_eq!(location.statement_index, body[location.block].statements.len());
+            location_data.terminator
+        }
+    }
+
+    pub fn group_for_location(
+        &self,
+        body: &Body<'tcx>,
+        location: Location,
+    ) -> Option<&SourceAssignmentGroup<'tcx>> {
+        let group = self.index_for_location(body, location)?;
+        Some(&self.groups[group as usize])
+    }
+}
+
 impl<'tcx> HasLocalDecls<'tcx> for LocalDecls<'tcx> {
     #[inline]
     fn local_decls(&self) -> &LocalDecls<'tcx> {
@@ -227,6 +272,13 @@ pub struct Body<'tcx> {
     /// and used for debuginfo. Indexed by a `SourceScope`.
     pub source_scopes: IndexVec<SourceScope, SourceScopeData<'tcx>>,
 
+    /// Grouping of MIR locations that come from the same source-level assignment expression.
+    ///
+    /// This is only populated for MIR built from THIR and is primarily used by lints that need
+    /// source-assignment semantics even when lowering expands one assignment into multiple MIR
+    /// locations.
+    pub source_assignment_groups: Option<Box<SourceAssignmentGroups<'tcx>>>,
+
     /// Additional information carried by a MIR body when it is lowered from a coroutine.
     ///
     /// Note that the coroutine drop shim, any promoted consts, and other synthetic MIR
@@ -360,6 +412,7 @@ impl<'tcx> Body<'tcx> {
             source,
             basic_blocks: BasicBlocks::new(basic_blocks),
             source_scopes,
+            source_assignment_groups: None,
             coroutine,
             local_decls,
             user_type_annotations,
@@ -391,6 +444,7 @@ impl<'tcx> Body<'tcx> {
             source: MirSource::item(CRATE_DEF_ID.to_def_id()),
             basic_blocks: BasicBlocks::new(basic_blocks),
             source_scopes: IndexVec::new(),
+            source_assignment_groups: None,
             coroutine: None,
             local_decls: IndexVec::new(),
             user_type_annotations: IndexVec::new(),
@@ -500,6 +554,13 @@ impl<'tcx> Body<'tcx> {
             assert_eq!(idx, stmts.len());
             &block.terminator().source_info
         }
+    }
+
+    pub fn source_assignment_group(
+        &self,
+        location: Location,
+    ) -> Option<&SourceAssignmentGroup<'tcx>> {
+        self.source_assignment_groups.as_ref()?.group_for_location(self, location)
     }
 
     /// Returns the return type; it always return first element from `local_decls` array.

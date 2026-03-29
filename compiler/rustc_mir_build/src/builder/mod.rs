@@ -249,6 +249,26 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         self.infcx.typing_env(self.param_env)
     }
 
+    fn in_source_assignment_group<T>(
+        &mut self,
+        source_info: SourceInfo,
+        f: impl FnOnce(&mut Self, SourceAssignmentIndex) -> T,
+    ) -> T {
+        let group = self.cfg.source_assignment_groups.new_group(source_info);
+        let previous = self.cfg.active_source_assignment.replace(group);
+        let result = f(self, group);
+        self.cfg.active_source_assignment = previous;
+        result
+    }
+
+    fn set_source_assignment_assignee(
+        &mut self,
+        group: SourceAssignmentIndex,
+        assignee: Place<'tcx>,
+    ) {
+        self.cfg.source_assignment_groups.set_assignee(group, assignee);
+    }
+
     fn is_bound_var_in_guard(&self, id: LocalVarId) -> bool {
         self.guard_context.iter().any(|frame| frame.locals.iter().any(|local| local.id == id))
     }
@@ -391,6 +411,54 @@ impl LocalsForNode {
 
 struct CFG<'tcx> {
     basic_blocks: IndexVec<BasicBlock, BasicBlockData<'tcx>>,
+    source_assignment_groups: SourceAssignmentGroupsBuilder<'tcx>,
+    active_source_assignment: Option<SourceAssignmentIndex>,
+}
+
+#[derive(Clone, Default)]
+struct SourceAssignmentGroupsBuilder<'tcx> {
+    groups: Vec<(SourceInfo, Option<Place<'tcx>>)>,
+    locations: IndexVec<BasicBlock, SourceAssignmentLocations>,
+}
+
+impl<'tcx> SourceAssignmentGroupsBuilder<'tcx> {
+    fn start_new_block(&mut self) {
+        self.locations.push(SourceAssignmentLocations::default());
+    }
+
+    fn push_statement(&mut self, block: BasicBlock, group: Option<SourceAssignmentIndex>) {
+        self.locations[block].statements.push(group);
+    }
+
+    fn push_terminator(&mut self, block: BasicBlock, group: Option<SourceAssignmentIndex>) {
+        self.locations[block].terminator = group;
+    }
+
+    fn new_group(&mut self, source_info: SourceInfo) -> SourceAssignmentIndex {
+        let group: SourceAssignmentIndex = self.groups.len().try_into().unwrap();
+        self.groups.push((source_info, None));
+        group
+    }
+
+    fn set_assignee(&mut self, group: SourceAssignmentIndex, assignee: Place<'tcx>) {
+        self.groups[group as usize].1 = Some(assignee);
+    }
+
+    fn finish(self) -> Option<Box<SourceAssignmentGroups<'tcx>>> {
+        if self.groups.is_empty() {
+            return None;
+        }
+
+        let groups = self
+            .groups
+            .into_iter()
+            .map(|(source_info, assignee)| SourceAssignmentGroup {
+                source_info,
+                assignee: assignee.expect("source assignment group without assignee"),
+            })
+            .collect();
+        Some(Box::new(SourceAssignmentGroups { groups, locations: self.locations }))
+    }
 }
 
 rustc_index::newtype_index! {
@@ -709,7 +777,11 @@ fn construct_error(tcx: TyCtxt<'_>, def_id: LocalDefId, guar: ErrorGuaranteed) -
     let local_decls = IndexVec::from_iter(
         [output].iter().chain(&inputs).map(|ty| LocalDecl::with_source_info(*ty, source_info)),
     );
-    let mut cfg = CFG { basic_blocks: IndexVec::new() };
+    let mut cfg = CFG {
+        basic_blocks: IndexVec::new(),
+        source_assignment_groups: SourceAssignmentGroupsBuilder::default(),
+        active_source_assignment: None,
+    };
     let mut source_scopes = IndexVec::new();
 
     cfg.start_new_block();
@@ -774,7 +846,11 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
             hir_id,
             parent_module: tcx.parent_module(hir_id).to_def_id(),
             check_overflow,
-            cfg: CFG { basic_blocks: IndexVec::new() },
+            cfg: CFG {
+                basic_blocks: IndexVec::new(),
+                source_assignment_groups: SourceAssignmentGroupsBuilder::default(),
+                active_source_assignment: None,
+            },
             fn_span: span,
             arg_count,
             coroutine,
@@ -816,6 +892,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
             self.coroutine.clone(),
             None,
         );
+        body.source_assignment_groups = self.cfg.source_assignment_groups.clone().finish();
         body.coverage_info_hi = self.coverage_info.as_ref().map(|b| b.as_done());
 
         let writer = pretty::MirWriter::new(self.tcx);
@@ -948,6 +1025,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
             self.coroutine,
             None,
         );
+        body.source_assignment_groups = self.cfg.source_assignment_groups.finish();
         body.coverage_info_hi = self.coverage_info.map(|b| b.into_done());
 
         let writer = pretty::MirWriter::new(self.tcx);

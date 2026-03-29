@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use rustc_abi::FieldIdx;
 use rustc_data_structures::fx::{FxHashMap, FxHashSet, FxIndexMap, IndexEntry};
 use rustc_hir::def::{CtorKind, DefKind};
@@ -16,7 +14,9 @@ use rustc_middle::ty::adjustment::PointerCoercion;
 use rustc_middle::ty::print::with_no_trimmed_paths;
 use rustc_middle::ty::{self, Ty, TyCtxt};
 use rustc_mir_dataflow::fmt::DebugWithContext;
-use rustc_mir_dataflow::{Analysis, Backward, ResultsCursor};
+use rustc_mir_dataflow::{
+    Analysis, Backward, Forward, JoinSemiLattice, MaybeReachable, ResultsCursor,
+};
 use rustc_session::lint;
 use rustc_span::Span;
 use rustc_span::edit_distance::find_best_match_for_name;
@@ -136,7 +136,7 @@ pub(crate) fn check_liveness<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> Den
     // Get the remaining variables' names from debuginfo.
     checked_places.record_debuginfo(&body.var_debug_info);
 
-    let raw_pointer_origins = find_raw_pointer_origins(tcx, body);
+    let raw_pointer_uses = collect_raw_pointer_uses(tcx, body);
     let ignored_self_assignment_places = find_self_assignment_places(&checked_places, body);
 
     let mut live = MaybeLivePlaces {
@@ -144,7 +144,7 @@ pub(crate) fn check_liveness<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> Den
         capture_kind,
         checked_places: &checked_places,
         ignored_self_assignment_places,
-        raw_pointer_origins,
+        raw_pointer_uses,
     }
     .iterate_to_fixpoint(tcx, body, None)
     .into_results_cursor(body);
@@ -258,25 +258,40 @@ fn maybe_drop_guard<'tcx>(
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 struct PlaceSources<'tcx> {
     places: Vec<Place<'tcx>>,
 }
 
 impl<'tcx> PlaceSources<'tcx> {
-    fn insert(&mut self, place: Place<'tcx>) {
-        if !self.places.contains(&place) {
+    fn singleton(place: Place<'tcx>) -> Self {
+        let mut places = Self::default();
+        places.insert(place);
+        places
+    }
+
+    fn insert(&mut self, place: Place<'tcx>) -> bool {
+        if self.places.contains(&place) {
+            false
+        } else {
             self.places.push(place);
+            true
         }
     }
 
-    fn extend<I>(&mut self, places: I)
+    fn extend<I>(&mut self, places: I) -> bool
     where
         I: IntoIterator<Item = Place<'tcx>>,
     {
+        let mut changed = false;
         for place in places {
-            self.insert(place);
+            changed |= self.insert(place);
         }
+        changed
+    }
+
+    fn is_empty(&self) -> bool {
+        self.places.is_empty()
     }
 
     fn iter(&self) -> impl Iterator<Item = Place<'tcx>> + '_ {
@@ -284,16 +299,235 @@ impl<'tcx> PlaceSources<'tcx> {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-struct AggregateDef<'tcx> {
-    fields: Vec<PlaceSources<'tcx>>,
+impl<'tcx> JoinSemiLattice for PlaceSources<'tcx> {
+    fn join(&mut self, other: &Self) -> bool {
+        self.extend(other.iter())
+    }
 }
 
-#[derive(Clone, Debug)]
-enum ResolvedPointerLikeOrigin<'tcx> {
-    Unresolved,
-    Resolving,
-    Resolved(PlaceSources<'tcx>),
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct AggregateFieldSources<'tcx> {
+    deferred_places: PlaceSources<'tcx>,
+    pointer_origins: PlaceSources<'tcx>,
+}
+
+impl<'tcx> AggregateFieldSources<'tcx> {
+    fn is_empty(&self) -> bool {
+        self.deferred_places.is_empty() && self.pointer_origins.is_empty()
+    }
+}
+
+impl<'tcx> JoinSemiLattice for AggregateFieldSources<'tcx> {
+    fn join(&mut self, other: &Self) -> bool {
+        self.deferred_places.join(&other.deferred_places)
+            | self.pointer_origins.join(&other.pointer_origins)
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct AggregateDef<'tcx> {
+    fields: Vec<AggregateFieldSources<'tcx>>,
+}
+
+impl<'tcx> AggregateDef<'tcx> {
+    fn is_empty(&self) -> bool {
+        self.fields.iter().all(AggregateFieldSources::is_empty)
+    }
+
+    fn field_sources_mut(&mut self, field: FieldIdx) -> &mut AggregateFieldSources<'tcx> {
+        if self.fields.len() <= field.index() {
+            self.fields.resize_with(field.index() + 1, AggregateFieldSources::default);
+        }
+        &mut self.fields[field.index()]
+    }
+}
+
+impl<'tcx> JoinSemiLattice for AggregateDef<'tcx> {
+    fn join(&mut self, other: &Self) -> bool {
+        let mut changed = false;
+        if self.fields.len() < other.fields.len() {
+            self.fields.resize_with(other.fields.len(), AggregateFieldSources::default);
+            changed = true;
+        }
+        for (field, other_sources) in self.fields.iter_mut().zip(&other.fields) {
+            changed |= field.join(other_sources);
+        }
+        changed
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct PointerOriginStateData<'tcx> {
+    pointer_like_defs: FxHashMap<Local, PlaceSources<'tcx>>,
+    aggregate_defs: FxHashMap<Local, AggregateDef<'tcx>>,
+}
+
+type PointerOriginState<'tcx> = MaybeReachable<PointerOriginStateData<'tcx>>;
+
+impl<'tcx> JoinSemiLattice for PointerOriginStateData<'tcx> {
+    fn join(&mut self, other: &Self) -> bool {
+        let mut changed = false;
+
+        #[allow(rustc::potential_query_instability)]
+        // We sort the locals immediately, so the hash iteration order never escapes the join.
+        let mut pointer_locals: Vec<_> = other.pointer_like_defs.keys().copied().collect();
+        pointer_locals.sort_unstable_by_key(|local| local.as_usize());
+        for local in pointer_locals {
+            let sources = &other.pointer_like_defs[&local];
+            match self.pointer_like_defs.entry(local) {
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    entry.insert(sources.clone());
+                    changed = true;
+                }
+                std::collections::hash_map::Entry::Occupied(entry) => {
+                    changed |= entry.into_mut().join(sources);
+                }
+            }
+        }
+
+        #[allow(rustc::potential_query_instability)]
+        // We sort the locals immediately, so the hash iteration order never escapes the join.
+        let mut aggregate_locals: Vec<_> = other.aggregate_defs.keys().copied().collect();
+        aggregate_locals.sort_unstable_by_key(|local| local.as_usize());
+        for local in aggregate_locals {
+            let sources = &other.aggregate_defs[&local];
+            match self.aggregate_defs.entry(local) {
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    entry.insert(sources.clone());
+                    changed = true;
+                }
+                std::collections::hash_map::Entry::Occupied(entry) => {
+                    changed |= entry.into_mut().join(sources);
+                }
+            }
+        }
+
+        changed
+    }
+}
+
+impl<'tcx, 'body> DebugWithContext<MaybeRawPointerOrigins<'body, 'tcx>>
+    for PointerOriginStateData<'tcx>
+{
+}
+
+impl<'tcx> PointerOriginStateData<'tcx> {
+    fn clear_local(&mut self, local: Local) {
+        self.pointer_like_defs.remove(&local);
+        self.aggregate_defs.remove(&local);
+    }
+
+    fn set_pointer_like_origins(&mut self, local: Local, origins: PlaceSources<'tcx>) {
+        if origins.is_empty() {
+            self.pointer_like_defs.remove(&local);
+        } else {
+            self.pointer_like_defs.insert(local, origins);
+        }
+    }
+
+    fn set_aggregate_def(&mut self, local: Local, aggregate: AggregateDef<'tcx>) {
+        if aggregate.is_empty() {
+            self.aggregate_defs.remove(&local);
+        } else {
+            self.aggregate_defs.insert(local, aggregate);
+        }
+    }
+
+    fn resolve_pointer_like_place(
+        &self,
+        place: PlaceRef<'tcx>,
+        body: &Body<'tcx>,
+        tcx: TyCtxt<'tcx>,
+    ) -> PlaceSources<'tcx> {
+        let mut visiting = FxHashSet::default();
+        self.resolve_pointer_like_place_inner(place, body, tcx, &mut visiting)
+    }
+
+    fn resolve_pointer_like_place_inner(
+        &self,
+        place: PlaceRef<'tcx>,
+        body: &Body<'tcx>,
+        tcx: TyCtxt<'tcx>,
+        visiting: &mut FxHashSet<Place<'tcx>>,
+    ) -> PlaceSources<'tcx> {
+        let owned_place = place_ref_to_place(place, tcx);
+        if !visiting.insert(owned_place) {
+            return PlaceSources::default();
+        }
+
+        let origins = if place.projection.is_empty()
+            && matches!(body.local_decls[place.local].ty.kind(), ty::Ref(..) | ty::RawPtr(..))
+        {
+            self.pointer_like_defs.get(&place.local).cloned().unwrap_or_default()
+        } else if matches!(place.projection, [PlaceElem::Deref]) {
+            self.pointer_like_defs.get(&place.local).cloned().unwrap_or_default()
+        } else if let Some((PlaceElem::Field(field, _), tail)) = place.projection.split_first() {
+            let mut origins = PlaceSources::default();
+            if let Some(aggregate) = self.aggregate_defs.get(&place.local)
+                && let Some(field_sources) = aggregate.fields.get(field.index())
+            {
+                for source in field_sources.deferred_places.iter() {
+                    origins.extend(
+                        self.resolve_pointer_like_place_inner(
+                            source.project_deeper(tail, tcx).as_ref(),
+                            body,
+                            tcx,
+                            visiting,
+                        )
+                        .iter(),
+                    );
+                }
+
+                if tail.is_empty() {
+                    origins.extend(field_sources.pointer_origins.iter());
+                } else if let Some((PlaceElem::Deref, tail)) = tail.split_first() {
+                    for origin in field_sources.pointer_origins.iter() {
+                        origins.insert(origin.project_deeper(tail, tcx));
+                    }
+                }
+            }
+            origins
+        } else {
+            PlaceSources::default()
+        };
+
+        visiting.remove(&owned_place);
+        origins
+    }
+
+    fn normalize_borrowed_place(
+        &self,
+        place: PlaceRef<'tcx>,
+        body: &Body<'tcx>,
+        tcx: TyCtxt<'tcx>,
+    ) -> PlaceSources<'tcx> {
+        let Some(deref_position) =
+            place.projection.iter().position(|elem| *elem == PlaceElem::Deref)
+        else {
+            return PlaceSources::singleton(place_ref_to_place(place, tcx));
+        };
+
+        let base = PlaceRef { local: place.local, projection: &place.projection[..deref_position] };
+        if !matches!(base.ty(&body.local_decls, tcx).ty.kind(), ty::Ref(..) | ty::RawPtr(..)) {
+            return PlaceSources::singleton(place_ref_to_place(place, tcx));
+        }
+
+        let tail = &place.projection[deref_position + 1..];
+        let mut origins = PlaceSources::default();
+        for origin in self.resolve_pointer_like_place(base, body, tcx).iter() {
+            origins.insert(origin.project_deeper(tail, tcx));
+        }
+
+        if origins.is_empty() {
+            PlaceSources::singleton(place_ref_to_place(place, tcx))
+        } else {
+            origins
+        }
+    }
+}
+
+fn place_ref_to_place<'tcx>(place: PlaceRef<'tcx>, tcx: TyCtxt<'tcx>) -> Place<'tcx> {
+    Place { local: place.local, projection: tcx.mk_place_elems(place.projection) }
 }
 
 fn operand_place<'tcx>(operand: &Operand<'tcx>) -> Option<Place<'tcx>> {
@@ -303,110 +537,143 @@ fn operand_place<'tcx>(operand: &Operand<'tcx>) -> Option<Place<'tcx>> {
     }
 }
 
-fn classify_pointer_like_source<'tcx>(rvalue: &Rvalue<'tcx>) -> Option<Place<'tcx>> {
-    match rvalue {
-        Rvalue::Ref(_, _, place) | Rvalue::RawPtr(_, place) => Some(*place),
-        Rvalue::Use(operand) => operand_place(operand),
-        Rvalue::Cast(
-            CastKind::PtrToPtr
-            | CastKind::PointerCoercion(PointerCoercion::MutToConstPointer, _)
-            | CastKind::Subtype,
-            operand,
-            _,
-        ) => operand_place(operand),
-        _ => None,
-    }
-}
-
-fn classify_aggregate_source<'tcx>(rvalue: &Rvalue<'tcx>) -> Option<Vec<Option<Place<'tcx>>>> {
-    match rvalue {
-        Rvalue::Aggregate(_, operands) => Some(operands.iter().map(operand_place).collect()),
-        _ => None,
-    }
-}
-
-fn record_pointer_like_def<'tcx>(
-    defs: &mut IndexVec<Local, PlaceSources<'tcx>>,
-    body: &Body<'tcx>,
-    local: Local,
-    source: Option<Place<'tcx>>,
-) {
-    if !matches!(body.local_decls[local].ty.kind(), ty::Ref(..) | ty::RawPtr(..)) {
-        return;
-    }
-
-    if let Some(source) = source {
-        defs[local].insert(source);
-    }
-}
-
-fn record_aggregate_def<'tcx>(
-    defs: &mut IndexVec<Local, AggregateDef<'tcx>>,
-    local: Local,
-    source: Option<Vec<Option<Place<'tcx>>>>,
-) {
-    let Some(source) = source else { return };
-    if defs[local].fields.len() < source.len() {
-        defs[local].fields.resize_with(source.len(), PlaceSources::default);
-    }
-    for (field_sources, source) in defs[local].fields.iter_mut().zip(source) {
-        if let Some(source) = source {
-            field_sources.insert(source);
-        }
-    }
-}
-
-fn find_raw_pointer_origins<'tcx>(
+struct MaybeRawPointerOrigins<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
-    body: &Body<'tcx>,
-) -> IndexVec<Local, PlaceSources<'tcx>> {
-    let mut defs = IndexVec::from_elem_n(PlaceSources::default(), body.local_decls.len());
-    let mut aggregate_defs = IndexVec::from_elem_n(AggregateDef::default(), body.local_decls.len());
+    body: &'a Body<'tcx>,
+}
 
-    for block in body.basic_blocks.iter() {
-        for statement in &block.statements {
-            match &statement.kind {
-                StatementKind::Assign(box (place, rvalue)) => {
-                    if let Some(local) = place.as_local() {
-                        record_pointer_like_def(
-                            &mut defs,
-                            body,
-                            local,
-                            classify_pointer_like_source(rvalue),
-                        );
-                        record_aggregate_def(
-                            &mut aggregate_defs,
-                            local,
-                            classify_aggregate_source(rvalue),
-                        );
-                    }
+impl<'a, 'tcx> MaybeRawPointerOrigins<'a, 'tcx> {
+    fn clear_local(state: &mut PointerOriginStateData<'tcx>, local: Local) {
+        state.clear_local(local);
+    }
+
+    fn record_pointer_like_assignment(
+        &self,
+        state: &mut PointerOriginStateData<'tcx>,
+        local: Local,
+        rvalue: &Rvalue<'tcx>,
+    ) {
+        if matches!(self.body.local_decls[local].ty.kind(), ty::Ref(..) | ty::RawPtr(..)) {
+            let origins = match rvalue {
+                Rvalue::Ref(_, _, place) | Rvalue::RawPtr(_, place) => {
+                    state.normalize_borrowed_place(place.as_ref(), self.body, self.tcx)
                 }
-                StatementKind::SetDiscriminant { box place, .. } => {
-                    if let Some(local) = place.as_local() {
-                        record_pointer_like_def(&mut defs, body, local, None);
-                        record_aggregate_def(&mut aggregate_defs, local, None);
-                    }
-                }
-                StatementKind::Retag(_, _)
-                | StatementKind::StorageLive(_)
-                | StatementKind::StorageDead(_)
-                | StatementKind::Coverage(_)
-                | StatementKind::Intrinsic(_)
-                | StatementKind::Nop
-                | StatementKind::FakeRead(_)
-                | StatementKind::PlaceMention(_)
-                | StatementKind::ConstEvalCounter
-                | StatementKind::BackwardIncompatibleDropHint { .. }
-                | StatementKind::AscribeUserType(_, _) => {}
-            }
+                Rvalue::Use(operand) => operand_place(operand)
+                    .map(|place| {
+                        state.resolve_pointer_like_place(place.as_ref(), self.body, self.tcx)
+                    })
+                    .unwrap_or_default(),
+                Rvalue::Cast(
+                    CastKind::PtrToPtr
+                    | CastKind::PointerCoercion(PointerCoercion::MutToConstPointer, _)
+                    | CastKind::Subtype,
+                    operand,
+                    _,
+                ) => operand_place(operand)
+                    .map(|place| {
+                        state.resolve_pointer_like_place(place.as_ref(), self.body, self.tcx)
+                    })
+                    .unwrap_or_default(),
+                _ => PlaceSources::default(),
+            };
+            state.set_pointer_like_origins(local, origins);
+        } else {
+            state.pointer_like_defs.remove(&local);
         }
+    }
 
-        match &block.terminator().kind {
-            TerminatorKind::Call { destination, .. }
-            | TerminatorKind::Yield { resume_arg: destination, .. } => {
-                if let Some(local) = destination.as_local() {
-                    record_pointer_like_def(&mut defs, body, local, None);
-                    record_aggregate_def(&mut aggregate_defs, local, None);
+    fn record_aggregate_assignment(
+        &self,
+        state: &mut PointerOriginStateData<'tcx>,
+        local: Local,
+        rvalue: &Rvalue<'tcx>,
+    ) {
+        if let Rvalue::Aggregate(_, operands) = rvalue {
+            let mut aggregate = AggregateDef::default();
+            for (field, operand) in operands.iter_enumerated() {
+                if let Some(place) = operand_place(operand) {
+                    let field_sources = aggregate.field_sources_mut(field);
+                    if matches!(
+                        place.ty(&self.body.local_decls, self.tcx).ty.kind(),
+                        ty::Ref(..) | ty::RawPtr(..)
+                    ) {
+                        field_sources.pointer_origins.extend(
+                            state
+                                .resolve_pointer_like_place(place.as_ref(), self.body, self.tcx)
+                                .iter(),
+                        );
+                    } else {
+                        field_sources.deferred_places.insert(place);
+                    }
+                }
+            }
+            state.set_aggregate_def(local, aggregate);
+        } else {
+            state.aggregate_defs.remove(&local);
+        }
+    }
+}
+
+impl<'a, 'tcx> Analysis<'tcx> for MaybeRawPointerOrigins<'a, 'tcx> {
+    type Domain = PointerOriginState<'tcx>;
+    type Direction = Forward;
+
+    const NAME: &'static str = "maybe-raw-pointer-origins";
+
+    fn bottom_value(&self, _: &Body<'tcx>) -> Self::Domain {
+        MaybeReachable::Unreachable
+    }
+
+    fn initialize_start_block(&self, _: &Body<'tcx>, state: &mut Self::Domain) {
+        *state = MaybeReachable::Reachable(PointerOriginStateData::default());
+    }
+
+    fn apply_primary_statement_effect(
+        &self,
+        state: &mut Self::Domain,
+        statement: &Statement<'tcx>,
+        _location: Location,
+    ) {
+        let MaybeReachable::Reachable(state) = state else { return };
+
+        match &statement.kind {
+            StatementKind::Assign(box (place, rvalue)) => {
+                if let Some(local) = place.as_local() {
+                    self.record_pointer_like_assignment(state, local, rvalue);
+                    self.record_aggregate_assignment(state, local, rvalue);
+                }
+            }
+            StatementKind::SetDiscriminant { box place, .. } => {
+                if let Some(local) = place.as_local() {
+                    Self::clear_local(state, local);
+                }
+            }
+            StatementKind::StorageDead(local) => Self::clear_local(state, *local),
+            StatementKind::Retag(_, _)
+            | StatementKind::StorageLive(_)
+            | StatementKind::Coverage(_)
+            | StatementKind::Intrinsic(_)
+            | StatementKind::Nop
+            | StatementKind::FakeRead(_)
+            | StatementKind::PlaceMention(_)
+            | StatementKind::ConstEvalCounter
+            | StatementKind::BackwardIncompatibleDropHint { .. }
+            | StatementKind::AscribeUserType(_, _) => {}
+        }
+    }
+
+    fn apply_primary_terminator_effect<'mir>(
+        &self,
+        state: &mut Self::Domain,
+        terminator: &'mir Terminator<'tcx>,
+        _location: Location,
+    ) -> TerminatorEdges<'mir, 'tcx> {
+        let MaybeReachable::Reachable(state) = state else { return terminator.edges() };
+
+        match &terminator.kind {
+            TerminatorKind::Yield { resume_arg, .. } => {
+                if let Some(local) = resume_arg.as_local() {
+                    Self::clear_local(state, local);
                 }
             }
             TerminatorKind::InlineAsm { operands, .. } => {
@@ -415,8 +682,7 @@ fn find_raw_pointer_origins<'tcx>(
                     | InlineAsmOperand::InOut { out_place: Some(place), .. } = operand
                         && let Some(local) = place.as_local()
                     {
-                        record_pointer_like_def(&mut defs, body, local, None);
-                        record_aggregate_def(&mut aggregate_defs, local, None);
+                        Self::clear_local(state, local);
                     }
                 }
             }
@@ -429,111 +695,227 @@ fn find_raw_pointer_origins<'tcx>(
             | TerminatorKind::Return
             | TerminatorKind::TailCall { .. }
             | TerminatorKind::CoroutineDrop
+            | TerminatorKind::Call { .. }
             | TerminatorKind::FalseEdge { .. }
             | TerminatorKind::FalseUnwind { .. }
             | TerminatorKind::Unreachable => {}
         }
+
+        terminator.edges()
     }
 
-    fn resolve_place<'tcx>(
-        place: Place<'tcx>,
-        body: &Body<'tcx>,
-        defs: &IndexVec<Local, PlaceSources<'tcx>>,
-        aggregate_defs: &IndexVec<Local, AggregateDef<'tcx>>,
-        visiting_places: &mut FxHashSet<Place<'tcx>>,
-        resolved: &mut IndexVec<Local, ResolvedPointerLikeOrigin<'tcx>>,
-        tcx: TyCtxt<'tcx>,
-    ) -> PlaceSources<'tcx> {
-        if !visiting_places.insert(place) {
-            return PlaceSources::default();
-        }
+    fn apply_call_return_effect(
+        &self,
+        state: &mut Self::Domain,
+        _block: BasicBlock,
+        return_places: CallReturnPlaces<'_, 'tcx>,
+    ) {
+        let MaybeReachable::Reachable(state) = state else { return };
 
-        let origins = if matches!(place.projection.as_slice(), [PlaceElem::Deref]) {
-            resolve_origin(place.local, body, defs, aggregate_defs, visiting_places, resolved, tcx)
-        } else if let Some((PlaceElem::Field(field, _), tail)) = place.projection.split_first() {
-            let mut origins = PlaceSources::default();
-            if let Some(field_places) = aggregate_defs[place.local].fields.get(field.index()) {
-                for source in field_places.iter() {
-                    origins.extend(
-                        resolve_place(
-                            source.project_deeper(tail, tcx),
-                            body,
-                            defs,
-                            aggregate_defs,
-                            visiting_places,
-                            resolved,
-                            tcx,
-                        )
-                        .iter(),
-                    );
-                }
+        return_places.for_each(|place| {
+            if let Some(local) = place.as_local() {
+                Self::clear_local(state, local);
             }
-            if origins.places.is_empty() {
-                let mut origins = PlaceSources::default();
-                origins.insert(place);
-                origins
-            } else {
-                origins
-            }
-        } else if place.projection.is_empty()
-            && matches!(body.local_decls[place.local].ty.kind(), ty::Ref(..) | ty::RawPtr(..))
-        {
-            resolve_origin(place.local, body, defs, aggregate_defs, visiting_places, resolved, tcx)
-        } else {
-            let mut origins = PlaceSources::default();
-            origins.insert(place);
-            origins
-        };
+        });
+    }
+}
 
-        visiting_places.remove(&place);
-        origins
+#[derive(Default)]
+struct RawPointerUses<'tcx> {
+    deref_uses: FxHashMap<(Location, Place<'tcx>), PlaceSources<'tcx>>,
+    escape_uses: FxHashMap<(Location, Place<'tcx>), PlaceSources<'tcx>>,
+}
+
+fn dereferenced_raw_pointer_origins<'tcx>(
+    state: &PointerOriginStateData<'tcx>,
+    body: &Body<'tcx>,
+    tcx: TyCtxt<'tcx>,
+    place: PlaceRef<'tcx>,
+) -> PlaceSources<'tcx> {
+    let Some(deref_position) = place.projection.iter().position(|elem| *elem == PlaceElem::Deref)
+    else {
+        return PlaceSources::default();
+    };
+
+    let base = PlaceRef { local: place.local, projection: &place.projection[..deref_position] };
+    if !matches!(base.ty(&body.local_decls, tcx).ty.kind(), ty::RawPtr(..)) {
+        return PlaceSources::default();
     }
 
-    fn resolve_origin<'tcx>(
-        local: Local,
-        body: &Body<'tcx>,
-        defs: &IndexVec<Local, PlaceSources<'tcx>>,
-        aggregate_defs: &IndexVec<Local, AggregateDef<'tcx>>,
-        visiting_places: &mut FxHashSet<Place<'tcx>>,
-        resolved: &mut IndexVec<Local, ResolvedPointerLikeOrigin<'tcx>>,
-        tcx: TyCtxt<'tcx>,
-    ) -> PlaceSources<'tcx> {
-        match &resolved[local] {
-            ResolvedPointerLikeOrigin::Resolved(origins) => return origins.clone(),
-            ResolvedPointerLikeOrigin::Resolving => return PlaceSources::default(),
-            ResolvedPointerLikeOrigin::Unresolved => {}
-        }
-
-        resolved[local] = ResolvedPointerLikeOrigin::Resolving;
-        let mut origins = PlaceSources::default();
-        for place in defs[local].iter() {
-            origins.extend(
-                resolve_place(place, body, defs, aggregate_defs, visiting_places, resolved, tcx)
-                    .iter(),
-            );
-        }
-        resolved[local] = ResolvedPointerLikeOrigin::Resolved(origins.clone());
-        origins
-    }
-
-    let mut resolved =
-        IndexVec::from_elem(ResolvedPointerLikeOrigin::Unresolved, &body.local_decls);
-    let mut visiting_places = FxHashSet::default();
-    let mut origins = IndexVec::from_elem_n(PlaceSources::default(), body.local_decls.len());
-    for local in body.local_decls.indices() {
-        if matches!(body.local_decls[local].ty.kind(), ty::RawPtr(..)) {
-            origins[local] = resolve_origin(
-                local,
-                body,
-                &defs,
-                &aggregate_defs,
-                &mut visiting_places,
-                &mut resolved,
-                tcx,
-            );
-        }
+    let tail = &place.projection[deref_position + 1..];
+    let mut origins = PlaceSources::default();
+    for origin in state.resolve_pointer_like_place(base, body, tcx).iter() {
+        origins.insert(origin.project_deeper(tail, tcx));
     }
     origins
+}
+
+fn escaped_raw_pointer_origins<'tcx>(
+    state: &PointerOriginStateData<'tcx>,
+    body: &Body<'tcx>,
+    tcx: TyCtxt<'tcx>,
+    operand: &Operand<'tcx>,
+) -> Option<(Place<'tcx>, PlaceSources<'tcx>)> {
+    let place = operand_place(operand)?;
+    if !matches!(place.ty(&body.local_decls, tcx).ty.kind(), ty::RawPtr(..)) {
+        return None;
+    }
+
+    let origins = state.resolve_pointer_like_place(place.as_ref(), body, tcx);
+    (!origins.is_empty()).then_some((place, origins))
+}
+
+fn place_has_raw_pointer_deref<'tcx>(
+    body: &Body<'tcx>,
+    tcx: TyCtxt<'tcx>,
+    place: PlaceRef<'tcx>,
+) -> bool {
+    place.projection.iter().position(|elem| *elem == PlaceElem::Deref).is_some_and(
+        |deref_position| {
+            let base =
+                PlaceRef { local: place.local, projection: &place.projection[..deref_position] };
+            matches!(base.ty(&body.local_decls, tcx).ty.kind(), ty::RawPtr(..))
+        },
+    )
+}
+
+fn body_needs_raw_pointer_liveness<'tcx>(tcx: TyCtxt<'tcx>, body: &Body<'tcx>) -> bool {
+    if !body.local_decls.iter().any(|decl| matches!(decl.ty.kind(), ty::RawPtr(..))) {
+        return false;
+    }
+
+    struct RawPointerDerefDetector<'a, 'tcx> {
+        body: &'a Body<'tcx>,
+        tcx: TyCtxt<'tcx>,
+        found: bool,
+    }
+
+    impl<'tcx> Visitor<'tcx> for RawPointerDerefDetector<'_, 'tcx> {
+        fn visit_place(&mut self, place: &Place<'tcx>, _: PlaceContext, _: Location) {
+            self.found |= place_has_raw_pointer_deref(self.body, self.tcx, place.as_ref());
+        }
+    }
+
+    let operand_is_raw_pointer = |operand: &Operand<'tcx>| {
+        operand_place(operand).is_some_and(|place| {
+            matches!(place.ty(&body.local_decls, tcx).ty.kind(), ty::RawPtr(..))
+        })
+    };
+
+    for (bb, bb_data) in body.basic_blocks.iter_enumerated() {
+        for (statement_index, statement) in bb_data.statements.iter().enumerate() {
+            let location = Location { block: bb, statement_index };
+            if let StatementKind::Assign(box (_, Rvalue::Aggregate(_, operands))) = &statement.kind
+                && operands.iter().any(operand_is_raw_pointer)
+            {
+                return true;
+            }
+
+            let mut detector = RawPointerDerefDetector { body, tcx, found: false };
+            detector.visit_statement(statement, location);
+            if detector.found {
+                return true;
+            }
+        }
+
+        let location = body.terminator_loc(bb);
+        if let TerminatorKind::Call { args, .. } | TerminatorKind::TailCall { args, .. } =
+            &bb_data.terminator().kind
+            && args.iter().any(|arg| operand_is_raw_pointer(&arg.node))
+        {
+            return true;
+        }
+
+        let mut detector = RawPointerDerefDetector { body, tcx, found: false };
+        detector.visit_terminator(bb_data.terminator(), location);
+        if detector.found {
+            return true;
+        }
+    }
+
+    false
+}
+
+struct RawPointerUseCollector<'a, 'tcx> {
+    tcx: TyCtxt<'tcx>,
+    body: &'a Body<'tcx>,
+    state: &'a PointerOriginStateData<'tcx>,
+    uses: &'a mut RawPointerUses<'tcx>,
+}
+
+impl<'a, 'tcx> RawPointerUseCollector<'a, 'tcx> {
+    fn record_escape_operand(&mut self, operand: &Operand<'tcx>, location: Location) {
+        if let Some((place, origins)) =
+            escaped_raw_pointer_origins(self.state, self.body, self.tcx, operand)
+        {
+            self.uses.escape_uses.insert((location, place), origins);
+        }
+    }
+}
+
+impl<'tcx> Visitor<'tcx> for RawPointerUseCollector<'_, 'tcx> {
+    fn visit_terminator(&mut self, terminator: &Terminator<'tcx>, location: Location) {
+        if let TerminatorKind::Call { args, .. } | TerminatorKind::TailCall { args, .. } =
+            &terminator.kind
+        {
+            for arg in args {
+                self.record_escape_operand(&arg.node, location);
+            }
+        }
+        self.super_terminator(terminator, location);
+    }
+
+    fn visit_rvalue(&mut self, rvalue: &Rvalue<'tcx>, location: Location) {
+        match rvalue {
+            Rvalue::Aggregate(
+                box AggregateKind::Closure(..) | box AggregateKind::Coroutine(..),
+                _,
+            ) => self.super_rvalue(rvalue, location),
+            Rvalue::Aggregate(_, operands) => {
+                for operand in operands {
+                    self.record_escape_operand(operand, location);
+                }
+                self.super_rvalue(rvalue, location);
+            }
+            _ => self.super_rvalue(rvalue, location),
+        }
+    }
+
+    fn visit_place(&mut self, place: &Place<'tcx>, _: PlaceContext, location: Location) {
+        let origins =
+            dereferenced_raw_pointer_origins(self.state, self.body, self.tcx, place.as_ref());
+        if !origins.is_empty() {
+            self.uses.deref_uses.insert((location, *place), origins);
+        }
+    }
+}
+
+fn collect_raw_pointer_uses<'tcx>(tcx: TyCtxt<'tcx>, body: &Body<'tcx>) -> RawPointerUses<'tcx> {
+    if !body_needs_raw_pointer_liveness(tcx, body) {
+        return RawPointerUses::default();
+    }
+
+    let results = MaybeRawPointerOrigins { tcx, body }.iterate_to_fixpoint(tcx, body, None);
+    let mut cursor = results.into_results_cursor(body);
+    let mut uses = RawPointerUses::default();
+
+    for (bb, bb_data) in body.basic_blocks.iter_enumerated() {
+        for (statement_index, statement) in bb_data.statements.iter().enumerate() {
+            let location = Location { block: bb, statement_index };
+            cursor.seek_before_primary_effect(location);
+            let MaybeReachable::Reachable(state) = cursor.get() else { continue };
+            RawPointerUseCollector { tcx, body, state, uses: &mut uses }
+                .visit_statement(statement, location);
+        }
+
+        let location = body.terminator_loc(bb);
+        cursor.seek_before_primary_effect(location);
+        let MaybeReachable::Reachable(state) = cursor.get() else { continue };
+        RawPointerUseCollector { tcx, body, state, uses: &mut uses }
+            .visit_terminator(bb_data.terminator(), location);
+    }
+
+    uses
 }
 
 /// Detect the following case
@@ -632,86 +1014,6 @@ fn annotate_mut_binding_to_immutable_binding<'tcx>(
     }
 }
 
-/// Group assignments by their source position so we can reason about a source-level assignment as
-/// one unit even when MIR lowers it into multiple statements or terminators.
-fn collect_source_assignments<'tcx>(
-    checked_places: &PlaceSet<'tcx>,
-    body: &Body<'tcx>,
-) -> FxHashMap<SourceInfo, Vec<Place<'tcx>>> {
-    fn record<'tcx>(
-        checked_places: &PlaceSet<'tcx>,
-        assignments: &mut FxHashMap<SourceInfo, Vec<Place<'tcx>>>,
-        source_info: SourceInfo,
-        place: Place<'tcx>,
-    ) {
-        let Some((_index, extra_projections)) = checked_places.get(place.as_ref()) else {
-            return;
-        };
-        if is_indirect(extra_projections) {
-            return;
-        }
-
-        let places = assignments.entry(source_info).or_default();
-        if !places.contains(&place) {
-            places.push(place);
-        }
-    }
-
-    let mut assignments = FxHashMap::default();
-    for bb_data in body.basic_blocks.iter() {
-        for statement in &bb_data.statements {
-            match statement.kind {
-                StatementKind::Assign(box (place, _))
-                | StatementKind::SetDiscriminant { box place, .. } => {
-                    record(checked_places, &mut assignments, statement.source_info, place);
-                }
-                StatementKind::Retag(_, _)
-                | StatementKind::StorageLive(_)
-                | StatementKind::StorageDead(_)
-                | StatementKind::Coverage(_)
-                | StatementKind::Intrinsic(_)
-                | StatementKind::Nop
-                | StatementKind::FakeRead(_)
-                | StatementKind::PlaceMention(_)
-                | StatementKind::ConstEvalCounter
-                | StatementKind::BackwardIncompatibleDropHint { .. }
-                | StatementKind::AscribeUserType(_, _) => {}
-            }
-        }
-
-        let terminator = bb_data.terminator();
-        match &terminator.kind {
-            TerminatorKind::Call { destination, .. }
-            | TerminatorKind::Yield { resume_arg: destination, .. } => {
-                record(checked_places, &mut assignments, terminator.source_info, *destination);
-            }
-            TerminatorKind::InlineAsm { operands, .. } => {
-                for operand in operands {
-                    if let InlineAsmOperand::Out { place: Some(place), .. }
-                    | InlineAsmOperand::InOut { out_place: Some(place), .. } = operand
-                    {
-                        record(checked_places, &mut assignments, terminator.source_info, *place);
-                    }
-                }
-            }
-            TerminatorKind::Goto { .. }
-            | TerminatorKind::SwitchInt { .. }
-            | TerminatorKind::Drop { .. }
-            | TerminatorKind::Assert { .. }
-            | TerminatorKind::UnwindResume
-            | TerminatorKind::UnwindTerminate(_)
-            | TerminatorKind::Return
-            | TerminatorKind::TailCall { .. }
-            | TerminatorKind::CoroutineDrop
-            | TerminatorKind::FalseEdge { .. }
-            | TerminatorKind::FalseUnwind { .. }
-            | TerminatorKind::Unreachable => {}
-        }
-    }
-
-    assignments
-}
-
 fn source_assignment_covers_use<'tcx>(assignment: PlaceRef<'tcx>, used: PlaceRef<'tcx>) -> bool {
     assignment.local == used.local
         && assignment.projection.len() <= used.projection.len()
@@ -722,53 +1024,43 @@ fn source_assignment_covers_use<'tcx>(assignment: PlaceRef<'tcx>, used: PlaceRef
             .all(|(assignment, used)| assignment == used)
 }
 
-/// Collect accesses inside a source-level assignment that should not feed the assignee's liveness
-/// back into itself. This makes the old value of `x` matter only when the result of `x = ...`
-/// actually remains live after the whole source assignment.
+/// Collect source-assignment locations whose accesses to the assignee should not feed the
+/// assignee's liveness back into the same source-level assignment.
 fn find_self_assignment_places<'tcx>(
     checked_places: &PlaceSet<'tcx>,
     body: &Body<'tcx>,
-) -> FxHashMap<Location, Vec<Place<'tcx>>> {
-    struct AssigneeAccessCollector<'a, 'tcx> {
-        assignees: &'a [Place<'tcx>],
-        accesses: Vec<Place<'tcx>>,
-        uses: Vec<Place<'tcx>>,
+) -> FxHashMap<Location, Place<'tcx>> {
+    struct AssigneeAccessCollector<'tcx> {
+        assignee: Place<'tcx>,
+        accessed: bool,
+        self_used: bool,
     }
 
-    impl<'a, 'tcx> AssigneeAccessCollector<'a, 'tcx> {
+    impl<'tcx> AssigneeAccessCollector<'tcx> {
         fn should_count_as_self_use(context: PlaceContext) -> bool {
             !matches!(context, PlaceContext::MutatingUse(MutatingUseContext::Drop))
         }
 
         fn record(&mut self, place: PlaceRef<'tcx>, context: PlaceContext) {
-            for &assignee in self.assignees {
-                if !source_assignment_covers_use(assignee.as_ref(), place) {
-                    continue;
-                }
+            if !source_assignment_covers_use(self.assignee.as_ref(), place) {
+                return;
+            }
 
-                let extra_projections = &place.projection[assignee.projection.len()..];
-                match DefUse::for_place(extra_projections, context) {
-                    Some(DefUse::Def) => {
-                        if !self.accesses.contains(&assignee) {
-                            self.accesses.push(assignee);
-                        }
-                    }
-                    Some(DefUse::Use) => {
-                        if !self.accesses.contains(&assignee) {
-                            self.accesses.push(assignee);
-                        }
-                        if Self::should_count_as_self_use(context) && !self.uses.contains(&assignee)
-                        {
-                            self.uses.push(assignee);
-                        }
-                    }
-                    None => {}
+            let extra_projections = &place.projection[self.assignee.projection.len()..];
+            match DefUse::for_place(extra_projections, context) {
+                Some(DefUse::Def) => {
+                    self.accessed = true;
                 }
+                Some(DefUse::Use) => {
+                    self.accessed = true;
+                    self.self_used |= Self::should_count_as_self_use(context);
+                }
+                None => {}
             }
         }
     }
 
-    impl<'tcx> Visitor<'tcx> for AssigneeAccessCollector<'_, 'tcx> {
+    impl<'tcx> Visitor<'tcx> for AssigneeAccessCollector<'tcx> {
         fn visit_place(&mut self, place: &Place<'tcx>, context: PlaceContext, _: Location) {
             self.record(place.as_ref(), context);
         }
@@ -778,71 +1070,71 @@ fn find_self_assignment_places<'tcx>(
         }
     }
 
-    fn collect_accesses_at_location<'tcx>(
-        assignees: &[Place<'tcx>],
-        statement: Option<&Statement<'tcx>>,
-        terminator: Option<&Terminator<'tcx>>,
-        location: Location,
-    ) -> (Vec<Place<'tcx>>, Vec<Place<'tcx>>) {
-        let mut collector = AssigneeAccessCollector { assignees, accesses: vec![], uses: vec![] };
-        if let Some(statement) = statement {
-            collector.visit_statement(statement, location);
-        }
-        if let Some(terminator) = terminator {
-            collector.visit_terminator(terminator, location);
-        }
-        (collector.accesses, collector.uses)
-    }
+    let Some(source_assignment_groups) = body.source_assignment_groups.as_ref() else {
+        return FxHashMap::default();
+    };
 
-    let source_assignments = collect_source_assignments(checked_places, body);
-    let mut self_used_by_source = FxHashMap::<SourceInfo, Vec<Place<'tcx>>>::default();
-    let mut accesses_by_location = BTreeMap::<Location, (SourceInfo, Vec<Place<'tcx>>)>::new();
+    let mut self_used_groups = FxHashSet::default();
+    let mut accessed_locations = vec![];
 
     for (bb, bb_data) in body.basic_blocks.iter_enumerated() {
         for (statement_index, statement) in bb_data.statements.iter().enumerate() {
-            let Some(assignees) = source_assignments.get(&statement.source_info) else { continue };
             let location = Location { block: bb, statement_index };
-            let (accesses, uses) =
-                collect_accesses_at_location(assignees, Some(statement), None, location);
-            if !accesses.is_empty() {
-                accesses_by_location.insert(location, (statement.source_info, accesses));
+            let Some(group_index) = source_assignment_groups.index_for_location(body, location)
+            else {
+                continue;
+            };
+            let group = &source_assignment_groups.groups[group_index as usize];
+            if statement.source_info.span != group.source_info.span {
+                continue;
             }
-            let self_used = self_used_by_source.entry(statement.source_info).or_default();
-            for assignee in uses {
-                if !self_used.contains(&assignee) {
-                    self_used.push(assignee);
-                }
+            let assignee = group.assignee;
+            let Some((_index, extra_projections)) = checked_places.get(assignee.as_ref()) else {
+                continue;
+            };
+            if is_indirect(extra_projections) {
+                continue;
+            }
+            let mut collector =
+                AssigneeAccessCollector { assignee, accessed: false, self_used: false };
+            collector.visit_statement(statement, location);
+            if collector.accessed {
+                accessed_locations.push((location, group_index, assignee));
+            }
+            if collector.self_used {
+                self_used_groups.insert(group_index);
             }
         }
 
-        let terminator = bb_data.terminator();
-        if let Some(assignees) = source_assignments.get(&terminator.source_info) {
-            let location = body.terminator_loc(bb);
-            let (accesses, uses) =
-                collect_accesses_at_location(assignees, None, Some(terminator), location);
-            if !accesses.is_empty() {
-                accesses_by_location.insert(location, (terminator.source_info, accesses));
-            }
-            let self_used = self_used_by_source.entry(terminator.source_info).or_default();
-            for assignee in uses {
-                if !self_used.contains(&assignee) {
-                    self_used.push(assignee);
-                }
-            }
+        let location = body.terminator_loc(bb);
+        let Some(group_index) = source_assignment_groups.index_for_location(body, location) else {
+            continue;
+        };
+        let group = &source_assignment_groups.groups[group_index as usize];
+        if bb_data.terminator().source_info.span != group.source_info.span {
+            continue;
+        }
+        let assignee = group.assignee;
+        let Some((_index, extra_projections)) = checked_places.get(assignee.as_ref()) else {
+            continue;
+        };
+        if is_indirect(extra_projections) {
+            continue;
+        }
+        let mut collector = AssigneeAccessCollector { assignee, accessed: false, self_used: false };
+        collector.visit_terminator(bb_data.terminator(), location);
+        if collector.accessed {
+            accessed_locations.push((location, group_index, assignee));
+        }
+        if collector.self_used {
+            self_used_groups.insert(group_index);
         }
     }
 
     let mut ignored = FxHashMap::default();
-    for (location, (source_info, accesses)) in accesses_by_location {
-        let Some(self_used) = self_used_by_source.get(&source_info) else { continue };
-        let mut ignored_places = vec![];
-        for access in accesses {
-            if self_used.contains(&access) && !ignored_places.contains(&access) {
-                ignored_places.push(access);
-            }
-        }
-        if !ignored_places.is_empty() {
-            ignored.insert(location, ignored_places);
+    for (location, group_index, assignee) in accessed_locations {
+        if self_used_groups.contains(&group_index) {
+            ignored.insert(location, assignee);
         }
     }
     ignored
@@ -1547,11 +1839,11 @@ pub struct MaybeLivePlaces<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
     checked_places: &'a PlaceSet<'tcx>,
     capture_kind: CaptureKind,
-    ignored_self_assignment_places: FxHashMap<Location, Vec<Place<'tcx>>>,
-    raw_pointer_origins: IndexVec<Local, PlaceSources<'tcx>>,
+    ignored_self_assignment_places: FxHashMap<Location, Place<'tcx>>,
+    raw_pointer_uses: RawPointerUses<'tcx>,
 }
 
-impl<'tcx> MaybeLivePlaces<'_, 'tcx> {
+impl<'places, 'tcx> MaybeLivePlaces<'places, 'tcx> {
     fn transfer_function<'a>(
         &'a self,
         trans: &'a mut DenseBitSet<PlaceIndex>,
@@ -1562,7 +1854,7 @@ impl<'tcx> MaybeLivePlaces<'_, 'tcx> {
             capture_kind: self.capture_kind,
             trans,
             ignored_self_assignment_places: &self.ignored_self_assignment_places,
-            raw_pointer_origins: &self.raw_pointer_origins,
+            raw_pointer_uses: &self.raw_pointer_uses,
         }
     }
 }
@@ -1616,8 +1908,8 @@ struct TransferFunction<'a, 'tcx> {
     checked_places: &'a PlaceSet<'tcx>,
     trans: &'a mut DenseBitSet<PlaceIndex>,
     capture_kind: CaptureKind,
-    ignored_self_assignment_places: &'a FxHashMap<Location, Vec<Place<'tcx>>>,
-    raw_pointer_origins: &'a IndexVec<Local, PlaceSources<'tcx>>,
+    ignored_self_assignment_places: &'a FxHashMap<Location, Place<'tcx>>,
+    raw_pointer_uses: &'a RawPointerUses<'tcx>,
 }
 
 impl<'a, 'tcx> TransferFunction<'a, 'tcx> {
@@ -1626,9 +1918,9 @@ impl<'a, 'tcx> TransferFunction<'a, 'tcx> {
         place: PlaceRef<'tcx>,
         location: Location,
     ) -> bool {
-        self.ignored_self_assignment_places.get(&location).is_some_and(|places| {
-            places.iter().any(|assignment| source_assignment_covers_use(assignment.as_ref(), place))
-        })
+        self.ignored_self_assignment_places
+            .get(&location)
+            .is_some_and(|assignment| source_assignment_covers_use(assignment.as_ref(), place))
     }
 
     fn raw_pointer_operand_context(operand: &Operand<'tcx>) -> Option<PlaceContext> {
@@ -1647,17 +1939,18 @@ impl<'a, 'tcx> TransferFunction<'a, 'tcx> {
         }
     }
 
-    fn mark_raw_pointer_escape_operand(&mut self, operand: &Operand<'tcx>) {
+    fn mark_raw_pointer_escape_operand(&mut self, operand: &Operand<'tcx>, location: Location) {
         let Some(context) = Self::raw_pointer_operand_context(operand) else { return };
         let place = match operand {
             Operand::Copy(place) | Operand::Move(place) => *place,
             Operand::Constant(_) | Operand::RuntimeChecks(_) => return,
         };
 
-        if place.projection.is_empty() {
-            for origin in self.raw_pointer_origins[place.local].iter() {
-                self.mark_raw_pointer_origin_use(origin, context);
-            }
+        let Some(origins) = self.raw_pointer_uses.escape_uses.get(&(location, place)) else {
+            return;
+        };
+        for origin in origins.iter() {
+            self.mark_raw_pointer_origin_use(origin, context);
         }
     }
 }
@@ -1681,7 +1974,7 @@ impl<'tcx> Visitor<'tcx> for TransferFunction<'_, 'tcx> {
             &terminator.kind
         {
             for arg in args {
-                self.mark_raw_pointer_escape_operand(&arg.node);
+                self.mark_raw_pointer_escape_operand(&arg.node, location);
             }
         }
 
@@ -1733,7 +2026,7 @@ impl<'tcx> Visitor<'tcx> for TransferFunction<'_, 'tcx> {
             }
             Rvalue::Aggregate(_, operands) => {
                 for operand in operands {
-                    self.mark_raw_pointer_escape_operand(operand);
+                    self.mark_raw_pointer_escape_operand(operand, location);
                 }
                 self.super_rvalue(rvalue, location);
             }
@@ -1746,9 +2039,8 @@ impl<'tcx> Visitor<'tcx> for TransferFunction<'_, 'tcx> {
             return;
         }
 
-        if let Some((PlaceElem::Deref, tail)) = place.projection.split_first() {
-            for origin in self.raw_pointer_origins[place.local].iter() {
-                let origin = origin.project_deeper(tail, self.tcx);
+        if let Some(origins) = self.raw_pointer_uses.deref_uses.get(&(location, *place)) {
+            for origin in origins.iter() {
                 if let Some((index, extra_projections)) = self.checked_places.get(origin.as_ref()) {
                     match DefUse::for_place(extra_projections, context) {
                         Some(DefUse::Def) => {
