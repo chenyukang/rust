@@ -403,10 +403,10 @@ fn emit_mismatch_diagnostic<'tcx>(
     let mixed_suggestion = should_suggest_mixed.then(|| {
         let implicit_suggestions = make_implicit_suggestions(&suggest_change_to_mixed_implicit);
 
-        let explicit_anonymous_suggestions = suggest_change_to_mixed_explicit_anonymous
-            .iter()
-            .map(|info| info.suggestion("'_"))
-            .collect();
+        let explicit_anonymous_suggestions = build_lifetime_replacement_suggestions(
+            "'_",
+            &suggest_change_to_mixed_explicit_anonymous,
+        );
 
         lints::MismatchedLifetimeSyntaxesSuggestion::Mixed {
             implicit_suggestions,
@@ -482,14 +482,58 @@ fn build_mismatch_suggestion(
     infos: &[&Info<'_>],
 ) -> lints::MismatchedLifetimeSyntaxesSuggestion {
     let lifetime_name = lifetime_name.to_owned();
-
-    let suggestions = infos.iter().map(|info| info.suggestion(&lifetime_name)).collect();
+    let suggestions = build_lifetime_replacement_suggestions(&lifetime_name, infos);
 
     lints::MismatchedLifetimeSyntaxesSuggestion::Explicit {
         lifetime_name,
         suggestions,
         optional_alternative: false,
     }
+}
+
+fn build_lifetime_replacement_suggestions(
+    lifetime_name: &str,
+    infos: &[&Info<'_>],
+) -> Vec<(Span, String)> {
+    enum SuggestionOrder {
+        Direct((Span, String)),
+        HiddenPath(hir::HirId),
+    }
+
+    let mut order = Vec::new();
+    let mut hidden_paths: FxIndexMap<hir::HirId, (&Info<'_>, usize)> = FxIndexMap::default();
+
+    for info in infos.iter().copied() {
+        if let Some(hidden_path_key) = info.hidden_path_key() {
+            hidden_paths
+                .entry(hidden_path_key)
+                .and_modify(|(_, hidden_lifetime_count)| *hidden_lifetime_count += 1)
+                .or_insert_with(|| {
+                    order.push(SuggestionOrder::HiddenPath(hidden_path_key));
+                    (info, 1)
+                });
+        } else {
+            order.push(SuggestionOrder::Direct(info.suggestion(lifetime_name)));
+        }
+    }
+
+    let mut suggestions = Vec::new();
+
+    for suggestion in order {
+        let suggestion = match suggestion {
+            SuggestionOrder::Direct(suggestion) => suggestion,
+            SuggestionOrder::HiddenPath(hidden_path_key) => {
+                let (info, hidden_lifetime_count) = hidden_paths[&hidden_path_key];
+                info.hidden_path_suggestion(lifetime_name, hidden_lifetime_count)
+            }
+        };
+
+        if !suggestions.contains(&suggestion) {
+            suggestions.push(suggestion);
+        }
+    }
+
+    suggestions
 }
 
 #[derive(Debug)]
@@ -500,6 +544,35 @@ struct Info<'tcx> {
 }
 
 impl<'tcx> Info<'tcx> {
+    fn hidden_path_key(&self) -> Option<hir::HirId> {
+        match (self.lifetime.syntax, self.lifetime.source) {
+            (hir::LifetimeSyntax::Implicit, LifetimeSource::Path { .. }) => Some(self.ty.hir_id),
+            _ => None,
+        }
+    }
+
+    fn hidden_path_suggestion(
+        &self,
+        lifetime_name: &str,
+        hidden_lifetime_count: usize,
+    ) -> (Span, String) {
+        let repeated_lifetimes =
+            (0..hidden_lifetime_count).map(|_| lifetime_name).collect::<Vec<_>>().join(", ");
+
+        match self.lifetime.source {
+            LifetimeSource::Path { angle_brackets: hir::AngleBrackets::Full } => {
+                (self.lifetime.ident.span, format!("{repeated_lifetimes}, "))
+            }
+            LifetimeSource::Path { angle_brackets: hir::AngleBrackets::Empty } => {
+                (self.lifetime.ident.span, repeated_lifetimes)
+            }
+            LifetimeSource::Path { angle_brackets: hir::AngleBrackets::Missing } => {
+                (self.lifetime.ident.span.shrink_to_hi(), format!("<{repeated_lifetimes}>"))
+            }
+            source => unreachable!("can't suggest a hidden path lifetime for {source:?}"),
+        }
+    }
+
     /// When reporting a lifetime that is implicit, we expand the span
     /// to include the type. Otherwise we end up pointing at nothing,
     /// which is a bit confusing.

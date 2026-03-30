@@ -1,0 +1,135 @@
+error: hiding a lifetime that's elided elsewhere is confusing
+  --> $DIR/multiple-hidden-lifetimes-issue-154493.rs:23:22
+   |
+LL | fn elided_missing(x: &u8) -> Pair {
+   |                      ^^^     ^^^^
+   |                      |       |
+   |                      |       the same lifetime is hidden here
+   |                      |       the same lifetime is hidden here
+   |                      the lifetime is elided here
+   |
+   = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+note: the lint level is defined here
+  --> $DIR/multiple-hidden-lifetimes-issue-154493.rs:4:9
+   |
+LL | #![deny(mismatched_lifetime_syntaxes)]
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: use `'_` for type paths
+   |
+LL | fn elided_missing(x: &u8) -> Pair<'_, '_> {
+   |                                  ++++++++
+
+error: hiding a lifetime that's elided elsewhere is confusing
+  --> $DIR/multiple-hidden-lifetimes-issue-154493.rs:28:19
+   |
+LL | fn elided_full(x: &u8) -> PairWithType<u8> {
+   |                   ^^^     ^^^^^^^^^^^^^^^^
+   |                   |       |
+   |                   |       the same lifetime is hidden here
+   |                   |       the same lifetime is hidden here
+   |                   the lifetime is elided here
+   |
+   = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+help: use `'_` for type paths
+   |
+LL | fn elided_full(x: &u8) -> PairWithType<'_, '_, u8> {
+   |                                        +++++++
+
+error: hiding a lifetime that's named elsewhere is confusing
+  --> $DIR/multiple-hidden-lifetimes-issue-154493.rs:33:36
+   |
+LL | fn named_missing<'a>(x: &'a u8) -> Pair {
+   |                          --        ^^^^
+   |                          |         |
+   |                          |         the same lifetime is hidden here
+   |                          |         the same lifetime is hidden here
+   |                          the lifetime is named here
+   |
+   = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+help: consistently use `'a`
+   |
+LL | fn named_missing<'a>(x: &'a u8) -> Pair<'a, 'a> {
+   |                                        ++++++++
+
+error: hiding a lifetime that's named elsewhere is confusing
+  --> $DIR/multiple-hidden-lifetimes-issue-154493.rs:38:33
+   |
+LL | fn named_full<'a>(x: &'a u8) -> PairWithType<u8> {
+   |                       --        ^^^^^^^^^^^^^^^^
+   |                       |         |
+   |                       |         the same lifetime is hidden here
+   |                       |         the same lifetime is hidden here
+   |                       the lifetime is named here
+   |
+   = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+help: consistently use `'a`
+   |
+LL | fn named_full<'a>(x: &'a u8) -> PairWithType<'a, 'a, u8> {
+   |                                              +++++++
+
+error: hiding or eliding a lifetime that's named elsewhere is confusing
+  --> $DIR/multiple-hidden-lifetimes-issue-154493.rs:11:10
+   |
+LL |         ($pair, $middle, $pair)
+   |          ^^^^^           ^^^^^
+   |          |               |
+   |          |               the same lifetime is hidden here
+   |          |               the same lifetime is hidden here
+   |          the same lifetime is hidden here
+   |          the same lifetime is hidden here
+...
+LL |     x: &'a u8,
+   |         -- the lifetime is named here
+LL | ) -> repeated_hidden_paths_with_middle_ref!(Pair, &'_ u8) {
+   |      ----------------------------------------------^^----
+   |      |                                             |
+   |      |                                             the same lifetime is elided here
+   |      in this macro invocation
+   |
+   = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+   = note: this error originates in the macro `repeated_hidden_paths_with_middle_ref` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consistently use `'a`
+   |
+LL ~         ($pair<'a, 'a>, $middle, $pair<'a, 'a>)
+LL |
+...
+LL |     x: &'a u8,
+LL ~ ) -> repeated_hidden_paths_with_middle_ref!(Pair, &'a u8) {
+   |
+
+error: hiding or eliding a lifetime that's named elsewhere is confusing
+  --> $DIR/multiple-hidden-lifetimes-issue-154493.rs:18:12
+   |
+LL |         ($($pair),+, $middle, $($pair),+)
+   |            ^^^^^                ^^^^^
+   |            |                    |
+   |            |                    the same lifetime is hidden here
+   |            |                    the same lifetime is hidden here
+   |            |                    the same lifetime is hidden here
+   |            |                    the same lifetime is hidden here
+   |            the same lifetime is hidden here
+   |            the same lifetime is hidden here
+   |            the same lifetime is hidden here
+   |            the same lifetime is hidden here
+...
+LL |     x: &'a u8,
+   |         -- the lifetime is named here
+LL | ) -> repeated_hidden_paths_in_repetition!(Pair, Pair; &'_ u8) {
+   |      --------------------------------------------------^^----
+   |      |                                                 |
+   |      |                                                 the same lifetime is elided here
+   |      in this macro invocation
+   |
+   = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+   = note: this error originates in the macro `repeated_hidden_paths_in_repetition` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consistently use `'a`
+   |
+LL ~         ($($pair<'a, 'a>),+, $middle, $($pair<'a, 'a>),+)
+LL |
+...
+LL |     x: &'a u8,
+LL ~ ) -> repeated_hidden_paths_in_repetition!(Pair, Pair; &'a u8) {
+   |
+
+error: aborting due to 6 previous errors
+
