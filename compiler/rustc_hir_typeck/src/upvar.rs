@@ -1928,6 +1928,14 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         let mut is_mutbl = bm.1;
 
+        // `normalize_capture_place` can recover from failed normalization by
+        // turning the place into `Ty::Error`. In that case, preserve the
+        // binding mutability and let the original type error stand on its own.
+        if place.references_error() {
+            debug!("place: {:?} has error", place);
+            return is_mutbl;
+        }
+
         for pointer_ty in place.deref_tys() {
             match self.structurally_resolve_type(self.tcx.hir_span(var_hir_id), pointer_ty).kind() {
                 // We don't capture derefs of raw ptrs
