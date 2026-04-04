@@ -40,6 +40,11 @@ macro_rules! panic {
 #[rustc_diagnostic_item = "assert_eq_macro"]
 #[allow_internal_unstable(panic_internals)]
 macro_rules! assert_eq {
+    () => {
+        compile_error!(
+            "assert_eq! expects two expressions and an optional panic message, like `assert_eq!(left, right)`"
+        )
+    };
     ($left:expr, $right:expr $(,)?) => {
         match (&$left, &$right) {
             (left_val, right_val) => {
@@ -52,6 +57,11 @@ macro_rules! assert_eq {
                 }
             }
         }
+    };
+    ($left:expr $(,)?) => {
+        compile_error!(
+            "assert_eq! expects two expressions and an optional panic message, like `assert_eq!(left, right)`"
+        )
     };
     ($left:expr, $right:expr, $($arg:tt)+) => {
         match (&$left, &$right) {
@@ -96,6 +106,11 @@ macro_rules! assert_eq {
 #[rustc_diagnostic_item = "assert_ne_macro"]
 #[allow_internal_unstable(panic_internals)]
 macro_rules! assert_ne {
+    () => {
+        compile_error!(
+            "assert_ne! expects two expressions and an optional panic message, like `assert_ne!(left, right)`"
+        )
+    };
     ($left:expr, $right:expr $(,)?) => {
         match (&$left, &$right) {
             (left_val, right_val) => {
@@ -108,6 +123,11 @@ macro_rules! assert_ne {
                 }
             }
         }
+    };
+    ($left:expr $(,)?) => {
+        compile_error!(
+            "assert_ne! expects two expressions and an optional panic message, like `assert_ne!(left, right)`"
+        )
     };
     ($left:expr, $right:expr, $($arg:tt)+) => {
         match (&($left), &($right)) {

@@ -1,0 +1,44 @@
+error: unexpected end of macro invocation
+  --> $DIR/assert-comparison-missing-argument.rs:2:5
+   |
+LL |     assert_eq!();
+   |     ^^^^^^^^^^^^ missing tokens in macro arguments
+   |
+note: while trying to match meta-variable `$left:expr`
+  --> $SRC_DIR/core/src/macros/mod.rs:LL:COL
+
+error: assert_eq! expects two expressions and an optional panic message, like `assert_eq!(left, right)`
+  --> $DIR/assert-comparison-missing-argument.rs:5:5
+   |
+LL |     assert_eq!(1);
+   |     ^^^^^^^^^^^^^
+
+error: assert_eq! expects two expressions and an optional panic message, like `assert_eq!(left, right)`
+  --> $DIR/assert-comparison-missing-argument.rs:8:5
+   |
+LL |     assert_eq!(1,);
+   |     ^^^^^^^^^^^^^^
+
+error: assert_ne! expects two expressions and an optional panic message, like `assert_ne!(left, right)`
+  --> $DIR/assert-comparison-missing-argument.rs:11:5
+   |
+LL |     assert_ne!(1);
+   |     ^^^^^^^^^^^^^
+
+error: assert_ne! expects two expressions and an optional panic message, like `assert_ne!(left, right)`
+  --> $DIR/assert-comparison-missing-argument.rs:14:5
+   |
+LL |     assert_ne!(1,);
+   |     ^^^^^^^^^^^^^^
+
+error: unexpected end of macro invocation
+  --> $DIR/assert-comparison-missing-argument.rs:17:5
+   |
+LL |     assert_ne!();
+   |     ^^^^^^^^^^^^ missing tokens in macro arguments
+   |
+note: while trying to match meta-variable `$left:expr`
+  --> $SRC_DIR/core/src/macros/mod.rs:LL:COL
+
+error: aborting due to 6 previous errors
+
