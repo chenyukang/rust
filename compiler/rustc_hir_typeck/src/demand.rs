@@ -1203,6 +1203,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         if parent_expr.span.desugaring_kind().is_some() {
             return;
         }
+        if self.note_defaulted_generic_arg_in_output(err, parent_expr, expr, checked_ty) {
+            return;
+        }
         enum CallableKind {
             Function,
             Method,
@@ -1280,6 +1283,148 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             }
             _ => return,
         }
+    }
+
+    fn note_defaulted_generic_arg_in_output(
+        &self,
+        err: &mut Diag<'_>,
+        parent_expr: &hir::Expr<'_>,
+        expr: &hir::Expr<'_>,
+        checked_ty: Ty<'tcx>,
+    ) -> bool {
+        let (def_id, args, call_hir_id, input_offset) = match parent_expr.kind {
+            hir::ExprKind::Call(fun, args) => match fun.kind {
+                hir::ExprKind::Path(hir::QPath::Resolved(_, path)) => {
+                    let hir::def::Res::Def(_, def_id) = path.res else {
+                        return false;
+                    };
+                    (def_id, args, fun.hir_id, 0)
+                }
+                hir::ExprKind::Path(hir::QPath::TypeRelative(_, _)) => {
+                    let Some(def_id) =
+                        self.typeck_results.borrow().type_dependent_def_id(fun.hir_id)
+                    else {
+                        return false;
+                    };
+                    (def_id, args, fun.hir_id, 0)
+                }
+                _ => return false,
+            },
+            hir::ExprKind::MethodCall(_method, _receiver, args, _span) => {
+                let Some(def_id) =
+                    self.typeck_results.borrow().type_dependent_def_id(parent_expr.hir_id)
+                else {
+                    return false;
+                };
+                (def_id, args, parent_expr.hir_id, 1)
+            }
+            _ => return false,
+        };
+        self.note_defaulted_generic_arg_in_output_for_call(
+            err,
+            parent_expr,
+            args,
+            expr,
+            checked_ty,
+            def_id,
+            self.typeck_results.borrow().node_args(call_hir_id),
+            input_offset,
+        )
+    }
+
+    /// For calls like `HashMap::with_hasher`, point out when a mismatched
+    /// argument replaces a defaulted generic parameter in the ADT output.
+    fn note_defaulted_generic_arg_in_output_for_call(
+        &self,
+        err: &mut Diag<'_>,
+        parent_expr: &hir::Expr<'_>,
+        args: &[hir::Expr<'_>],
+        expr: &hir::Expr<'_>,
+        checked_ty: Ty<'tcx>,
+        def_id: hir::def_id::DefId,
+        call_args: ty::GenericArgsRef<'tcx>,
+        input_offset: usize,
+    ) -> bool {
+        let Some((arg_idx, arg_expr)) =
+            args.iter().enumerate().find(|(_, arg)| arg.hir_id == expr.hir_id)
+        else {
+            return false;
+        };
+        let fn_sig = self.tcx.fn_sig(def_id);
+        let identity_sig = fn_sig.instantiate_identity();
+        let Some(&arg) = identity_sig.inputs().skip_binder().get(arg_idx + input_offset) else {
+            return false;
+        };
+        let ty::Param(param) = arg.kind() else {
+            return false;
+        };
+
+        let identity_output = self.tcx.instantiate_bound_regions_with_erased(identity_sig.output());
+        let (adt, output_args) = match identity_output.kind() {
+            ty::Adt(def, args) => (*def, args),
+            _ => return false,
+        };
+        let generics = self.tcx.generics_of(adt.did());
+        let Some((generic_index, param_def)) =
+            output_args.iter().enumerate().find_map(|(generic_index, output_arg)| {
+                let output_ty = output_arg.as_type()?;
+                match output_ty.kind() {
+                    ty::Param(output_param) if *output_param == *param => {
+                        let param_def = generics.param_at(generic_index, self.tcx);
+                        Some((generic_index, param_def))
+                    }
+                    _ => None,
+                }
+            })
+        else {
+            return false;
+        };
+        let Some(default_arg) = param_def.default_value(self.tcx) else {
+            return false;
+        };
+        let fn_sig = fn_sig.instantiate(self.tcx, call_args);
+        let output = self.resolve_vars_if_possible(
+            self.tcx.instantiate_bound_regions_with_erased(fn_sig.output()),
+        );
+        let output_args = match output.kind() {
+            ty::Adt(found_adt, args) if *found_adt == adt => args,
+            _ => return false,
+        };
+        let default_arg =
+            self.resolve_vars_if_possible(default_arg.instantiate(self.tcx, output_args));
+        let Some(default_ty) = default_arg.as_type() else {
+            return false;
+        };
+        let actual_ty = output_args.type_at(generic_index);
+        let actual_ty = if actual_ty.has_non_region_infer() {
+            if self.node_ty(arg_expr.hir_id) != checked_ty {
+                return false;
+            }
+            checked_ty
+        } else {
+            actual_ty
+        };
+        if actual_ty == default_ty {
+            return false;
+        }
+
+        let item_name = self.tcx.item_name(adt.did());
+        let mut multi_span: MultiSpan = parent_expr.span.into();
+        multi_span.push_span_label(
+            arg_expr.span,
+            format!(
+                "this argument changes the generic parameter `{}` of `{}`",
+                param_def.name, item_name
+            ),
+        );
+        err.span_help(
+            multi_span,
+            format!(
+                "the generic parameter `{}` of `{}` defaults to `{}`, but this argument sets it to `{}`",
+                param_def.name, item_name, default_ty, actual_ty,
+            ),
+        );
+        true
     }
 }
 

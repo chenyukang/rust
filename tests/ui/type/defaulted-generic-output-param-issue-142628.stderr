@@ -1,0 +1,69 @@
+error[E0308]: mismatched types
+  --> $DIR/defaulted-generic-output-param-issue-142628.rs:22:30
+   |
+LL |         HashMap::with_hasher(BuildHasherDefault::<DefaultHasher>::new());
+   |         -------------------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `RandomState`, found `BuildHasherDefault<DefaultHasher>`
+   |         |
+   |         arguments to this function are incorrect
+   |
+   = note: expected struct `RandomState`
+              found struct `BuildHasherDefault<DefaultHasher>`
+help: the generic parameter `S` of `HashMap` defaults to `RandomState`, but this argument sets it to `BuildHasherDefault<DefaultHasher>`
+  --> $DIR/defaulted-generic-output-param-issue-142628.rs:22:9
+   |
+LL |         HashMap::with_hasher(BuildHasherDefault::<DefaultHasher>::new());
+   |         ^^^^^^^^^^^^^^^^^^^^^------------------------------------------^
+   |                              |
+   |                              this argument changes the generic parameter `S` of `HashMap`
+note: associated function defined here
+  --> $SRC_DIR/std/src/collections/hash/map.rs:LL:COL
+
+error[E0308]: mismatched types
+  --> $DIR/defaulted-generic-output-param-issue-142628.rs:25:31
+   |
+LL |     let _: Map<()> = make_map(String::new());
+   |                      -------- ^^^^^^^^^^^^^ expected `Vec<()>`, found `String`
+   |                      |
+   |                      arguments to this function are incorrect
+   |
+   = note: expected struct `Vec<()>`
+              found struct `String`
+help: the generic parameter `S` of `Map` defaults to `Vec<_>`, but this argument sets it to `String`
+  --> $DIR/defaulted-generic-output-param-issue-142628.rs:25:22
+   |
+LL |     let _: Map<()> = make_map(String::new());
+   |                      ^^^^^^^^^-------------^
+   |                               |
+   |                               this argument changes the generic parameter `S` of `Map`
+note: function defined here
+  --> $DIR/defaulted-generic-output-param-issue-142628.rs:8:4
+   |
+LL | fn make_map<K, S>(hasher: S) -> Map<K, S> {
+   |    ^^^^^^^^       ---------
+
+error[E0308]: mismatched types
+  --> $DIR/defaulted-generic-output-param-issue-142628.rs:28:61
+   |
+LL |     let _: Map<()> = Builder::<()>(PhantomData).with_hasher(String::new());
+   |                                                 ----------- ^^^^^^^^^^^^^ expected `Vec<()>`, found `String`
+   |                                                 |
+   |                                                 arguments to this method are incorrect
+   |
+   = note: expected struct `Vec<()>`
+              found struct `String`
+help: the generic parameter `S` of `Map` defaults to `Vec<()>`, but this argument sets it to `String`
+  --> $DIR/defaulted-generic-output-param-issue-142628.rs:28:22
+   |
+LL |     let _: Map<()> = Builder::<()>(PhantomData).with_hasher(String::new());
+   |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-------------^
+   |                                                             |
+   |                                                             this argument changes the generic parameter `S` of `Map`
+note: method defined here
+  --> $DIR/defaulted-generic-output-param-issue-142628.rs:15:8
+   |
+LL |     fn with_hasher<S>(self, hasher: S) -> Map<K, S> {
+   |        ^^^^^^^^^^^          ---------
+
+error: aborting due to 3 previous errors
+
+For more information about this error, try `rustc --explain E0308`.
