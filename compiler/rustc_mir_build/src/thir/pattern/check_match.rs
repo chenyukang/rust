@@ -976,6 +976,7 @@ fn report_unreachable_pattern<'p, 'tcx>(
 ) {
     static CAP_COVERED_BY_MANY: usize = 4;
     let pat_span = pat.data().span;
+    let lint_span = lint_span_for_unreachable_pattern(cx.tcx, hir_id, pat_span);
     let mut lint = UnreachablePatternInner {
         span: Some(pat_span),
         matches_no_values: None,
@@ -1041,9 +1042,30 @@ fn report_unreachable_pattern<'p, 'tcx>(
     cx.tcx.emit_node_span_lint(
         UNREACHABLE_PATTERNS,
         hir_id,
-        pat_span,
+        lint_span,
         UnreachablePattern { inner: lint, covered_by_many_n_more_count },
     );
+}
+
+fn lint_span_for_unreachable_pattern(tcx: TyCtxt<'_>, hir_id: HirId, pat_span: Span) -> Span {
+    let sm = tcx.sess.source_map();
+    if !pat_span.in_external_macro(sm) {
+        return pat_span;
+    }
+
+    // A pattern macro can be defined by an external macro and still be invoked from a
+    // user-written match arm. In that case, lint at the local invocation instead of letting the
+    // external-macro lint gate suppress the diagnostic entirely.
+    let arm_span = tcx.hir_span(hir_id);
+    let callsite = pat_span.source_callsite();
+    if !arm_span.in_external_macro(sm)
+        && callsite.is_visible(sm)
+        && callsite.find_ancestor_inside(arm_span).is_some()
+    {
+        callsite
+    } else {
+        pat_span
+    }
 }
 
 /// Detect typos that were meant to be a `const` but were interpreted as a new pattern binding.
