@@ -2659,6 +2659,20 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         }
 
         let mut sugg_paths: Vec<(Vec<Ident>, bool)> = vec![];
+        let import_prefix_is_accessible = |import: Import<'ra>| match import.imported_module.get() {
+            Some(ModuleOrUniformRoot::Module(module))
+            | Some(ModuleOrUniformRoot::ModuleAndExternPrelude(module)) => {
+                std::iter::successors(Some(module), |module| module.parent)
+                    .filter_map(|module| module.self_decl)
+                    .all(|decl| self.is_accessible_from(decl.vis(), parent_scope.module))
+            }
+            Some(
+                ModuleOrUniformRoot::ExternPrelude
+                | ModuleOrUniformRoot::CurrentScope
+                | ModuleOrUniformRoot::OpenModule(_),
+            ) => true,
+            None => false,
+        };
         if let Some(mut def_id) = res.opt_def_id() {
             // We can't use `def_path_str` in resolve.
             let mut path = vec![def_id];
@@ -2700,9 +2714,9 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
 
         // Print the whole import chain to make it easier to see what happens.
         let first_binding = decl;
-        let mut next_binding = Some(decl);
+        let mut next_binding = Some((decl, true));
         let mut next_ident = ident;
-        while let Some(binding) = next_binding {
+        while let Some((binding, path_to_binding_accessible)) = next_binding {
             let name = next_ident;
             next_binding = match binding.kind {
                 _ if res == Res::Err => None,
@@ -2710,11 +2724,17 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                     _ if source_decl.span.is_dummy() => None,
                     ImportKind::Single { source, .. } => {
                         next_ident = source;
-                        Some(source_decl)
+                        Some((
+                            source_decl,
+                            path_to_binding_accessible && import_prefix_is_accessible(import),
+                        ))
                     }
                     ImportKind::Glob { .. }
                     | ImportKind::MacroUse { .. }
-                    | ImportKind::MacroExport => Some(source_decl),
+                    | ImportKind::MacroExport => Some((
+                        source_decl,
+                        path_to_binding_accessible && import_prefix_is_accessible(import),
+                    )),
                     ImportKind::ExternCrate { .. } => None,
                 },
                 _ => None,
@@ -2728,38 +2748,22 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                         .first()
                         .is_some_and(|seg| matches!(seg.ident.name, kw::SelfLower | kw::Super));
                     let res_def_id = res.opt_def_id();
-                    let path = if uses_relative_path {
+                    let path = if !import_prefix_is_accessible(import) {
+                        None
+                    } else if uses_relative_path {
                         // A path recovered from `self`/`super` is only useful if both the
                         // target and every module segment can be named from the failing use site.
                         let module_path = if let Some(ModuleOrUniformRoot::Module(module)) =
                             import.imported_module.get()
                             && module.is_local()
                             && let Some(module_path) = self.module_path_names(module)
-                            && let Some(mut def_id) = module.opt_def_id()
                             && res_def_id.is_none_or(|def_id| {
                                 self.is_accessible_from(
                                     self.tcx.visibility(def_id),
                                     parent_scope.module,
                                 )
                             }) {
-                            // `module_path_names` tells us the resolved module's canonical path.
-                            // Before suggesting that path from the failing use site, make sure
-                            // every segment in it can actually be named from there.
-                            let mut visible_from_use_site = true;
-                            while let Some(parent) = self.tcx.opt_parent(def_id) {
-                                if !self.is_accessible_from(
-                                    self.tcx.visibility(def_id),
-                                    parent_scope.module,
-                                ) {
-                                    visible_from_use_site = false;
-                                    break;
-                                }
-                                if parent.is_top_level_module() {
-                                    break;
-                                }
-                                def_id = parent;
-                            }
-                            if visible_from_use_site { Some(module_path) } else { None }
+                            Some(module_path)
                         } else {
                             None
                         };
@@ -2802,7 +2806,7 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
             let first = binding == first_binding;
             let def_span = self.tcx.sess.source_map().guess_head_span(binding.span);
             let mut note_span = MultiSpan::from_span(def_span);
-            if !first && binding.vis().is_public() {
+            if !first && binding.vis().is_public() && path_to_binding_accessible {
                 let desc = match binding.kind {
                     DeclKind::Import { .. } => "re-export",
                     _ => "directly",
