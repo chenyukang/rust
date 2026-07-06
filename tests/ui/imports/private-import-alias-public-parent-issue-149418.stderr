@@ -1,0 +1,72 @@
+error[E0603]: struct import `Alias` is private
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:41:44
+   |
+LL |         let _: super::nested_alias::inner::Alias;
+   |                                            ^^^^^ private struct import
+   |
+note: the struct import `Alias` is defined here...
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:35:13
+   |
+LL |         use super::super::public_reexport::Item as Alias;
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the struct import `Item` which is defined here...
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:30:13
+   |
+LL |     pub use self::private::Item;
+   |             ^^^^^^^^^^^^^^^^^^^ you could import this re-export
+note: ...and refers to the struct `Item` which is defined here
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:27:9
+   |
+LL |         pub struct Item;
+   |         ^^^^^^^^^^^^^^^^
+help: import `Alias` through the re-export
+   |
+LL -         let _: super::nested_alias::inner::Alias;
+LL +         let _: crate::public_reexport::Item;
+   |
+
+error[E0603]: constant import `fruit` is private
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:47:32
+   |
+LL |     let _ = accessible_parent::fruit;
+   |                                ^^^^^ private constant import
+   |
+note: the constant import `fruit` is defined here...
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:10:9
+   |
+LL |     use self::fruits::PEAR as fruit;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the constant `PEAR` which is defined here
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:13:9
+   |
+LL |         pub const PEAR: &str = "Pear";
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ you could import this directly
+help: import `fruit` directly
+   |
+LL |     let _ = accessible_parent::fruits::PEAR;
+   |                                     +++++++
+
+error[E0603]: constant import `fruit` is private
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:49:45
+   |
+LL |     let _ = accessible_parent_without_self::fruit;
+   |                                             ^^^^^ private constant import
+   |
+note: the constant import `fruit` is defined here...
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:18:9
+   |
+LL |     use fruits::PEAR as fruit;
+   |         ^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the constant `PEAR` which is defined here
+  --> $DIR/private-import-alias-public-parent-issue-149418.rs:21:9
+   |
+LL |         pub const PEAR: &str = "Pear";
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ you could import this directly
+help: import `fruit` directly
+   |
+LL |     let _ = accessible_parent_without_self::fruits::PEAR;
+   |                                                  +++++++
+
+error: aborting due to 3 previous errors
+
+For more information about this error, try `rustc --explain E0603`.

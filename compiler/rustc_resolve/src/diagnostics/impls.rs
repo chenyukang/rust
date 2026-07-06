@@ -2482,6 +2482,106 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         Some(path)
     }
 
+    /// Returns whether `path` is accessible from `parent_scope` and resolves to `expected_res`.
+    fn path_resolves_to(
+        &self,
+        path: &Path,
+        expected_res: Res,
+        parent_scope: &ParentScope<'ra>,
+    ) -> bool {
+        let Some(ns) = expected_res.ns() else { return false };
+        let segments = Segment::from_path(path);
+        match self.cm().maybe_resolve_path(&segments, Some(ns), parent_scope, None) {
+            PathResult::NonModule(partial_res) => partial_res.full_res() == Some(expected_res),
+            PathResult::Module(ModuleOrUniformRoot::Module(module)) => {
+                module.res() == Some(expected_res)
+            }
+            PathResult::Module(_) | PathResult::Indeterminate | PathResult::Failed { .. } => false,
+        }
+    }
+
+    /// Finds an accessible path to an import's source from the use site,
+    /// accessibility is checked by `path_resolves_to`.
+    fn import_source_suggestion_path(
+        &self,
+        import: Import<'ra>,
+        source: Ident,
+        source_res: Res,
+        parent_scope: &ParentScope<'ra>,
+    ) -> Option<Vec<Ident>> {
+        let path = Path {
+            span: source.span,
+            segments: import
+                .module_path
+                .iter()
+                .filter(|segment| segment.ident.name != kw::PathRoot)
+                .map(|segment| segment.ident.clone())
+                .chain(std::iter::once(source))
+                .map(ast::PathSegment::from_ident)
+                .collect(),
+        };
+        self.path_resolves_to(&path, source_res, parent_scope)
+            .then(|| path.segments.iter().map(|segment| segment.ident).collect())
+    }
+
+    /// Finds an accessible path to a declaration while following a private import chain.
+    fn binding_suggestion_path(
+        &self,
+        binding: Decl<'ra>,
+        name: Ident,
+        parent_scope: &ParentScope<'ra>,
+    ) -> Option<Vec<Ident>> {
+        let res = binding.res();
+        let mut path = match binding.kind {
+            DeclKind::Import { import, .. } => Path {
+                span: name.span,
+                segments: self
+                    .module_path_names(import.parent_scope.module)?
+                    .into_iter()
+                    .chain(std::iter::once(name.name))
+                    .map(|name| ast::PathSegment::from_ident(Ident::with_dummy_span(name)))
+                    .collect(),
+            },
+            DeclKind::Def(_) => {
+                let mut def_id = match res {
+                    Res::Def(DefKind::Ctor(..), def_id) => self.tcx.parent(def_id),
+                    _ => res.opt_def_id()?,
+                };
+                let mut def_path = vec![def_id];
+                while let Some(parent) = self.tcx.opt_parent(def_id) {
+                    def_id = parent;
+                    def_path.push(def_id);
+                    if def_id.is_top_level_module() {
+                        break;
+                    }
+                }
+                def_path.reverse();
+                Path {
+                    span: name.span,
+                    segments: def_path
+                        .into_iter()
+                        .map(|def_id| {
+                            let name = if def_id.is_top_level_module() {
+                                if def_id.is_local() {
+                                    kw::Crate
+                                } else {
+                                    self.tcx.crate_name(def_id.krate)
+                                }
+                            } else {
+                                self.tcx.opt_item_name(def_id)?
+                            };
+                            Some(ast::PathSegment::from_ident(Ident::with_dummy_span(name)))
+                        })
+                        .collect::<Option<_>>()?,
+                }
+            }
+        };
+
+        self.shorten_import_path(res.opt_def_id(), &mut path, parent_scope.module);
+        self.path_resolves_to(&path, res, parent_scope)
+            .then(|| path.segments.iter().map(|segment| segment.ident).collect())
+    }
+
     fn shorten_candidate_path(
         &self,
         suggestion: &mut ImportSuggestion,
@@ -2659,150 +2759,64 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         }
 
         let mut sugg_paths: Vec<(Vec<Ident>, bool)> = vec![];
-        if let Some(mut def_id) = res.opt_def_id() {
-            // We can't use `def_path_str` in resolve.
-            let mut path = vec![def_id];
-            while let Some(parent) = self.tcx.opt_parent(def_id) {
-                def_id = parent;
-                if !def_id.is_top_level_module() {
-                    path.push(def_id);
-                } else {
-                    break;
-                }
-            }
-            // We will only suggest importing directly if it is accessible through that path.
-            let path_names: Option<Vec<Ident>> = path
-                .iter()
-                .rev()
-                .map(|def_id| {
-                    self.tcx.opt_item_name(*def_id).map(|name| {
-                        Ident::with_dummy_span(if def_id.is_top_level_module() {
-                            kw::Crate
-                        } else {
-                            name
-                        })
-                    })
-                })
-                .collect();
-            if let Some(&def_id) = path.get(0)
-                && let Some(path) = path_names
-            {
-                if let Some(def_id) = def_id.as_local() {
-                    if self.effective_visibilities.is_directly_public(def_id) {
-                        sugg_paths.push((path, false));
-                    }
-                } else if self.is_accessible_from(self.tcx.visibility(def_id), parent_scope.module)
-                {
-                    sugg_paths.push((path, false));
-                }
-            }
-        }
-
         // Print the whole import chain to make it easier to see what happens.
         let first_binding = decl;
         let mut next_binding = Some(decl);
         let mut next_ident = ident;
         while let Some(binding) = next_binding {
             let name = next_ident;
+            let mut source_path_is_accessible = false;
             next_binding = match binding.kind {
                 _ if res == Res::Err => None,
-                DeclKind::Import { source_decl, import, .. } => match import.kind {
-                    _ if source_decl.span.is_dummy() => None,
-                    ImportKind::Single { source, .. } => {
-                        next_ident = source;
-                        Some(source_decl)
-                    }
-                    ImportKind::Glob { .. }
-                    | ImportKind::MacroUse { .. }
-                    | ImportKind::MacroExport => Some(source_decl),
-                    ImportKind::ExternCrate { .. } => None,
-                },
-                _ => None,
-            };
-
-            match binding.kind {
+                DeclKind::Import { source_decl, .. } if source_decl.span.is_dummy() => None,
                 DeclKind::Import { source_decl, import, .. } => {
-                    let through_reexport = !matches!(source_decl.kind, DeclKind::Def(_));
-                    let uses_relative_path = import
-                        .module_path
-                        .first()
-                        .is_some_and(|seg| matches!(seg.ident.name, kw::SelfLower | kw::Super));
-                    let res_def_id = res.opt_def_id();
-                    let path = if uses_relative_path {
-                        // A path recovered from `self`/`super` is only useful if both the
-                        // target and every module segment can be named from the failing use site.
-                        let module_path = if let Some(ModuleOrUniformRoot::Module(module)) =
-                            import.imported_module.get()
-                            && module.is_local()
-                            && let Some(module_path) = self.module_path_names(module)
-                            && let Some(mut def_id) = module.opt_def_id()
-                            && res_def_id.is_none_or(|def_id| {
-                                self.is_accessible_from(
-                                    self.tcx.visibility(def_id),
-                                    parent_scope.module,
-                                )
-                            }) {
-                            // `module_path_names` tells us the resolved module's canonical path.
-                            // Before suggesting that path from the failing use site, make sure
-                            // every segment in it can actually be named from there.
-                            let mut visible_from_use_site = true;
-                            while let Some(parent) = self.tcx.opt_parent(def_id) {
-                                if !self.is_accessible_from(
-                                    self.tcx.visibility(def_id),
-                                    parent_scope.module,
-                                ) {
-                                    visible_from_use_site = false;
-                                    break;
-                                }
-                                if parent.is_top_level_module() {
-                                    break;
-                                }
-                                def_id = parent;
-                            }
-                            if visible_from_use_site { Some(module_path) } else { None }
-                        } else {
-                            None
-                        };
-
-                        module_path.map(|module_path| {
-                            // `import.module_path` is relative to the import's module, not to the
-                            // failing use site.
-                            let mut path = Path {
-                                span: ident.span,
-                                segments: module_path
-                                    .into_iter()
-                                    .chain(std::iter::once(ident.name))
-                                    .map(|name| {
-                                        ast::PathSegment::from_ident(Ident::with_dummy_span(name))
-                                    })
-                                    .collect(),
-                            };
-                            self.shorten_import_path(res_def_id, &mut path, parent_scope.module);
-                            path.segments.iter().map(|seg| seg.ident).collect()
-                        })
-                    } else {
-                        // Don't include `{{root}}` in suggestions - it's an internal symbol
-                        // that should never be shown to users.
-                        Some(
-                            import
-                                .module_path
-                                .iter()
-                                .filter(|seg| seg.ident.name != kw::PathRoot)
-                                .map(|seg| seg.ident.clone())
-                                .chain(std::iter::once(ident))
-                                .collect::<Vec<_>>(),
-                        )
+                    let source = match import.kind {
+                        ImportKind::Single { source, .. } => Some(source),
+                        ImportKind::Glob { .. }
+                        | ImportKind::MacroUse { .. }
+                        | ImportKind::MacroExport => Some(next_ident),
+                        ImportKind::ExternCrate { .. } => None,
                     };
-                    if let Some(path) = path {
-                        sugg_paths.push((path, through_reexport));
+                    if let Some(source) = source {
+                        next_ident = source;
+                        let path = self.import_source_suggestion_path(
+                            import,
+                            source,
+                            source_decl.res(),
+                            &parent_scope,
+                        );
+                        if let Some(path) = path {
+                            source_path_is_accessible = true;
+                            let through_reexport = !matches!(source_decl.kind, DeclKind::Def(_));
+                            sugg_paths.push((path, through_reexport));
+                        }
+                        Some(source_decl)
+                    } else {
+                        None
                     }
                 }
-                DeclKind::Def(_) => {}
+                _ => None,
+            };
+            let binding_path = self.binding_suggestion_path(binding, name, &parent_scope);
+            let path_to_binding_accessible = binding_path.is_some() || source_path_is_accessible;
+            // Prefer to use public definitions directly.
+            let prefer_definition_path = matches!(binding.kind, DeclKind::Def(_))
+                && binding.res().opt_def_id().is_some_and(|def_id| {
+                    if let Some(def_id) = def_id.as_local() {
+                        self.effective_visibilities.is_directly_public(def_id)
+                    } else {
+                        self.is_accessible_from(self.tcx.visibility(def_id), parent_scope.module)
+                    }
+                });
+            if let Some(path) = binding_path
+                && (sugg_paths.is_empty() || prefer_definition_path)
+            {
+                sugg_paths.push((path, binding.kind.is_import()));
             }
             let first = binding == first_binding;
             let def_span = self.tcx.sess.source_map().guess_head_span(binding.span);
             let mut note_span = MultiSpan::from_span(def_span);
-            if !first && binding.vis().is_public() {
+            if !first && binding.vis().is_public() && path_to_binding_accessible {
                 let desc = match binding.kind {
                     DeclKind::Import { .. } => "re-export",
                     _ => "directly",

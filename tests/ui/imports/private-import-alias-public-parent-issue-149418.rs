@@ -1,0 +1,51 @@
+//@ run-rustfix
+//@ edition: 2024
+
+// Private import aliases should suggest their source through an accessible parent module or
+// re-export.
+
+#![allow(unused_imports, dead_code)]
+
+mod accessible_parent {
+    use self::fruits::PEAR as fruit;
+
+    pub mod fruits {
+        pub const PEAR: &str = "Pear";
+    }
+}
+
+mod accessible_parent_without_self {
+    use fruits::PEAR as fruit;
+
+    pub mod fruits {
+        pub const PEAR: &str = "Pear";
+    }
+}
+
+mod public_reexport {
+    mod private {
+        pub struct Item;
+    }
+
+    pub use self::private::Item;
+}
+
+mod nested_alias {
+    pub mod inner {
+        use super::super::public_reexport::Item as Alias;
+    }
+}
+
+mod use_site {
+    fn check() {
+        let _: super::nested_alias::inner::Alias;
+        //~^ ERROR struct import `Alias` is private
+    }
+}
+
+fn main() {
+    let _ = accessible_parent::fruit;
+    //~^ ERROR constant import `fruit` is private
+    let _ = accessible_parent_without_self::fruit;
+    //~^ ERROR constant import `fruit` is private
+}
