@@ -1,0 +1,26 @@
+error[E0038]: the trait `Factory` is not dyn compatible
+  --> $DIR/associated-fn-vtable-guidance-issue-159492.rs:7:20
+   |
+LL | fn use_factory(_: &dyn Factory) {}
+   |                    ^^^^^^^^^^^ `Factory` is not dyn compatible
+   |
+note: for a trait to be dyn compatible it needs to allow building a vtable
+      for more information, visit <https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility>
+  --> $DIR/associated-fn-vtable-guidance-issue-159492.rs:4:8
+   |
+LL | trait Factory {
+   |       ------- this trait is not dyn compatible...
+LL |     fn create();
+   |        ^^^^^^ ...because associated function `create` has no `self` parameter
+help: consider turning `create` into a method by giving it a `&self` argument, so that it is accessible through the trait object's vtable
+   |
+LL |     fn create(&self);
+   |               +++++
+help: alternatively, consider constraining `create` so it is explicitly marked as not applying to trait objects
+   |
+LL |     fn create() where Self: Sized;
+   |                 +++++++++++++++++
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0038`.
