@@ -2933,6 +2933,47 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         let expr = expr.peel_drop_temps();
 
         match (&expr.kind, expected.kind(), checked_ty.kind()) {
+            (
+                _,
+                &ty::Ref(_, exp, hir::Mutability::Mut),
+                &ty::Ref(_, check, hir::Mutability::Not),
+            ) if self.can_eq(self.param_env, exp, check)
+                && let hir::ExprKind::AddrOf(
+                    hir::BorrowKind::Ref,
+                    hir::Mutability::Not,
+                    borrowed,
+                ) = expr.kind
+                && borrowed.span.can_be_used_for_suggestions()
+                && let hir::ExprKind::Path(hir::QPath::Resolved(None, path)) = borrowed.kind
+                && let Res::Local(binding_hir_id) = path.res
+                && let hir::Node::Pat(pat) = self.tcx.hir_node(binding_hir_id) =>
+            {
+                let borrow_suggestion = (borrowed.span.shrink_to_lo(), "mut ".to_string());
+                let mut suggestions = vec![];
+                let message = match pat.kind {
+                    hir::PatKind::Binding(hir::BindingMode::MUT, ..) => {
+                        "consider changing this borrow's mutability"
+                    }
+                    hir::PatKind::Binding(hir::BindingMode::NONE, _, ident, _)
+                        if ident.span.can_be_used_for_suggestions()
+                            && matches!(
+                                self.tcx.parent_hir_node(pat.hir_id),
+                                hir::Node::LetStmt(_) | hir::Node::Param(_)
+                            ) =>
+                    {
+                        suggestions.push((ident.span.shrink_to_lo(), "mut ".to_string()));
+                        "consider changing the borrow and binding to be mutable"
+                    }
+                    _ => return None,
+                };
+                suggestions.push(borrow_suggestion);
+                return Some((
+                    suggestions,
+                    message.to_string(),
+                    Applicability::MachineApplicable,
+                    false,
+                ));
+            }
             (_, &ty::Ref(_, exp, _), &ty::Ref(_, check, _)) => match (exp.kind(), check.kind()) {
                 (&ty::Str, &ty::Array(arr, _) | &ty::Slice(arr)) if arr == self.tcx.types.u8 => {
                     if let hir::ExprKind::Lit(_) = expr.kind

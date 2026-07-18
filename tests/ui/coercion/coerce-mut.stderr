@@ -13,6 +13,11 @@ note: function defined here
    |
 LL | fn f(x: &mut i32) {}
    |    ^ -----------
+help: consider changing the borrow and binding to be mutable
+   |
+LL ~     let mut x = 0;
+LL ~     f(&mut x);
+   |
 
 error: aborting due to 1 previous error
 

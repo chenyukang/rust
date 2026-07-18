@@ -1,0 +1,111 @@
+error[E0308]: mismatched types
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:12:15
+   |
+LL |     takes_mut(&value);
+   |     --------- ^^^^^^ types differ in mutability
+   |     |
+   |     arguments to this function are incorrect
+   |
+   = note: expected mutable reference `&mut String`
+                      found reference `&String`
+note: function defined here
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:7:4
+   |
+LL | fn takes_mut(_: &mut String) {}
+   |    ^^^^^^^^^ --------------
+help: consider changing the borrow and binding to be mutable
+   |
+LL ~     let mut value = String::new();
+LL |
+LL ~     takes_mut(&mut value);
+   |
+
+error[E0308]: mismatched types
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:18:15
+   |
+LL |     takes_mut(&value);
+   |     --------- ^^^^^^ types differ in mutability
+   |     |
+   |     arguments to this function are incorrect
+   |
+   = note: expected mutable reference `&mut String`
+                      found reference `&String`
+note: function defined here
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:7:4
+   |
+LL | fn takes_mut(_: &mut String) {}
+   |    ^^^^^^^^^ --------------
+help: consider changing this borrow's mutability
+   |
+LL |     takes_mut(&mut value);
+   |                +++
+
+error[E0308]: mismatched types
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:25:15
+   |
+LL |     takes_mut(&value);
+   |     --------- ^^^^^^ types differ in mutability
+   |     |
+   |     arguments to this function are incorrect
+   |
+   = note: expected mutable reference `&mut String`
+                      found reference `&String`
+note: function defined here
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:7:4
+   |
+LL | fn takes_mut(_: &mut String) {}
+   |    ^^^^^^^^^ --------------
+help: consider changing the borrow and binding to be mutable
+   |
+LL ~ fn immutable_parameter(mut value: String) {
+LL |
+LL ~     takes_mut(&mut value);
+   |
+
+error[E0308]: mismatched types
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:32:15
+   |
+LL |     takes_mut((&value));
+   |     --------- ^^^^^^^^ types differ in mutability
+   |     |
+   |     arguments to this function are incorrect
+   |
+   = note: expected mutable reference `&mut String`
+                      found reference `&String`
+note: function defined here
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:7:4
+   |
+LL | fn takes_mut(_: &mut String) {}
+   |    ^^^^^^^^^ --------------
+help: consider changing the borrow and binding to be mutable
+   |
+LL ~     let mut value = String::new();
+LL |
+LL ~     takes_mut((&mut value));
+   |
+
+error[E0308]: mismatched types
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:39:15
+   |
+LL |     takes_mut(&/* keep */ value);
+   |     --------- ^^^^^^^^^^^^^^^^^ types differ in mutability
+   |     |
+   |     arguments to this function are incorrect
+   |
+   = note: expected mutable reference `&mut String`
+                      found reference `&String`
+note: function defined here
+  --> $DIR/suggest-mut-borrow-and-binding-issue-159490.rs:7:4
+   |
+LL | fn takes_mut(_: &mut String) {}
+   |    ^^^^^^^^^ --------------
+help: consider changing the borrow and binding to be mutable
+   |
+LL ~     let mut value = String::new();
+LL |
+LL ~     takes_mut(&/* keep */ mut value);
+   |
+
+error: aborting due to 5 previous errors
+
+For more information about this error, try `rustc --explain E0308`.
