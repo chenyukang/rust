@@ -1,13 +1,16 @@
-error[E0282]: type annotations needed for `A<std::result::Result<std::result::Result<(), _>, Error>>`
-  --> $DIR/issue-104649.rs:24:9
+error[E0282]: type annotations needed
+  --> $DIR/issue-104649.rs:27:16
    |
 LL |     let a = A(Result::Ok(Result::Ok(())));
-   |         ^                -------------- type must be known at this point
+   |                          -------------- type must be known at this point
+...
+LL |             Ok(Ok(a)) => {}
+   |                ^^^^^ cannot infer type of the type parameter `E` declared on the enum `Result`
    |
-help: consider giving `a` an explicit type, where the type for type parameter `E` is specified
+help: consider specifying the generic arguments
    |
-LL |     let a: A<std::result::Result<std::result::Result<_, E>, _>> = A(Result::Ok(Result::Ok(())));
-   |          ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+LL |             Ok(Ok::<(), E>(a)) => {}
+   |                  +++++++++
 
 error: aborting due to 1 previous error
 

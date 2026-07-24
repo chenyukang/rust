@@ -21,10 +21,10 @@ impl<T> ForEach for A<T> {
 struct A<T>(T);
 
 fn main() {
-    let a = A(Result::Ok(Result::Ok(()))); //~ ERROR type annotations needed
+    let a = A(Result::Ok(Result::Ok(())));
     a.for_each(|a: Result<_>| {
         let f = || match a {
-            Ok(Ok(a)) => {}
+            Ok(Ok(a)) => {} //~ ERROR type annotations needed
             Ok(Err(a)) => {}
             Err(a) => {}
         };

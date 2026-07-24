@@ -1,9 +1,60 @@
 error[E0282]: type annotations needed
-  --> $DIR/type-annotation-suggestion-issue-141742.rs:5:17
+  --> $DIR/type-annotation-suggestion-issue-141742.rs:13:12
    |
 LL |     if let Some(whatever) = todo!() {
-   |                 ^^^^^^^^ cannot infer type
+   |            ^^^^^^^^^^^^^^ cannot infer type of the type parameter `T` declared on the enum `Option`
+   |
+help: consider specifying a concrete type for the type parameter `T`
+   |
+LL |     if let Some::</* Type */>(whatever) = todo!() {
+   |                ++++++++++++++
 
-error: aborting due to 1 previous error
+error[E0282]: type annotations needed
+  --> $DIR/type-annotation-suggestion-issue-141742.rs:22:12
+   |
+LL |     if let None = todo!() {
+   |            ^^^^ cannot infer type of the type parameter `T` declared on the enum `Option`
+   |
+help: consider specifying a concrete type for the type parameter `T`
+   |
+LL |     if let None::</* Type */> = todo!() {
+   |                ++++++++++++++
+
+error[E0282]: type annotations needed
+  --> $DIR/type-annotation-suggestion-issue-141742.rs:29:12
+   |
+LL |     if let Wrapper { field } = todo!() {
+   |            ^^^^^^^^^^^^^^^^^ cannot infer type of the type parameter `T` declared on the struct `Wrapper`
+   |
+help: consider specifying a concrete type for the type parameter `T`
+   |
+LL |     if let Wrapper::</* Type */> { field } = todo!() {
+   |                   ++++++++++++++
+
+error[E0282]: type annotations needed
+  --> $DIR/type-annotation-suggestion-issue-141742.rs:36:19
+   |
+LL |     if let Some::<_>(whatever) = todo!() {
+   |                   ^ cannot infer type of the type parameter `T` declared on the enum `Option`
+
+error[E0282]: type annotations needed
+  --> $DIR/type-annotation-suggestion-issue-141742.rs:43:19
+   |
+LL |     if let None::<_> = todo!() {
+   |                   ^ cannot infer type of the type parameter `T` declared on the enum `Option`
+
+error[E0282]: type annotations needed
+  --> $DIR/type-annotation-suggestion-issue-141742.rs:50:22
+   |
+LL |     if let Wrapper::<_> { field } = todo!() {
+   |                      ^ cannot infer type of the type parameter `T` declared on the struct `Wrapper`
+
+error[E0282]: type annotations needed
+  --> $DIR/type-annotation-suggestion-issue-141742.rs:57:35
+   |
+LL |     if let MultipleArgs::<'_, u8, _>::Variant(_, value) = todo!() {
+   |                                   ^ cannot infer type of the type parameter `U` declared on the enum `MultipleArgs`
+
+error: aborting due to 7 previous errors
 
 For more information about this error, try `rustc --explain E0282`.

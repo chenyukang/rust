@@ -882,6 +882,7 @@ impl<'tcx> InferSourceKind<'tcx> {
 #[derive(Debug)]
 struct InsertableGenericArgs<'tcx> {
     insert_span: Span,
+    hir_args: Option<&'tcx hir::GenericArgs<'tcx>>,
     args: GenericArgsRef<'tcx>,
     generics_def_id: DefId,
     def_id: DefId,
@@ -1150,6 +1151,7 @@ impl<'a, 'tcx> FindInferSourceVisitor<'a, 'tcx> {
                         });
                         InsertableGenericArgs {
                             insert_span,
+                            hir_args: segment.args,
                             args,
                             generics_def_id: def_id,
                             def_id,
@@ -1163,6 +1165,54 @@ impl<'a, 'tcx> FindInferSourceVisitor<'a, 'tcx> {
         }
 
         Box::new(iter::empty())
+    }
+
+    fn update_infer_source_from_args(
+        &mut self,
+        hir_id: HirId,
+        args: InsertableGenericArgs<'tcx>,
+        source_span: impl FnOnce(Option<Span>) -> Span,
+    ) {
+        debug!(?args);
+        let InsertableGenericArgs {
+            insert_span,
+            hir_args,
+            args,
+            generics_def_id,
+            def_id,
+            have_turbofish,
+        } = args;
+        let tcx = self.tecx.tcx;
+        let generics = tcx.generics_of(generics_def_id);
+        let Some(mut argument_index) =
+            generics.own_args(args).iter().position(|&arg| self.generic_arg_contains_target(arg))
+        else {
+            return;
+        };
+        let explicit_arg_span = hir_args.and_then(|hir_args| {
+            let index = argument_index.checked_sub(generics.own_counts().lifetimes)?;
+            hir_args.args.get(hir_args.num_lifetime_args() + index).map(|arg| arg.span())
+        });
+        let span = source_span(explicit_arg_span);
+        let args = self.tecx.resolve_vars_if_possible(args);
+        let generic_args =
+            &generics.own_args_no_defaults(tcx, args)[generics.own_counts().lifetimes..];
+        if generics.has_own_self() {
+            argument_index += 1;
+        }
+
+        self.update_infer_source(InferSource {
+            span,
+            kind: InferSourceKind::GenericArg {
+                insert_span,
+                argument_index,
+                generics_def_id,
+                def_id,
+                generic_args,
+                have_turbofish,
+                hir_id,
+            },
+        });
     }
 
     fn resolved_path_inferred_arg_iter(
@@ -1185,10 +1235,11 @@ impl<'a, 'tcx> FindInferSourceVisitor<'a, 'tcx> {
             if generics.has_impl_trait() {
                 do yeet ();
             }
-            let insert_span =
-                path.segments.last().unwrap().ident.span.shrink_to_hi().with_hi(path.span.hi());
+            let segment = path.segments.last().unwrap();
+            let insert_span = segment.ident.span.shrink_to_hi().with_hi(path.span.hi());
             InsertableGenericArgs {
                 insert_span,
+                hir_args: segment.args,
                 args,
                 generics_def_id,
                 def_id: path.res.def_id(),
@@ -1209,6 +1260,7 @@ impl<'a, 'tcx> FindInferSourceVisitor<'a, 'tcx> {
                 let insert_span = segment.ident.span.shrink_to_hi().with_hi(span.hi());
                 Some(InsertableGenericArgs {
                     insert_span,
+                    hir_args: segment.args,
                     args,
                     generics_def_id,
                     def_id: res.def_id(),
@@ -1242,6 +1294,7 @@ impl<'a, 'tcx> FindInferSourceVisitor<'a, 'tcx> {
                     let insert_span = segment.ident.span.shrink_to_hi().with_hi(span.hi());
                     Some(InsertableGenericArgs {
                         insert_span,
+                        hir_args: segment.args,
                         args,
                         generics_def_id: def_id,
                         def_id,
@@ -1383,7 +1436,6 @@ impl<'a, 'tcx> Visitor<'tcx> for FindInferSourceVisitor<'a, 'tcx> {
 
     #[instrument(level = "debug", skip(self))]
     fn visit_expr(&mut self, expr: &'tcx Expr<'tcx>) {
-        let tcx = self.tecx.tcx;
         match expr.kind {
             // When encountering `func(arg)` first look into `arg` and then `func`,
             // as `arg` is "more specific".
@@ -1397,57 +1449,17 @@ impl<'a, 'tcx> Visitor<'tcx> for FindInferSourceVisitor<'a, 'tcx> {
         }
 
         for args in self.expr_inferred_arg_iter(expr) {
-            debug!(?args);
-            let InsertableGenericArgs {
-                insert_span,
-                args,
-                generics_def_id,
-                def_id,
-                have_turbofish,
-            } = args;
-            let generics = tcx.generics_of(generics_def_id);
-            if let Some(argument_index) = generics
-                .own_args(args)
-                .iter()
-                .position(|&arg| self.generic_arg_contains_target(arg))
-            {
-                let args = self.tecx.resolve_vars_if_possible(args);
-                let generic_args =
-                    &generics.own_args_no_defaults(tcx, args)[generics.own_counts().lifetimes..];
-                let span = match expr.kind {
-                    ExprKind::MethodCall(segment, ..)
-                        if have_turbofish
-                            && let Some(hir_args) = segment.args
-                            && let Some(idx) =
-                                argument_index.checked_sub(generics.own_counts().lifetimes)
-                            && let Some(arg) =
-                                hir_args.args.get(hir_args.num_lifetime_args() + idx) =>
-                    {
-                        arg.span()
+            self.update_infer_source_from_args(expr.hir_id, args, |explicit_arg_span| {
+                match expr.kind {
+                    ExprKind::MethodCall(segment, ..) => {
+                        explicit_arg_span.unwrap_or(segment.ident.span)
                     }
-                    ExprKind::MethodCall(segment, ..) => segment.ident.span,
                     _ => expr.span,
-                };
-                let mut argument_index = argument_index;
-                if generics.has_own_self() {
-                    argument_index += 1;
                 }
-
-                self.update_infer_source(InferSource {
-                    span,
-                    kind: InferSourceKind::GenericArg {
-                        insert_span,
-                        argument_index,
-                        generics_def_id,
-                        def_id,
-                        generic_args,
-                        have_turbofish,
-                        hir_id: expr.hir_id,
-                    },
-                });
-            }
+            });
         }
 
+        let tcx = self.tecx.tcx;
         if let Some(node_ty) = self.opt_node_type(expr.hir_id) {
             if let (
                 &ExprKind::Closure(&Closure { fn_decl, body, fn_decl_span, .. }),
@@ -1502,6 +1514,34 @@ impl<'a, 'tcx> Visitor<'tcx> for FindInferSourceVisitor<'a, 'tcx> {
                     def_id,
                 },
             })
+        }
+    }
+
+    fn visit_pat(&mut self, pat: &'tcx hir::Pat<'tcx>) {
+        intravisit::walk_pat(self, pat);
+
+        let (hir_id, qpath) = match pat.kind {
+            PatKind::Expr(hir::PatExpr { hir_id, kind: hir::PatExprKind::Path(qpath), .. }) => {
+                (*hir_id, qpath)
+            }
+            PatKind::Struct(ref qpath, ..) | PatKind::TupleStruct(ref qpath, ..) => {
+                (pat.hir_id, qpath)
+            }
+            _ => return,
+        };
+        let inferred_args: Box<dyn Iterator<Item = InsertableGenericArgs<'tcx>> + '_> =
+            if let Some(args) = self.node_args_opt(hir_id) {
+                self.path_inferred_arg_iter(hir_id, args, qpath)
+            } else if let PatKind::Struct(hir::QPath::Resolved(_, path), ..) = pat.kind
+                && let Some(ty) = self.opt_node_type(pat.hir_id)
+                && let ty::Adt(_, args) = ty.kind()
+            {
+                Box::new(self.resolved_path_inferred_arg_iter(path, args))
+            } else {
+                return;
+            };
+        for args in inferred_args {
+            self.update_infer_source_from_args(hir_id, args, |span| span.unwrap_or(pat.span));
         }
     }
 }
