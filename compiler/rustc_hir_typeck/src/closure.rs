@@ -17,7 +17,7 @@ use rustc_middle::ty::{
     TypeVisitableExt, TypeVisitor, Unnormalized,
 };
 use rustc_span::def_id::LocalDefId;
-use rustc_span::{DUMMY_SP, Span};
+use rustc_span::{DUMMY_SP, Span, sym};
 use rustc_trait_selection::error_reporting::traits::ArgKind;
 use rustc_trait_selection::traits;
 use tracing::{debug, instrument, trace};
@@ -44,6 +44,18 @@ struct ClosureSignatures<'tcx> {
     liberated_sig: ty::FnSig<'tcx>,
 }
 
+struct MentionsTy<'tcx> {
+    expected_ty: Ty<'tcx>,
+}
+
+impl<'tcx> TypeVisitor<TyCtxt<'tcx>> for MentionsTy<'tcx> {
+    type Result = ControlFlow<()>;
+
+    fn visit_ty(&mut self, ty: Ty<'tcx>) -> Self::Result {
+        if ty == self.expected_ty { ControlFlow::Break(()) } else { ty.super_visit_with(self) }
+    }
+}
+
 impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     #[instrument(skip(self, closure), level = "debug")]
     pub(crate) fn check_expr_closure(
@@ -61,7 +73,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         // type, and see if can glean a closure kind from there.
         let (expected_sig, expected_kind) = match expected.to_option(self) {
             Some(ty) => {
-                self.deduce_closure_signature(self.resolve_vars_with_obligations(ty), closure.kind)
+                let ty = self.resolve_vars_with_obligations(ty);
+                let (expected_sig, expected_kind) = self.deduce_closure_signature(ty, closure.kind);
+                let expected_sig = expected_sig.or_else(|| {
+                    self.deduce_closure_signature_from_selected_impl(ty, expr_span, closure.kind)
+                });
+                (expected_sig, expected_kind)
             }
             None => (None, None),
         };
@@ -334,6 +351,86 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         }
     }
 
+    fn deduce_closure_signature_from_selected_impl(
+        &self,
+        expected_ty: Ty<'tcx>,
+        expr_span: Span,
+        closure_kind: hir::ClosureKind,
+    ) -> Option<ExpectedSig<'tcx>> {
+        if self.next_trait_solver()
+            || !expected_ty.is_ty_var()
+            || !matches!(closure_kind, hir::ClosureKind::Closure)
+        {
+            return None;
+        }
+
+        // Competing impls can leave an argument type ambiguous before the closure is checked,
+        // hiding the `Fn*` obligations that would otherwise provide its expected signature.
+        // Probe with a rigid type to discard impls for unrelated concrete argument types, then
+        // use the selected impl's nested obligations without committing any inference changes.
+        self.fudge_inference_if_ok(|| {
+            let tcx = self.tcx;
+            let probe_ty = Ty::new_param(tcx, u32::MAX, sym::RustaceansAreAwesome);
+
+            let _ = self
+                .at(&self.misc(expr_span), self.param_env)
+                .eq(DefineOpaqueTypes::Yes, expected_ty, probe_ty)
+                .map_err(|_| ())?;
+
+            let mut clauses = vec![];
+            for obligation in self.fulfillment_cx.borrow().pending_obligations() {
+                let predicate = self.resolve_vars_if_possible(obligation.predicate);
+                if predicate.visit_with(&mut MentionsTy { expected_ty: probe_ty }).is_continue() {
+                    continue;
+                }
+
+                let Some(ty::PredicateKind::Clause(ty::ClauseKind::Trait(trait_pred))) =
+                    predicate.kind().no_bound_vars()
+                else {
+                    continue;
+                };
+                // Self-type obligations are already inspected by `deduce_closure_signature`.
+                // Selecting their impls here would also change existing higher-ranked closure
+                // lifetime inference; this fallback is only for the probe type appearing in
+                // another trait argument.
+                if self.resolve_vars_if_possible(trait_pred.self_ty()) == probe_ty {
+                    continue;
+                }
+                let Ok(Some(selection)) =
+                    traits::SelectionContext::new(self).select(&obligation.with(tcx, trait_pred))
+                else {
+                    continue;
+                };
+
+                for nested in selection.nested_obligations() {
+                    let predicate = self.resolve_vars_if_possible(nested.predicate);
+                    let Some(clause) = predicate.as_clause() else {
+                        continue;
+                    };
+                    let self_ty = match clause.kind().skip_binder() {
+                        ty::ClauseKind::Trait(data) => data.self_ty(),
+                        ty::ClauseKind::Projection(data) => data.self_ty(),
+                        _ => continue,
+                    };
+                    if self.resolve_vars_if_possible(self_ty) == probe_ty {
+                        clauses.push((clause, nested.cause.span));
+                    }
+                }
+            }
+
+            Ok::<_, ()>(
+                self.deduce_closure_signature_from_predicates(
+                    probe_ty,
+                    closure_kind,
+                    clauses.into_iter(),
+                )
+                .0,
+            )
+        })
+        .ok()
+        .flatten()
+    }
+
     fn deduce_closure_signature_from_predicates(
         &self,
         expected_ty: Ty<'tcx>,
@@ -372,21 +469,6 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 // Make sure that we didn't infer a signature that mentions itself.
                 // This can happen when we elaborate certain supertrait bounds that
                 // mention projections containing the `Self` type. See #105401.
-                struct MentionsTy<'tcx> {
-                    expected_ty: Ty<'tcx>,
-                }
-                impl<'tcx> TypeVisitor<TyCtxt<'tcx>> for MentionsTy<'tcx> {
-                    type Result = ControlFlow<()>;
-
-                    fn visit_ty(&mut self, t: Ty<'tcx>) -> Self::Result {
-                        if t == self.expected_ty {
-                            ControlFlow::Break(())
-                        } else {
-                            t.super_visit_with(self)
-                        }
-                    }
-                }
-
                 // Don't infer a closure signature from a goal that names the closure type as this will
                 // (almost always) lead to occurs check errors later in type checking.
                 if self.next_trait_solver()

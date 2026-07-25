@@ -1,3 +1,5 @@
+//@ check-pass
+
 //! Regression test for <https://github.com/rust-lang/rust/issues/83627>.
 //! An unrelated impl should not prevent inferring a closure argument from the applicable impl.
 
@@ -15,7 +17,6 @@ impl Foo<u8> for [u8] {
 
 fn main() {
     b"abc".foo(|b| match b {
-        //~^ ERROR type mismatch in closure arguments
         b' ' => true,
         _ => false,
     });
@@ -23,4 +24,16 @@ fn main() {
     b"abc".foo(|b| *b == b' ');
 
     b"abc".foo(|&b| b == b' ');
+}
+
+trait Coerce<P> {
+    fn coerce(&self, p: P);
+}
+
+impl Coerce<fn(&u8) -> bool> for [u8] {
+    fn coerce(&self, _f: fn(&u8) -> bool) {}
+}
+
+fn closure_to_fn_pointer() {
+    b"abc".coerce(|b| *b == b' ');
 }
