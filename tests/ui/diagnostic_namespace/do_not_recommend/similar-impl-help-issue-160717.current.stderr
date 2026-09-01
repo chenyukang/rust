@@ -7,13 +7,13 @@ LL |     require_into(String::new());
    |     required by a bound introduced by this call
    |
    = note: to coerce a `String` into a `&str`, use `&*` as a prefix
-help: the trait `From<String>` is not implemented for `&str`
-      but trait `From<Internal>` is implemented for it
-  --> $DIR/similar-impl-help-issue-160717.rs:11:1
-   |
-LL | impl From<Internal> for &str {
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   = help: for that trait implementation, expected `Internal`, found `String`
+   = help: `String` implements trait `From<T>`:
+             From<&String>
+             From<&mut str>
+             From<&str>
+             From<Box<str>>
+             From<Cow<'_, str>>
+             From<char>
    = note: required for `String` to implement `Into<&str>`
 note: required by a bound in `require_into`
   --> $DIR/similar-impl-help-issue-160717.rs:17:24

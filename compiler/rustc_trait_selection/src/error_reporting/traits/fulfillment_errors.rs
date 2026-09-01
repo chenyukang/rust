@@ -2115,7 +2115,10 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                 )
             })
             .collect();
-        if candidates.iter().any(|c| matches!(c.similarity, CandidateSimilarity::Exact { .. })) {
+        if candidates.iter().any(|c| {
+            matches!(c.similarity, CandidateSimilarity::Exact { .. })
+                && !self.tcx.do_not_recommend_impl(c.impl_def_id)
+        }) {
             // If any of the candidates is a perfect match, we don't want to show all of them.
             // This is particularly relevant for the case of numeric types (as they all have the
             // same category).
@@ -2191,7 +2194,9 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
             impl_candidates
         };
 
-        if let [single] = &impl_candidates {
+        if let [single] = &impl_candidates
+            && !self.tcx.do_not_recommend_impl(single.impl_def_id)
+        {
             let self_ty = trait_pred.skip_binder().self_ty();
             if !self_ty.has_escaping_bound_vars() {
                 let self_ty = self.tcx.instantiate_bound_regions_with_erased(trait_pred.self_ty());
