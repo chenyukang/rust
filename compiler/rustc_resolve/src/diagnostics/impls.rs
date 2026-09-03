@@ -124,6 +124,28 @@ pub(crate) struct ImportSuggestion {
     pub is_stable: bool,
 }
 
+#[derive(Clone, Copy)]
+enum PrivacyImportSuggestionKind {
+    Direct,
+    Reexport,
+}
+
+struct PrivacyImportSuggestion {
+    path: Vec<Ident>,
+    kind: PrivacyImportSuggestionKind,
+}
+
+struct PrivacyImportChainEntry<'ra> {
+    binding: Decl<'ra>,
+    name: Ident,
+    path_is_accessible: bool,
+}
+
+struct PrivacyImportChain<'ra> {
+    entries: Vec<PrivacyImportChainEntry<'ra>>,
+    suggestions: Vec<PrivacyImportSuggestion>,
+}
+
 /// Adjust the impl span so that just the `impl` keyword is taken by removing
 /// everything after `<` (`"impl<T> Iterator for A<T> {}" -> "impl"`) and
 /// everything after the first whitespace (`"impl Iterator for A" -> "impl"`).
@@ -2582,6 +2604,84 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
             .then(|| path.segments.iter().map(|segment| segment.ident).collect())
     }
 
+    fn collect_private_import_chain(
+        &self,
+        decl: Decl<'ra>,
+        ident: Ident,
+        parent_scope: &ParentScope<'ra>,
+    ) -> PrivacyImportChain<'ra> {
+        let res = decl.res();
+        let mut entries = Vec::new();
+        let mut suggestions = Vec::new();
+        let mut next_binding = Some(decl);
+        let mut next_ident = ident;
+
+        while let Some(binding) = next_binding {
+            let name = next_ident;
+            let mut source_path_is_accessible = false;
+            next_binding = match binding.kind {
+                _ if res == Res::Err => None,
+                DeclKind::Import { source_decl, .. } if source_decl.span.is_dummy() => None,
+                DeclKind::Import { source_decl, import, .. } => {
+                    let source = match import.kind {
+                        ImportKind::Single { source, .. } => Some(source),
+                        ImportKind::Glob { .. }
+                        | ImportKind::MacroUse { .. }
+                        | ImportKind::MacroExport => Some(next_ident),
+                        ImportKind::ExternCrate { .. } => None,
+                    };
+                    if let Some(source) = source {
+                        next_ident = source;
+                        if let Some(path) = self.import_source_suggestion_path(
+                            import,
+                            source,
+                            source_decl.res(),
+                            parent_scope,
+                        ) {
+                            source_path_is_accessible = true;
+                            let kind = if source_decl.kind.is_import() {
+                                PrivacyImportSuggestionKind::Reexport
+                            } else {
+                                PrivacyImportSuggestionKind::Direct
+                            };
+                            suggestions.push(PrivacyImportSuggestion { path, kind });
+                        }
+                        Some(source_decl)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            };
+
+            let binding_path = self.binding_suggestion_path(binding, name, parent_scope);
+            let path_is_accessible = binding_path.is_some() || source_path_is_accessible;
+            // Prefer to use public definitions directly.
+            let prefer_definition_path = matches!(binding.kind, DeclKind::Def(_))
+                && binding.res().opt_def_id().is_some_and(|def_id| {
+                    if let Some(def_id) = def_id.as_local() {
+                        self.effective_visibilities.is_directly_public(def_id)
+                    } else {
+                        self.is_accessible_from(self.tcx.visibility(def_id), parent_scope.module)
+                    }
+                });
+            if let Some(path) = binding_path
+                && (suggestions.is_empty() || prefer_definition_path)
+            {
+                let kind = if binding.kind.is_import() {
+                    PrivacyImportSuggestionKind::Reexport
+                } else {
+                    PrivacyImportSuggestionKind::Direct
+                };
+                suggestions.push(PrivacyImportSuggestion { path, kind });
+            }
+
+            entries.push(PrivacyImportChainEntry { binding, name, path_is_accessible });
+        }
+
+        PrivacyImportChain { entries, suggestions }
+    }
+
     fn shorten_candidate_path(
         &self,
         suggestion: &mut ImportSuggestion,
@@ -2672,6 +2772,115 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         *path = Path { span: path.span, segments: new_segments };
     }
 
+    fn add_outermost_privacy_suggestions(
+        &self,
+        err: &mut Diag<'_>,
+        privacy_error: &PrivacyError<'ra>,
+    ) -> bool {
+        let Some((this_res, outer_ident)) = privacy_error.outermost_res else { return false };
+        let mut import_suggestions = self.lookup_import_candidates(
+            outer_ident,
+            this_res.ns().unwrap_or(Namespace::TypeNS),
+            &privacy_error.parent_scope,
+            &|res: Res| res == this_res,
+        );
+        for suggestion in &mut import_suggestions {
+            self.shorten_candidate_path(suggestion, privacy_error.parent_scope.module);
+        }
+        let point_to_def = !show_candidates(
+            self.tcx,
+            err,
+            Some(privacy_error.dedup_span.until(outer_ident.span.shrink_to_hi())),
+            &import_suggestions,
+            Instead::Yes,
+            FoundUse::Yes,
+            DiagMode::Import { append: privacy_error.single_nested, unresolved_import: false },
+            vec![],
+            "",
+        );
+        // If we suggest importing a public re-export, don't point at the definition.
+        if point_to_def && privacy_error.ident.span != outer_ident.span {
+            let label = diagnostics::OuterIdentIsNotPubliclyReexported {
+                span: outer_ident.span,
+                outer_ident_descr: this_res.descr(),
+                outer_ident,
+            };
+            err.subdiagnostic(label);
+        }
+        !point_to_def
+    }
+
+    fn add_private_import_chain_notes(
+        &self,
+        err: &mut Diag<'_>,
+        entries: &[PrivacyImportChainEntry<'ra>],
+        non_exhaustive: Option<Span>,
+        import_descr: &str,
+        nonimport_descr: &str,
+    ) {
+        for (index, entry) in entries.iter().enumerate() {
+            let first = index == 0;
+            let last = index + 1 == entries.len();
+            let def_span = self.tcx.sess.source_map().guess_head_span(entry.binding.span);
+            let mut note_span = MultiSpan::from_span(def_span);
+            if !first && entry.binding.vis().is_public() && entry.path_is_accessible {
+                let desc = if entry.binding.kind.is_import() { "re-export" } else { "directly" };
+                note_span.push_span_label(def_span, format!("you could import this {desc}"));
+            }
+            if last && let Some(span) = non_exhaustive {
+                note_span.push_span_label(
+                    span,
+                    "cannot be constructed because it is `#[non_exhaustive]`",
+                );
+            }
+            let binding_descr =
+                if entry.binding.is_import() { import_descr } else { nonimport_descr };
+            let note = diagnostics::NoteAndRefersToTheItemDefinedHere {
+                span: note_span,
+                binding_descr,
+                binding_name: entry.name,
+                first,
+                dots: !last,
+            };
+            err.subdiagnostic(note);
+        }
+    }
+
+    fn add_best_private_import_suggestion(
+        &self,
+        err: &mut Diag<'_>,
+        mut suggestions: Vec<PrivacyImportSuggestion>,
+        dedup_span: Span,
+        ident: Ident,
+    ) {
+        // We prioritize shorter paths, non-core imports and direct imports over the alternatives.
+        suggestions.sort_by_key(|suggestion| {
+            (
+                suggestion.path.len(),
+                suggestion.path[0].name == sym::core,
+                matches!(suggestion.kind, PrivacyImportSuggestionKind::Reexport),
+            )
+        });
+        let Some(suggestion) = suggestions.into_iter().find(|suggestion| {
+            // A single path segment suggestion is wrong for circular imports.
+            // See `tests/ui/imports/issue-55884-2.rs`.
+            suggestion.path.len() > 1
+        }) else {
+            return;
+        };
+
+        let path = join_path_idents(suggestion.path);
+        let suggestion = match suggestion.kind {
+            PrivacyImportSuggestionKind::Direct => {
+                diagnostics::ImportIdent::Directly { span: dedup_span, ident, path }
+            }
+            PrivacyImportSuggestionKind::Reexport => {
+                diagnostics::ImportIdent::ThroughReExport { span: dedup_span, ident, path }
+            }
+        };
+        err.subdiagnostic(suggestion);
+    }
+
     fn report_privacy_error(&mut self, privacy_error: &PrivacyError<'ra>) {
         let PrivacyError {
             ident,
@@ -2689,50 +2898,15 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         let nonimport_descr =
             if ctor_fields_span.is_some() { plain_descr + " constructor" } else { plain_descr };
         let import_descr = nonimport_descr.clone() + " import";
-        let get_descr = |b: Decl<'_>| if b.is_import() { &import_descr } else { &nonimport_descr };
 
         // Print the primary message.
-        let ident_descr = get_descr(decl);
+        let ident_descr = if decl.is_import() { &import_descr } else { &nonimport_descr };
         let mut err =
             self.dcx().create_err(diagnostics::IsPrivate { span: ident.span, ident_descr, ident });
 
         self.mention_default_field_values(source, ident, &mut err);
 
-        let shown_candidates = if let Some((this_res, outer_ident)) = outermost_res {
-            let mut import_suggestions = self.lookup_import_candidates(
-                outer_ident,
-                this_res.ns().unwrap_or(Namespace::TypeNS),
-                &parent_scope,
-                &|res: Res| res == this_res,
-            );
-            // Shorten candidate paths using `super::` or `self::` when possible.
-            for suggestion in &mut import_suggestions {
-                self.shorten_candidate_path(suggestion, parent_scope.module);
-            }
-            let point_to_def = !show_candidates(
-                self.tcx,
-                &mut err,
-                Some(dedup_span.until(outer_ident.span.shrink_to_hi())),
-                &import_suggestions,
-                Instead::Yes,
-                FoundUse::Yes,
-                DiagMode::Import { append: single_nested, unresolved_import: false },
-                vec![],
-                "",
-            );
-            // If we suggest importing a public re-export, don't point at the definition.
-            if point_to_def && ident.span != outer_ident.span {
-                let label = diagnostics::OuterIdentIsNotPubliclyReexported {
-                    span: outer_ident.span,
-                    outer_ident_descr: this_res.descr(),
-                    outer_ident,
-                };
-                err.subdiagnostic(label);
-            }
-            !point_to_def
-        } else {
-            false
-        };
+        let shown_candidates = self.add_outermost_privacy_suggestions(&mut err, privacy_error);
 
         let mut non_exhaustive = None;
         // If an ADT is foreign and marked as `non_exhaustive`, then that's
@@ -2758,90 +2932,14 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
             }
         }
 
-        let mut sugg_paths: Vec<(Vec<Ident>, bool)> = vec![];
-        // Print the whole import chain to make it easier to see what happens.
-        let first_binding = decl;
-        let mut next_binding = Some(decl);
-        let mut next_ident = ident;
-        while let Some(binding) = next_binding {
-            let name = next_ident;
-            let mut source_path_is_accessible = false;
-            next_binding = match binding.kind {
-                _ if res == Res::Err => None,
-                DeclKind::Import { source_decl, .. } if source_decl.span.is_dummy() => None,
-                DeclKind::Import { source_decl, import, .. } => {
-                    let source = match import.kind {
-                        ImportKind::Single { source, .. } => Some(source),
-                        ImportKind::Glob { .. }
-                        | ImportKind::MacroUse { .. }
-                        | ImportKind::MacroExport => Some(next_ident),
-                        ImportKind::ExternCrate { .. } => None,
-                    };
-                    if let Some(source) = source {
-                        next_ident = source;
-                        let path = self.import_source_suggestion_path(
-                            import,
-                            source,
-                            source_decl.res(),
-                            &parent_scope,
-                        );
-                        if let Some(path) = path {
-                            source_path_is_accessible = true;
-                            let through_reexport = !matches!(source_decl.kind, DeclKind::Def(_));
-                            sugg_paths.push((path, through_reexport));
-                        }
-                        Some(source_decl)
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            };
-            let binding_path = self.binding_suggestion_path(binding, name, &parent_scope);
-            let path_to_binding_accessible = binding_path.is_some() || source_path_is_accessible;
-            // Prefer to use public definitions directly.
-            let prefer_definition_path = matches!(binding.kind, DeclKind::Def(_))
-                && binding.res().opt_def_id().is_some_and(|def_id| {
-                    if let Some(def_id) = def_id.as_local() {
-                        self.effective_visibilities.is_directly_public(def_id)
-                    } else {
-                        self.is_accessible_from(self.tcx.visibility(def_id), parent_scope.module)
-                    }
-                });
-            if let Some(path) = binding_path
-                && (sugg_paths.is_empty() || prefer_definition_path)
-            {
-                sugg_paths.push((path, binding.kind.is_import()));
-            }
-            let first = binding == first_binding;
-            let def_span = self.tcx.sess.source_map().guess_head_span(binding.span);
-            let mut note_span = MultiSpan::from_span(def_span);
-            if !first && binding.vis().is_public() && path_to_binding_accessible {
-                let desc = match binding.kind {
-                    DeclKind::Import { .. } => "re-export",
-                    _ => "directly",
-                };
-                note_span.push_span_label(def_span, format!("you could import this {desc}"));
-            }
-            // Final step in the import chain, point out if the ADT is `non_exhaustive`
-            // which is probably why this privacy violation occurred.
-            if next_binding.is_none()
-                && let Some(span) = non_exhaustive
-            {
-                note_span.push_span_label(
-                    span,
-                    "cannot be constructed because it is `#[non_exhaustive]`",
-                );
-            }
-            let note = diagnostics::NoteAndRefersToTheItemDefinedHere {
-                span: note_span,
-                binding_descr: get_descr(binding),
-                binding_name: name,
-                first,
-                dots: next_binding.is_some(),
-            };
-            err.subdiagnostic(note);
-        }
+        let chain = self.collect_private_import_chain(decl, ident, &parent_scope);
+        self.add_private_import_chain_notes(
+            &mut err,
+            &chain.entries,
+            non_exhaustive,
+            &import_descr,
+            &nonimport_descr,
+        );
         // The suggestion replaces `dedup_span` with a path reaching the failing ident.
         // That's valid only when
         // 1) the failing ident is the imported leaf, otherwise `as` renames and trailing segments
@@ -2853,24 +2951,7 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
             && !single_nested
             && !outermost_res.is_some_and(|(_, outer)| outer.span != ident.span);
         if can_replace_use {
-            // We prioritize shorter paths, non-core imports and direct imports over the
-            // alternatives.
-            sugg_paths.sort_by_key(|(p, reexport)| (p.len(), p[0].name == sym::core, *reexport));
-            for (sugg, reexport) in sugg_paths {
-                if sugg.len() <= 1 {
-                    // A single path segment suggestion is wrong. This happens on circular
-                    // imports. `tests/ui/imports/issue-55884-2.rs`
-                    continue;
-                }
-                let path = join_path_idents(sugg);
-                let sugg = if reexport {
-                    diagnostics::ImportIdent::ThroughReExport { span: dedup_span, ident, path }
-                } else {
-                    diagnostics::ImportIdent::Directly { span: dedup_span, ident, path }
-                };
-                err.subdiagnostic(sugg);
-                break;
-            }
+            self.add_best_private_import_suggestion(&mut err, chain.suggestions, dedup_span, ident);
         }
 
         err.emit();
