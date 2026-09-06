@@ -1378,7 +1378,16 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
             && let DeclKind::Import { import, .. } = binding.kind
             && matches!(import.kind, ImportKind::MacroExport)
         {
-            self.macro_expanded_macro_export_errors.insert((path_span, binding.span));
+            // Inert attributes preserve the item. Ignore their expansion layers for this lint
+            // only: the binding's actual expansion is still needed to detect ambiguities and
+            // changes to earlier macro resolutions.
+            let mut expansion = binding.expansion;
+            while self.non_macro_attr_expansions.contains(&expansion) {
+                expansion = self.invocation_parent_scopes[&expansion].expansion;
+            }
+            if expansion != LocalExpnId::ROOT {
+                self.macro_expanded_macro_export_errors.insert((path_span, binding.span));
+            }
         }
 
         self.record_use(ident, binding, used);
