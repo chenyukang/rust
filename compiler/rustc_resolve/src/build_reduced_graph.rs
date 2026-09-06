@@ -1309,7 +1309,7 @@ impl<'a, 'ra, 'tcx> DefCollector<'a, 'ra, 'tcx> {
         feed: TyCtxtFeed<'tcx, LocalDefId>,
     ) -> MacroRulesScopeRef<'ra> {
         let parent_scope = self.parent_scope;
-        let mut expansion = parent_scope.expansion;
+        let expansion = parent_scope.expansion;
         let def_id = feed.key();
         let (res, orig_ident, span, macro_rules) = match &item.kind {
             ItemKind::MacroDef(ident, def) => {
@@ -1336,13 +1336,6 @@ impl<'a, 'ra, 'tcx> DefCollector<'a, 'ra, 'tcx> {
             let ident = IdentKey::new(orig_ident);
             self.r.macro_names.insert(ident);
             let is_macro_export = ast::attr::contains_name(&item.attrs, sym::macro_export);
-            if is_macro_export {
-                // `NonMacroAttr`s preserve the annotated item. Only peel attribute expansions
-                // confirmed as non-macros; actual attribute macro layers remain.
-                while self.r.non_macro_attr_expansions.contains(&expansion) {
-                    expansion = self.r.invocation_parent_scopes[&expansion].expansion;
-                }
-            }
             let vis = if is_macro_export {
                 Visibility::Public
             } else {
@@ -1362,7 +1355,6 @@ impl<'a, 'ra, 'tcx> DefCollector<'a, 'ra, 'tcx> {
                     root_id: item.id,
                     parent_scope: ParentScope {
                         module: self.r.graph_root.to_module(),
-                        expansion,
                         ..parent_scope
                     },
                     imported_module: CmCell::new(None),

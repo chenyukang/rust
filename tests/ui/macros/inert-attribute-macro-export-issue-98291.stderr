@@ -1,0 +1,151 @@
+error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:26:9
+   |
+LL | pub use exported as renamed;
+   |         ^^^^^^^^^^^^^^^^^^^
+   |
+note: the macro is defined here
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:5:1
+   |
+LL | / macro_rules! exported {
+LL | |     () => {
+LL | |         "exported"
+LL | |     };
+LL | | }
+   | |_^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #52234 <https://github.com/rust-lang/rust/issues/52234>
+   = note: `#[deny(macro_expanded_macro_exports_accessed_by_absolute_paths)]` (part of `#[deny(future_incompatible)]`) on by default
+
+error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:31:9
+   |
+LL |     use crate::formatted;
+   |         ^^^^^^^^^^^^^^^^
+   |
+note: the macro is defined here
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:14:1
+   |
+LL | / macro_rules! formatted {
+LL | |     ($($arg:tt)*) => {
+LL | |         format_args!($($arg)*)
+LL | |     };
+LL | | }
+   | |_^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #52234 <https://github.com/rust-lang/rust/issues/52234>
+
+error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:42:13
+   |
+LL |     let _ = crate::exported!();
+   |             ^^^^^^^^^^^^^^^
+   |
+note: the macro is defined here
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:5:1
+   |
+LL | / macro_rules! exported {
+LL | |     () => {
+LL | |         "exported"
+LL | |     };
+LL | | }
+   | |_^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #52234 <https://github.com/rust-lang/rust/issues/52234>
+
+error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:45:5
+   |
+LL |     crate::configured!();
+   |     ^^^^^^^^^^^^^^^^^
+   |
+note: the macro is defined here
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:22:1
+   |
+LL | / macro_rules! configured {
+LL | |     () => {};
+LL | | }
+   | |_^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #52234 <https://github.com/rust-lang/rust/issues/52234>
+
+error: aborting due to 4 previous errors
+
+Future incompatibility report: Future breakage diagnostic:
+error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:26:9
+   |
+LL | pub use exported as renamed;
+   |         ^^^^^^^^^^^^^^^^^^^
+   |
+note: the macro is defined here
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:5:1
+   |
+LL | / macro_rules! exported {
+LL | |     () => {
+LL | |         "exported"
+LL | |     };
+LL | | }
+   | |_^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #52234 <https://github.com/rust-lang/rust/issues/52234>
+   = note: `#[deny(macro_expanded_macro_exports_accessed_by_absolute_paths)]` (part of `#[deny(future_incompatible)]`) on by default
+
+Future breakage diagnostic:
+error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:31:9
+   |
+LL |     use crate::formatted;
+   |         ^^^^^^^^^^^^^^^^
+   |
+note: the macro is defined here
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:14:1
+   |
+LL | / macro_rules! formatted {
+LL | |     ($($arg:tt)*) => {
+LL | |         format_args!($($arg)*)
+LL | |     };
+LL | | }
+   | |_^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #52234 <https://github.com/rust-lang/rust/issues/52234>
+   = note: `#[deny(macro_expanded_macro_exports_accessed_by_absolute_paths)]` (part of `#[deny(future_incompatible)]`) on by default
+
+Future breakage diagnostic:
+error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:42:13
+   |
+LL |     let _ = crate::exported!();
+   |             ^^^^^^^^^^^^^^^
+   |
+note: the macro is defined here
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:5:1
+   |
+LL | / macro_rules! exported {
+LL | |     () => {
+LL | |         "exported"
+LL | |     };
+LL | | }
+   | |_^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #52234 <https://github.com/rust-lang/rust/issues/52234>
+   = note: `#[deny(macro_expanded_macro_exports_accessed_by_absolute_paths)]` (part of `#[deny(future_incompatible)]`) on by default
+
+Future breakage diagnostic:
+error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:45:5
+   |
+LL |     crate::configured!();
+   |     ^^^^^^^^^^^^^^^^^
+   |
+note: the macro is defined here
+  --> $DIR/inert-attribute-macro-export-issue-98291.rs:22:1
+   |
+LL | / macro_rules! configured {
+LL | |     () => {};
+LL | | }
+   | |_^
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #52234 <https://github.com/rust-lang/rust/issues/52234>
+   = note: `#[deny(macro_expanded_macro_exports_accessed_by_absolute_paths)]` (part of `#[deny(future_incompatible)]`) on by default
+
