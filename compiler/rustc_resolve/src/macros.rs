@@ -340,6 +340,10 @@ impl<'ra, 'tcx> ResolverExpand for Resolver<'ra, 'tcx> {
             sugg_span,
         )?;
 
+        if matches!(res, Res::NonMacroAttr(..)) {
+            self.non_macro_attr_expansions.insert(invoc_id);
+        }
+
         let span = invoc.span();
         let def_id = if deleg_impl.is_some() { None } else { res.opt_def_id() };
         self.tcx.with_stable_hashing_context(|hcx| {
