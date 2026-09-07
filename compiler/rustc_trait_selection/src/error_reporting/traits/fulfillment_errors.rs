@@ -477,8 +477,15 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                             &mut err,
                             leaf_trait_predicate,
                         );
+                        // The dereference suggestion may already have simplified `&*x` to `x`.
                         suggested |=
-                            self.suggest_dereferences(&obligation, &mut err, leaf_trait_predicate);
+                            self.suggest_dereferences(&obligation, &mut err, leaf_trait_predicate)
+                                || self.suggest_remove_reference(
+                                    &obligation,
+                                    &mut err,
+                                    leaf_trait_predicate,
+                                );
+
                         suggested |=
                             self.suggest_fn_call(&obligation, &mut err, leaf_trait_predicate);
                         suggested |= self.suggest_cast_to_fn_pointer(
@@ -488,11 +495,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                             main_trait_predicate,
                             span,
                         );
-                        suggested |= self.suggest_remove_reference(
-                            &obligation,
-                            &mut err,
-                            leaf_trait_predicate,
-                        );
+
                         suggested |= self.suggest_semicolon_removal(
                             &obligation,
                             &mut err,
