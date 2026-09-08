@@ -477,7 +477,6 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                             &mut err,
                             leaf_trait_predicate,
                         );
-                        // The dereference suggestion may already have simplified `&*x` to `x`.
                         suggested |=
                             self.suggest_dereferences(&obligation, &mut err, leaf_trait_predicate)
                                 || self.suggest_remove_reference(

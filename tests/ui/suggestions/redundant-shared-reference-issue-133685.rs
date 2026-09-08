@@ -25,6 +25,11 @@ fn main() {
     //~^ ERROR is not an iterator
     consume((&ref_a));
     //~^ ERROR is not an iterator
+    consume((& /* keep this parenthesized comment */ ref_a));
+    //~^ ERROR is not an iterator
+    consume(& // Keep this line comment.
+        ref_a);
+    //~^^ ERROR is not an iterator
 
     let slice = &a[..];
     consume(&slice);

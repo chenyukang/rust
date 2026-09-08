@@ -55,7 +55,7 @@ LL | fn consume<'a>(_: impl IntoIterator<Item = &'a i32>) {}
 help: consider removing the leading `&`-reference
    |
 LL -     consume(& /* keep this comment */ ref_a);
-LL +     consume(ref_a);
+LL +     consume(/* keep this comment */ ref_a);
    |
 
 error[E0277]: `&&Vec<i32>` is not an iterator
@@ -79,8 +79,52 @@ LL -     consume((&ref_a));
 LL +     consume((ref_a));
    |
 
-error[E0277]: `&&[i32]` is not an iterator
+error[E0277]: `&&Vec<i32>` is not an iterator
+  --> $DIR/redundant-shared-reference-issue-133685.rs:28:13
+   |
+LL |     consume((& /* keep this parenthesized comment */ ref_a));
+   |     ------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&&Vec<i32>` is not an iterator
+   |     |
+   |     required by a bound introduced by this call
+   |
+   = help: the trait `Iterator` is not implemented for `&&Vec<i32>`
+   = note: required for `&&Vec<i32>` to implement `IntoIterator`
+note: required by a bound in `consume`
+  --> $DIR/redundant-shared-reference-issue-133685.rs:8:24
+   |
+LL | fn consume<'a>(_: impl IntoIterator<Item = &'a i32>) {}
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `consume`
+help: consider removing the leading `&`-reference
+   |
+LL -     consume((& /* keep this parenthesized comment */ ref_a));
+LL +     consume((/* keep this parenthesized comment */ ref_a));
+   |
+
+error[E0277]: `&&Vec<i32>` is not an iterator
   --> $DIR/redundant-shared-reference-issue-133685.rs:30:13
+   |
+LL |       consume(& // Keep this line comment.
+   |  _____-------_^
+   | |     |
+   | |     required by a bound introduced by this call
+LL | |         ref_a);
+   | |_____________^ `&&Vec<i32>` is not an iterator
+   |
+   = help: the trait `Iterator` is not implemented for `&&Vec<i32>`
+   = note: required for `&&Vec<i32>` to implement `IntoIterator`
+note: required by a bound in `consume`
+  --> $DIR/redundant-shared-reference-issue-133685.rs:8:24
+   |
+LL | fn consume<'a>(_: impl IntoIterator<Item = &'a i32>) {}
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `consume`
+help: consider removing the leading `&`-reference
+   |
+LL -     consume(& // Keep this line comment.
+LL +     consume(// Keep this line comment.
+   |
+
+error[E0277]: `&&[i32]` is not an iterator
+  --> $DIR/redundant-shared-reference-issue-133685.rs:35:13
    |
 LL |     consume(&slice);
    |     ------- ^^^^^^ `&&[i32]` is not an iterator
@@ -101,7 +145,7 @@ LL +     consume(slice);
    |
 
 error[E0277]: `&Box<Vec<i32>>` is not an iterator
-  --> $DIR/redundant-shared-reference-issue-133685.rs:35:13
+  --> $DIR/redundant-shared-reference-issue-133685.rs:40:13
    |
 LL |     consume(&boxed);
    |     ------- ^^^^^^ `&Box<Vec<i32>>` is not an iterator
@@ -121,7 +165,7 @@ LL |     consume(&*boxed);
    |              +
 
 error[E0277]: `&&mut Vec<i32>` is not an iterator
-  --> $DIR/redundant-shared-reference-issue-133685.rs:40:13
+  --> $DIR/redundant-shared-reference-issue-133685.rs:45:13
    |
 LL |     consume(&mut_ref);
    |     ------- ^^^^^^^^ `&&mut Vec<i32>` is not an iterator
@@ -141,7 +185,7 @@ LL |     consume(&*mut_ref);
    |              +
 
 error[E0277]: the trait bound `&&Source: Value` is not satisfied
-  --> $DIR/redundant-shared-reference-issue-133685.rs:46:19
+  --> $DIR/redundant-shared-reference-issue-133685.rs:51:19
    |
 LL |     consume_value(&shared);
    |     ------------- ^^^^^^^ the trait `Value` is not implemented for `&&Source`
@@ -159,6 +203,6 @@ LL -     consume_value(&shared);
 LL +     consume_value(shared);
    |
 
-error: aborting due to 8 previous errors
+error: aborting due to 10 previous errors
 
 For more information about this error, try `rustc --explain E0277`.

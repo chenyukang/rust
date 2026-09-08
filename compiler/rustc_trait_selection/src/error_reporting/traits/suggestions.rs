@@ -2146,7 +2146,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
     ) -> (Vec<PeeledRef<'tcx>>, Option<&'tcx hir::Param<'tcx>>) {
         let mut refs = Vec::new();
         'outer: loop {
-            while let hir::ExprKind::AddrOf(_, _, borrowed) = expr.kind {
+            while let hir::ExprKind::AddrOf(_, mutability, borrowed) = expr.kind {
                 let span =
                     if let Some(borrowed_span) = borrowed.span.find_ancestor_inside(expr.span) {
                         expr.span.until(borrowed_span)
@@ -2165,6 +2165,15 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                         span.with_lo(span.lo() + BytePos(amp as u32))
                     }
                     _ => break 'outer,
+                };
+                // Remove only `&` and trailing whitespace from shared borrows, preserving comments.
+                let span = if mutability.is_not() {
+                    self.tcx
+                        .sess
+                        .source_map()
+                        .span_extend_while_whitespace(span.with_hi(span.lo() + BytePos(1)))
+                } else {
+                    span
                 };
 
                 let ty::Ref(_, inner_ty, _) = ty.kind() else {
